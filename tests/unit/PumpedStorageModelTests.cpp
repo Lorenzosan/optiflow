@@ -16,7 +16,8 @@ optiflow::ModelParameters valid_parameters() {
     parameters.pump_efficiency = 0.8;
     parameters.timestep_hours = 1.0;
     parameters.discount_factor = 1.0;
-    parameters.terminal_water_value_eur_per_m3 = 0.01;
+    parameters.target_final_reservoir_volume_m3 = 500.0;
+    parameters.terminal_reservoir_penalty_eur_per_m3 = 0.01;
     parameters.overflow_spill_penalty_eur_per_m3 = 0.02;
     return parameters;
 }
@@ -46,5 +47,13 @@ int main() {
         auto bad = valid_parameters();
         bad.initial_reservoir_volume_m3 = 2000.0;
         require_throws([&] { optiflow::PumpedStorageModel invalid_model(bad); });
+
+        auto bad_target = valid_parameters();
+        bad_target.target_final_reservoir_volume_m3 = 2000.0;
+        require_throws([&] { optiflow::PumpedStorageModel invalid_model(bad_target); });
+
+        auto bad_penalty = valid_parameters();
+        bad_penalty.terminal_reservoir_penalty_eur_per_m3 = -1.0;
+        require_throws([&] { optiflow::PumpedStorageModel invalid_model(bad_penalty); });
     });
 }

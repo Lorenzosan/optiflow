@@ -93,8 +93,12 @@ void PumpedStorageModel::validate_parameters(const ModelParameters& parameters) 
     if (parameters.discount_factor <= 0.0 || parameters.discount_factor > 1.0) {
         throw std::invalid_argument("discount factor must be in (0, 1]");
     }
-    if (parameters.terminal_water_value_eur_per_m3 < 0.0) {
-        throw std::invalid_argument("terminal water value must be non-negative");
+    if (parameters.target_final_reservoir_volume_m3 < parameters.min_reservoir_volume_m3 ||
+        parameters.target_final_reservoir_volume_m3 > parameters.max_reservoir_volume_m3) {
+        throw std::invalid_argument("target final reservoir volume is outside reservoir bounds");
+    }
+    if (parameters.terminal_reservoir_penalty_eur_per_m3 < 0.0) {
+        throw std::invalid_argument("terminal reservoir penalty must be non-negative");
     }
     if (parameters.overflow_spill_penalty_eur_per_m3 < 0.0) {
         throw std::invalid_argument("overflow spill penalty must be non-negative");

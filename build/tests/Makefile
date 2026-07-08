@@ -197,6 +197,20 @@ InterpolatorTests/fast:
 .PHONY : InterpolatorTests/fast
 
 # Convenience name for target.
+tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule
+.PHONY : tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule
+
+# Convenience name for target.
+TerminalPenaltyModelTests: tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule
+.PHONY : TerminalPenaltyModelTests
+
+# fast build rule for target.
+TerminalPenaltyModelTests/fast:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/build
+.PHONY : TerminalPenaltyModelTests/fast
+
+# Convenience name for target.
 tests/CMakeFiles/PumpedStorageModelTests.dir/rule:
 	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/PumpedStorageModelTests.dir/rule
 .PHONY : tests/CMakeFiles/PumpedStorageModelTests.dir/rule
@@ -406,6 +420,30 @@ unit/StateGridTests.cpp.s:
 	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/StateGridTests.dir/build.make tests/CMakeFiles/StateGridTests.dir/unit/StateGridTests.cpp.s
 .PHONY : unit/StateGridTests.cpp.s
 
+unit/TerminalPenaltyModelTests.o: unit/TerminalPenaltyModelTests.cpp.o
+.PHONY : unit/TerminalPenaltyModelTests.o
+
+# target to build an object file
+unit/TerminalPenaltyModelTests.cpp.o:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/unit/TerminalPenaltyModelTests.cpp.o
+.PHONY : unit/TerminalPenaltyModelTests.cpp.o
+
+unit/TerminalPenaltyModelTests.i: unit/TerminalPenaltyModelTests.cpp.i
+.PHONY : unit/TerminalPenaltyModelTests.i
+
+# target to preprocess a source file
+unit/TerminalPenaltyModelTests.cpp.i:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/unit/TerminalPenaltyModelTests.cpp.i
+.PHONY : unit/TerminalPenaltyModelTests.cpp.i
+
+unit/TerminalPenaltyModelTests.s: unit/TerminalPenaltyModelTests.cpp.s
+.PHONY : unit/TerminalPenaltyModelTests.s
+
+# target to generate assembly for a file
+unit/TerminalPenaltyModelTests.cpp.s:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/unit/TerminalPenaltyModelTests.cpp.s
+.PHONY : unit/TerminalPenaltyModelTests.cpp.s
+
 unit/ValueFunctionTests.o: unit/ValueFunctionTests.cpp.o
 .PHONY : unit/ValueFunctionTests.o
 
@@ -446,6 +484,7 @@ help:
 	@echo "... InterpolatorTests"
 	@echo "... PumpedStorageModelTests"
 	@echo "... StateGridTests"
+	@echo "... TerminalPenaltyModelTests"
 	@echo "... ValueFunctionTests"
 	@echo "... unit/ActionGridTests.o"
 	@echo "... unit/ActionGridTests.i"
@@ -468,6 +507,9 @@ help:
 	@echo "... unit/StateGridTests.o"
 	@echo "... unit/StateGridTests.i"
 	@echo "... unit/StateGridTests.s"
+	@echo "... unit/TerminalPenaltyModelTests.o"
+	@echo "... unit/TerminalPenaltyModelTests.i"
+	@echo "... unit/TerminalPenaltyModelTests.s"
 	@echo "... unit/ValueFunctionTests.o"
 	@echo "... unit/ValueFunctionTests.i"
 	@echo "... unit/ValueFunctionTests.s"

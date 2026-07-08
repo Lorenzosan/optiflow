@@ -16,7 +16,8 @@ int main() {
         p.pump_efficiency = 0.85;
         p.timestep_hours = 1.0;
         p.discount_factor = 1.0;
-        p.terminal_water_value_eur_per_m3 = 0.0;
+        p.target_final_reservoir_volume_m3 = p.initial_reservoir_volume_m3;
+        p.terminal_reservoir_penalty_eur_per_m3 = 0.0;
         p.overflow_spill_penalty_eur_per_m3 = 0.0;
 
         const optiflow::DeterministicSeries series{{

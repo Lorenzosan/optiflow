@@ -70,7 +70,8 @@ struct ModelParameters {
     double timestep_hours{1.0};
     double discount_factor{1.0};
 
-    double terminal_water_value_eur_per_m3{};
+    double target_final_reservoir_volume_m3{};
+    double terminal_reservoir_penalty_eur_per_m3{};
     double overflow_spill_penalty_eur_per_m3{};
 };
 

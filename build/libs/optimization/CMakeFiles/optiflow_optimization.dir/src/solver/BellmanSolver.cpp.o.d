@@ -908,6 +908,6 @@ libs/optimization/CMakeFiles/optiflow_optimization.dir/src/solver/BellmanSolver.
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/numerics/ValueFunction.hpp \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/solver/SolverTypes.hpp \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/model/PumpedStorageModel.hpp \
-  /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/model/TerminalValueModel.hpp \
+  /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/model/TerminalPenaltyModel.hpp \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/numerics/ActionGrid.hpp \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/numerics/Interpolator.hpp

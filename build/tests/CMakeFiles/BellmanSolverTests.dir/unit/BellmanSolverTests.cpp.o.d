@@ -1006,4 +1006,5 @@ tests/CMakeFiles/BellmanSolverTests.dir/unit/BellmanSolverTests.cpp.o: \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/numerics/Policy.hpp \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/numerics/StateGrid.hpp \
   /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/numerics/ValueFunction.hpp \
-  /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/solver/SolverTypes.hpp
+  /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/solver/SolverTypes.hpp \
+  /Users/lorenzo/work/optiflow/libs/optimization/include/optiflow/solver/ForwardSimulator.hpp

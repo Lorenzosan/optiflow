@@ -14,6 +14,7 @@
 /Users/lorenzo/work/optiflow/build/tests/CMakeFiles/ActionGridTests.dir
 /Users/lorenzo/work/optiflow/build/tests/CMakeFiles/ValueFunctionTests.dir
 /Users/lorenzo/work/optiflow/build/tests/CMakeFiles/InterpolatorTests.dir
+/Users/lorenzo/work/optiflow/build/tests/CMakeFiles/TerminalPenaltyModelTests.dir
 /Users/lorenzo/work/optiflow/build/tests/CMakeFiles/PumpedStorageModelTests.dir
 /Users/lorenzo/work/optiflow/build/tests/CMakeFiles/BellmanSolverTests.dir
 /Users/lorenzo/work/optiflow/build/tests/CMakeFiles/ForwardSimulatorTests.dir

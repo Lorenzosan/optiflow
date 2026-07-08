@@ -114,19 +114,19 @@ libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageMo
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.s"
 	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/lorenzo/work/optiflow/libs/optimization/src/model/PumpedStorageModel.cpp -o CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.s
 
-libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o: libs/optimization/CMakeFiles/optiflow_optimization.dir/flags.make
-libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o: /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalValueModel.cpp
-libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o: libs/optimization/CMakeFiles/optiflow_optimization.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o"
-	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o -MF CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o.d -o CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalValueModel.cpp
+libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o: libs/optimization/CMakeFiles/optiflow_optimization.dir/flags.make
+libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o: /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalPenaltyModel.cpp
+libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o: libs/optimization/CMakeFiles/optiflow_optimization.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o"
+	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o -MF CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o.d -o CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalPenaltyModel.cpp
 
-libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.i"
-	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalValueModel.cpp > CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.i
+libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.i"
+	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalPenaltyModel.cpp > CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.i
 
-libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.s"
-	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalValueModel.cpp -o CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.s
+libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.s"
+	cd /Users/lorenzo/work/optiflow/build/libs/optimization && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/lorenzo/work/optiflow/libs/optimization/src/model/TerminalPenaltyModel.cpp -o CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.s
 
 libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/ActionGrid.cpp.o: libs/optimization/CMakeFiles/optiflow_optimization.dir/flags.make
 libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/ActionGrid.cpp.o: /Users/lorenzo/work/optiflow/libs/optimization/src/numerics/ActionGrid.cpp
@@ -245,7 +245,7 @@ optiflow_optimization_OBJECTS = \
 "CMakeFiles/optiflow_optimization.dir/src/core/StorageTypes.cpp.o" \
 "CMakeFiles/optiflow_optimization.dir/src/io/CsvReader.cpp.o" \
 "CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.o" \
-"CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o" \
+"CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o" \
 "CMakeFiles/optiflow_optimization.dir/src/numerics/ActionGrid.cpp.o" \
 "CMakeFiles/optiflow_optimization.dir/src/numerics/Interpolator.cpp.o" \
 "CMakeFiles/optiflow_optimization.dir/src/numerics/Policy.cpp.o" \
@@ -261,7 +261,7 @@ optiflow_optimization_EXTERNAL_OBJECTS =
 libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/core/StorageTypes.cpp.o
 libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/io/CsvReader.cpp.o
 libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.o
-libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o
+libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o
 libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/ActionGrid.cpp.o
 libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/Interpolator.cpp.o
 libs/optimization/liboptiflow_optimization.a: libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/Policy.cpp.o

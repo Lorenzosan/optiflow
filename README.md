@@ -9,7 +9,7 @@ This restart intentionally focuses on the deterministic model core. It does not 
 - Read deterministic price and inflow CSV files.
 - Validate physical and numerical model constraints.
 - Build a reservoir state grid and a hydro action grid.
-- Solve a deterministic Bellman recursion.
+- Solve a deterministic Bellman recursion with a final-reservoir target penalty.
 - Simulate the selected policy forward from the initial reservoir volume.
 - Provide Doxygen-ready public headers.
 - Provide unit tests for CSV loading, model validation, numerics, Bellman recursion, and forward simulation.
@@ -99,12 +99,25 @@ ctest --test-dir build --output-on-failure
   --pump-efficiency 0.85 \
   --timestep-hours 1 \
   --discount-factor 1 \
-  --terminal-water-value 0.02 \
+  --target-final-reservoir-volume 500000 \
+  --terminal-reservoir-penalty 0.10 \
   --overflow-spill-penalty 0.01 \
   --volume-grid-points 101 \
   --turbine-flow-steps 8 \
   --pump-flow-steps 6
 ```
+
+
+## Terminal target penalty
+
+This restart does not assign an economic terminal water value. Instead, the optimizer can be given a target final reservoir volume and a linear penalty for ending above or below that target:
+
+```text
+terminal_penalty_eur = terminal_reservoir_penalty_eur_per_m3
+                       * abs(final_reservoir_volume_m3 - target_final_reservoir_volume_m3)
+```
+
+This keeps the model simple while discouraging artificial end-of-horizon draining. The default target is the initial reservoir volume.
 
 ## Doxygen
 

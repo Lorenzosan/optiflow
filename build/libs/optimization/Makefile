@@ -212,29 +212,29 @@ src/model/PumpedStorageModel.cpp.s:
 	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.s
 .PHONY : src/model/PumpedStorageModel.cpp.s
 
-src/model/TerminalValueModel.o: src/model/TerminalValueModel.cpp.o
-.PHONY : src/model/TerminalValueModel.o
+src/model/TerminalPenaltyModel.o: src/model/TerminalPenaltyModel.cpp.o
+.PHONY : src/model/TerminalPenaltyModel.o
 
 # target to build an object file
-src/model/TerminalValueModel.cpp.o:
-	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.o
-.PHONY : src/model/TerminalValueModel.cpp.o
+src/model/TerminalPenaltyModel.cpp.o:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.o
+.PHONY : src/model/TerminalPenaltyModel.cpp.o
 
-src/model/TerminalValueModel.i: src/model/TerminalValueModel.cpp.i
-.PHONY : src/model/TerminalValueModel.i
+src/model/TerminalPenaltyModel.i: src/model/TerminalPenaltyModel.cpp.i
+.PHONY : src/model/TerminalPenaltyModel.i
 
 # target to preprocess a source file
-src/model/TerminalValueModel.cpp.i:
-	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.i
-.PHONY : src/model/TerminalValueModel.cpp.i
+src/model/TerminalPenaltyModel.cpp.i:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.i
+.PHONY : src/model/TerminalPenaltyModel.cpp.i
 
-src/model/TerminalValueModel.s: src/model/TerminalValueModel.cpp.s
-.PHONY : src/model/TerminalValueModel.s
+src/model/TerminalPenaltyModel.s: src/model/TerminalPenaltyModel.cpp.s
+.PHONY : src/model/TerminalPenaltyModel.s
 
 # target to generate assembly for a file
-src/model/TerminalValueModel.cpp.s:
-	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalValueModel.cpp.s
-.PHONY : src/model/TerminalValueModel.cpp.s
+src/model/TerminalPenaltyModel.cpp.s:
+	cd /Users/lorenzo/work/optiflow/build && $(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/TerminalPenaltyModel.cpp.s
+.PHONY : src/model/TerminalPenaltyModel.cpp.s
 
 src/numerics/ActionGrid.o: src/numerics/ActionGrid.cpp.o
 .PHONY : src/numerics/ActionGrid.o
@@ -447,9 +447,9 @@ help:
 	@echo "... src/model/PumpedStorageModel.o"
 	@echo "... src/model/PumpedStorageModel.i"
 	@echo "... src/model/PumpedStorageModel.s"
-	@echo "... src/model/TerminalValueModel.o"
-	@echo "... src/model/TerminalValueModel.i"
-	@echo "... src/model/TerminalValueModel.s"
+	@echo "... src/model/TerminalPenaltyModel.o"
+	@echo "... src/model/TerminalPenaltyModel.i"
+	@echo "... src/model/TerminalPenaltyModel.s"
 	@echo "... src/numerics/ActionGrid.o"
 	@echo "... src/numerics/ActionGrid.i"
 	@echo "... src/numerics/ActionGrid.s"

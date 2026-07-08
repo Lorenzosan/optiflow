@@ -218,6 +218,19 @@ InterpolatorTests/fast:
 .PHONY : InterpolatorTests/fast
 
 #=============================================================================
+# Target rules for targets named TerminalPenaltyModelTests
+
+# Build rule for target.
+TerminalPenaltyModelTests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 TerminalPenaltyModelTests
+.PHONY : TerminalPenaltyModelTests
+
+# fast build rule for target.
+TerminalPenaltyModelTests/fast:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/build
+.PHONY : TerminalPenaltyModelTests/fast
+
+#=============================================================================
 # Target rules for targets named PumpedStorageModelTests
 
 # Build rule for target.
@@ -272,6 +285,7 @@ help:
 	@echo "... InterpolatorTests"
 	@echo "... PumpedStorageModelTests"
 	@echo "... StateGridTests"
+	@echo "... TerminalPenaltyModelTests"
 	@echo "... ValueFunctionTests"
 	@echo "... optiflow_cli"
 	@echo "... optiflow_optimization"

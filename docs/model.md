@@ -51,10 +51,15 @@ reward_eur = price_eur_per_mwh * net_power_mw * timestep_hours
              - overflow_spill_penalty_eur_per_m3 * overflow_spill_m3
 ```
 
-## Terminal value
+## Terminal target penalty
+
+The deterministic restart does not assign a positive economic value to remaining water. Instead, the terminal value is a non-positive penalty for missing a requested final reservoir volume.
 
 ```text
-V_T(s) = terminal_water_value_eur_per_m3 * reservoir_volume_m3
+terminal_penalty_eur = terminal_reservoir_penalty_eur_per_m3
+                       * abs(final_reservoir_volume_m3 - target_final_reservoir_volume_m3)
+
+V_T(s) = -terminal_penalty_eur
 ```
 
-Terminal value avoids the common artifact where the optimizer drains the reservoir at the end of the horizon only because leftover water has zero modeled value.
+This discourages artificial end-of-horizon draining without requiring the exact final reservoir target to be reachable on the discretized grid. The same pattern can later be extended to battery SOC.

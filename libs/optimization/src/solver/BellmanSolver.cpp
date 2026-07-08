@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 #include <optiflow/model/PumpedStorageModel.hpp>
-#include <optiflow/model/TerminalValueModel.hpp>
+#include <optiflow/model/TerminalPenaltyModel.hpp>
 #include <optiflow/numerics/ActionGrid.hpp>
 #include <optiflow/numerics/Interpolator.hpp>
 
@@ -34,11 +34,12 @@ OptimizationResult BellmanSolver::solve(const DeterministicSeries& series,
 
     ValueFunction value_function(series.size(), state_grid.size());
     Policy policy(series.size(), state_grid.size());
-    const TerminalValueModel terminal_value(parameters.terminal_water_value_eur_per_m3);
+    const TerminalPenaltyModel terminal_penalty(parameters.target_final_reservoir_volume_m3,
+                                                parameters.terminal_reservoir_penalty_eur_per_m3);
 
     const std::size_t terminal_time = series.size();
     for (std::size_t state_index = 0; state_index < state_grid.size(); ++state_index) {
-        value_function.set(terminal_time, state_index, terminal_value.value(state_grid.at(state_index)));
+        value_function.set(terminal_time, state_index, terminal_penalty.value(state_grid.at(state_index)));
     }
 
     for (std::size_t reverse_time = series.size(); reverse_time > 0; --reverse_time) {

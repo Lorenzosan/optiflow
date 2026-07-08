@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <cmath>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,7 +30,8 @@ void print_usage() {
               << "  --pump-efficiency VALUE\n"
               << "  --timestep-hours VALUE\n"
               << "  --discount-factor VALUE\n"
-              << "  --terminal-water-value VALUE\n"
+              << "  --target-final-reservoir-volume VALUE\n"
+              << "  --terminal-reservoir-penalty VALUE\n"
               << "  --overflow-spill-penalty VALUE\n"
               << "  --volume-grid-points VALUE\n"
               << "  --turbine-flow-steps VALUE\n"
@@ -121,8 +123,11 @@ int main(int argc, char** argv) {
         parameters.pump_efficiency = get_double(args, "--pump-efficiency", 0.85);
         parameters.timestep_hours = get_double(args, "--timestep-hours", 1.0);
         parameters.discount_factor = get_double(args, "--discount-factor", 1.0);
-        parameters.terminal_water_value_eur_per_m3 =
-            get_double(args, "--terminal-water-value", 0.02);
+        parameters.target_final_reservoir_volume_m3 =
+            get_double(args, "--target-final-reservoir-volume",
+                       parameters.initial_reservoir_volume_m3);
+        parameters.terminal_reservoir_penalty_eur_per_m3 =
+            get_double(args, "--terminal-reservoir-penalty", 0.10);
         parameters.overflow_spill_penalty_eur_per_m3 =
             get_double(args, "--overflow-spill-penalty", 0.01);
 
@@ -147,9 +152,24 @@ int main(int argc, char** argv) {
             total_spill_m3 += step.overflow_spill_m3;
         }
 
+        const double final_reservoir_m3 = dispatch.empty()
+                                             ? parameters.initial_reservoir_volume_m3
+                                             : dispatch.back().reservoir_end_m3;
+        const double final_reservoir_deviation_m3 =
+            std::abs(final_reservoir_m3 - parameters.target_final_reservoir_volume_m3);
+        const double terminal_reservoir_penalty_eur =
+            final_reservoir_deviation_m3 * parameters.terminal_reservoir_penalty_eur_per_m3;
+        const double forward_total_value_eur = total_reward - terminal_reservoir_penalty_eur;
+
         std::cout << std::fixed << std::setprecision(3);
         std::cout << "objective_value_eur," << result.objective_value_eur << "\n";
         std::cout << "forward_reward_eur," << total_reward << "\n";
+        std::cout << "terminal_reservoir_penalty_eur," << terminal_reservoir_penalty_eur << "\n";
+        std::cout << "forward_total_value_eur," << forward_total_value_eur << "\n";
+        std::cout << "final_reservoir_m3," << final_reservoir_m3 << "\n";
+        std::cout << "target_final_reservoir_m3,"
+                  << parameters.target_final_reservoir_volume_m3 << "\n";
+        std::cout << "final_reservoir_deviation_m3," << final_reservoir_deviation_m3 << "\n";
         std::cout << "total_turbine_mwh," << total_turbine_mwh << "\n";
         std::cout << "total_pump_mwh," << total_pump_mwh << "\n";
         std::cout << "total_overflow_spill_m3," << total_spill_m3 << "\n\n";

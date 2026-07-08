@@ -1,9 +1,10 @@
-CsvReaderTests 1 0.0144138
-StateGridTests 1 0.009135
-ActionGridTests 1 0.00751933
-ValueFunctionTests 1 0.00809829
-InterpolatorTests 1 0.00830308
-PumpedStorageModelTests 1 0.00754142
-BellmanSolverTests 1 0.00787333
-ForwardSimulatorTests 1 0.00808163
+CsvReaderTests 2 0.00595992
+StateGridTests 2 0.00416756
+ActionGridTests 2 0.00355381
+ValueFunctionTests 2 0.00395652
+InterpolatorTests 2 0.00401004
+PumpedStorageModelTests 2 0.00378
+BellmanSolverTests 2 0.00422452
+ForwardSimulatorTests 2 0.00413202
+TerminalPenaltyModelTests 1 0.00746542
 ---

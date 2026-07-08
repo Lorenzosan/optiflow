@@ -133,6 +133,7 @@ tests/all: tests/CMakeFiles/StateGridTests.dir/all
 tests/all: tests/CMakeFiles/ActionGridTests.dir/all
 tests/all: tests/CMakeFiles/ValueFunctionTests.dir/all
 tests/all: tests/CMakeFiles/InterpolatorTests.dir/all
+tests/all: tests/CMakeFiles/TerminalPenaltyModelTests.dir/all
 tests/all: tests/CMakeFiles/PumpedStorageModelTests.dir/all
 tests/all: tests/CMakeFiles/BellmanSolverTests.dir/all
 tests/all: tests/CMakeFiles/ForwardSimulatorTests.dir/all
@@ -144,6 +145,7 @@ tests/codegen: tests/CMakeFiles/StateGridTests.dir/codegen
 tests/codegen: tests/CMakeFiles/ActionGridTests.dir/codegen
 tests/codegen: tests/CMakeFiles/ValueFunctionTests.dir/codegen
 tests/codegen: tests/CMakeFiles/InterpolatorTests.dir/codegen
+tests/codegen: tests/CMakeFiles/TerminalPenaltyModelTests.dir/codegen
 tests/codegen: tests/CMakeFiles/PumpedStorageModelTests.dir/codegen
 tests/codegen: tests/CMakeFiles/BellmanSolverTests.dir/codegen
 tests/codegen: tests/CMakeFiles/ForwardSimulatorTests.dir/codegen
@@ -159,6 +161,7 @@ tests/clean: tests/CMakeFiles/StateGridTests.dir/clean
 tests/clean: tests/CMakeFiles/ActionGridTests.dir/clean
 tests/clean: tests/CMakeFiles/ValueFunctionTests.dir/clean
 tests/clean: tests/CMakeFiles/InterpolatorTests.dir/clean
+tests/clean: tests/CMakeFiles/TerminalPenaltyModelTests.dir/clean
 tests/clean: tests/CMakeFiles/PumpedStorageModelTests.dir/clean
 tests/clean: tests/CMakeFiles/BellmanSolverTests.dir/clean
 tests/clean: tests/CMakeFiles/ForwardSimulatorTests.dir/clean
@@ -171,7 +174,7 @@ tests/clean: tests/CMakeFiles/ForwardSimulatorTests.dir/clean
 libs/optimization/CMakeFiles/optiflow_optimization.dir/all:
 	$(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/depend
 	$(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=19,20,21,22,23,24,25,26,27,28,29,30,31 "Built target optiflow_optimization"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=21,22,23,24,25,26,27,28,29,30,31,32,33 "Built target optiflow_optimization"
 .PHONY : libs/optimization/CMakeFiles/optiflow_optimization.dir/all
 
 # Build rule for subdir invocation for target.
@@ -188,7 +191,7 @@ optiflow_optimization: libs/optimization/CMakeFiles/optiflow_optimization.dir/ru
 # codegen rule for target.
 libs/optimization/CMakeFiles/optiflow_optimization.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f libs/optimization/CMakeFiles/optiflow_optimization.dir/build.make libs/optimization/CMakeFiles/optiflow_optimization.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=19,20,21,22,23,24,25,26,27,28,29,30,31 "Finished codegen for target optiflow_optimization"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=21,22,23,24,25,26,27,28,29,30,31,32,33 "Finished codegen for target optiflow_optimization"
 .PHONY : libs/optimization/CMakeFiles/optiflow_optimization.dir/codegen
 
 # clean rule for target.
@@ -203,7 +206,7 @@ libs/optimization/CMakeFiles/optiflow_optimization.dir/clean:
 apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/all: libs/optimization/CMakeFiles/optiflow_optimization.dir/all
 	$(MAKE) $(MAKESILENT) -f apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/build.make apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/depend
 	$(MAKE) $(MAKESILENT) -f apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/build.make apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=17,18 "Built target optiflow_cli"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=19,20 "Built target optiflow_cli"
 .PHONY : apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/all
 
 # Build rule for subdir invocation for target.
@@ -220,7 +223,7 @@ optiflow_cli: apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/rule
 # codegen rule for target.
 apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/build.make apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=17,18 "Finished codegen for target optiflow_cli"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=19,20 "Finished codegen for target optiflow_cli"
 .PHONY : apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/codegen
 
 # clean rule for target.
@@ -331,7 +334,7 @@ tests/CMakeFiles/ActionGridTests.dir/clean:
 tests/CMakeFiles/ValueFunctionTests.dir/all: libs/optimization/CMakeFiles/optiflow_optimization.dir/all
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/ValueFunctionTests.dir/build.make tests/CMakeFiles/ValueFunctionTests.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/ValueFunctionTests.dir/build.make tests/CMakeFiles/ValueFunctionTests.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=15,16 "Built target ValueFunctionTests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=17,18 "Built target ValueFunctionTests"
 .PHONY : tests/CMakeFiles/ValueFunctionTests.dir/all
 
 # Build rule for subdir invocation for target.
@@ -348,7 +351,7 @@ ValueFunctionTests: tests/CMakeFiles/ValueFunctionTests.dir/rule
 # codegen rule for target.
 tests/CMakeFiles/ValueFunctionTests.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/ValueFunctionTests.dir/build.make tests/CMakeFiles/ValueFunctionTests.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=15,16 "Finished codegen for target ValueFunctionTests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=17,18 "Finished codegen for target ValueFunctionTests"
 .PHONY : tests/CMakeFiles/ValueFunctionTests.dir/codegen
 
 # clean rule for target.
@@ -387,6 +390,38 @@ tests/CMakeFiles/InterpolatorTests.dir/codegen:
 tests/CMakeFiles/InterpolatorTests.dir/clean:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/InterpolatorTests.dir/build.make tests/CMakeFiles/InterpolatorTests.dir/clean
 .PHONY : tests/CMakeFiles/InterpolatorTests.dir/clean
+
+#=============================================================================
+# Target rules for target tests/CMakeFiles/TerminalPenaltyModelTests.dir
+
+# All Build rule for target.
+tests/CMakeFiles/TerminalPenaltyModelTests.dir/all: libs/optimization/CMakeFiles/optiflow_optimization.dir/all
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/depend
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=15,16 "Built target TerminalPenaltyModelTests"
+.PHONY : tests/CMakeFiles/TerminalPenaltyModelTests.dir/all
+
+# Build rule for subdir invocation for target.
+tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/lorenzo/work/optiflow/build/CMakeFiles 15
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/TerminalPenaltyModelTests.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/lorenzo/work/optiflow/build/CMakeFiles 0
+.PHONY : tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule
+
+# Convenience name for target.
+TerminalPenaltyModelTests: tests/CMakeFiles/TerminalPenaltyModelTests.dir/rule
+.PHONY : TerminalPenaltyModelTests
+
+# codegen rule for target.
+tests/CMakeFiles/TerminalPenaltyModelTests.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/lorenzo/work/optiflow/build/CMakeFiles --progress-num=15,16 "Finished codegen for target TerminalPenaltyModelTests"
+.PHONY : tests/CMakeFiles/TerminalPenaltyModelTests.dir/codegen
+
+# clean rule for target.
+tests/CMakeFiles/TerminalPenaltyModelTests.dir/clean:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/TerminalPenaltyModelTests.dir/build.make tests/CMakeFiles/TerminalPenaltyModelTests.dir/clean
+.PHONY : tests/CMakeFiles/TerminalPenaltyModelTests.dir/clean
 
 #=============================================================================
 # Target rules for target tests/CMakeFiles/PumpedStorageModelTests.dir

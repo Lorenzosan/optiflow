@@ -2,7 +2,7 @@ add_library(optiflow_optimization
     src/core/StorageTypes.cpp
     src/io/CsvReader.cpp
     src/model/PumpedStorageModel.cpp
-    src/model/TerminalValueModel.cpp
+    src/model/TerminalPenaltyModel.cpp
     src/numerics/ActionGrid.cpp
     src/numerics/Interpolator.cpp
     src/numerics/Policy.cpp
