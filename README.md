@@ -13,7 +13,9 @@ This starting point intentionally contains only the optimization library, a CSV-
 - Pumped-storage and battery transition model.
 - Deterministic Bellman dynamic-programming solver.
 - Bilinear interpolation of the continuation value.
-- Greedy forward simulation from the stored value function.
+- Terminal-state hard bounds and soft target penalties.
+- Value-function-based forward simulation.
+- Nearest-policy forward simulation for grid-aligned verification.
 - CSV dispatch output.
 - Doxygen comments on public interfaces.
 
@@ -62,6 +64,21 @@ key,value
 
 Every required key must be present. Missing keys cause the CLI to fail. This is intentional.
 
+Terminal-state behavior is controlled by explicit keys in the constraints file:
+
+```csv
+terminal_reservoir_min_volume,0
+terminal_reservoir_max_volume,200
+terminal_battery_min_soc,0
+terminal_battery_max_soc,50
+terminal_target_reservoir_volume,50
+terminal_target_battery_soc,0
+terminal_reservoir_target_penalty,0
+terminal_battery_target_penalty,0
+```
+
+The terminal min and max values are hard final-state bounds. The target values are soft preferences. The penalty coefficients multiply squared deviations from those targets. Set a penalty to zero when the corresponding soft target should not affect the objective.
+
 For a no-battery case, set:
 
 ```csv
@@ -73,12 +90,15 @@ battery_soc_grid_points,1
 battery_charge_steps,1
 battery_discharge_steps,1
 initial_battery_soc,0
+terminal_battery_min_soc,0
+terminal_battery_max_soc,0
+terminal_target_battery_soc,0
+terminal_battery_target_penalty,0
 ```
 
 ## Suggested next commits
 
-1. Add unit tests for all infeasible transition cases.
-2. Add JSON input after CSV is stable.
-3. Add gRPC optimizer service.
-4. Add persistence schema and API service.
-5. Add Docker Compose and frontend last.
+1. Add JSON input after CSV is stable.
+2. Add gRPC optimizer service.
+3. Add persistence schema and API service.
+4. Add Docker Compose and frontend last.

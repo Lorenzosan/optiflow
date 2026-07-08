@@ -19,11 +19,13 @@ void require_finite(double value, const char* name) {
 Scenario::Scenario(std::string name,
                    State initial_state,
                    std::vector<Exogenous> exogenous_series,
-                   ModelParameters model_parameters)
+                   ModelParameters model_parameters,
+                   TerminalParameters terminal_parameters)
     : name_(std::move(name)),
       initial_state_(initial_state),
       exogenous_series_(std::move(exogenous_series)),
-      model_parameters_(model_parameters) {
+      model_parameters_(model_parameters),
+      terminal_parameters_(terminal_parameters) {
     validate();
 }
 
@@ -43,6 +45,10 @@ const ModelParameters& Scenario::model_parameters() const {
     return model_parameters_;
 }
 
+const TerminalParameters& Scenario::terminal_parameters() const {
+    return terminal_parameters_;
+}
+
 std::size_t Scenario::horizon_size() const {
     return exogenous_series_.size();
 }
@@ -56,6 +62,7 @@ void Scenario::validate() const {
     }
 
     validate_model_parameters(model_parameters_);
+    validate_terminal_parameters(model_parameters_, terminal_parameters_);
 
     require_finite(initial_state_.reservoir_volume, "initial_reservoir_volume");
     require_finite(initial_state_.battery_soc, "initial_battery_soc");

@@ -177,6 +177,33 @@ struct ModelParameters {
                     double infeasibility_penalty);
 };
 
+
+/**
+ * @brief Terminal-state requirements and penalties.
+ */
+struct TerminalParameters {
+    double reservoir_min_volume; ///< Minimum allowed final reservoir volume.
+    double reservoir_max_volume; ///< Maximum allowed final reservoir volume.
+    double battery_min_soc; ///< Minimum allowed final battery state of charge.
+    double battery_max_soc; ///< Maximum allowed final battery state of charge.
+    double target_reservoir_volume; ///< Preferred final reservoir volume.
+    double target_battery_soc; ///< Preferred final battery state of charge.
+    double reservoir_target_penalty; ///< Penalty coefficient for squared reservoir target deviation.
+    double battery_target_penalty; ///< Penalty coefficient for squared battery target deviation.
+
+    /**
+     * @brief Construct terminal-state requirements and penalties.
+     */
+    TerminalParameters(double reservoir_min_volume,
+                       double reservoir_max_volume,
+                       double battery_min_soc,
+                       double battery_max_soc,
+                       double target_reservoir_volume,
+                       double target_battery_soc,
+                       double reservoir_target_penalty,
+                       double battery_target_penalty);
+};
+
 /**
  * @brief Numerical parameters used by grids and the Bellman solver.
  */
@@ -210,6 +237,16 @@ struct SolverParameters {
  * @throws std::invalid_argument if a value is inconsistent.
  */
 void validate_model_parameters(const ModelParameters& parameters);
+
+/**
+ * @brief Validate terminal-state requirements.
+ *
+ * @param model_parameters Physical and economic model parameters.
+ * @param terminal_parameters Terminal-state requirements and penalties.
+ * @throws std::invalid_argument if a value is inconsistent.
+ */
+void validate_terminal_parameters(const ModelParameters& model_parameters,
+                                  const TerminalParameters& terminal_parameters);
 
 /**
  * @brief Validate numerical solver parameters.

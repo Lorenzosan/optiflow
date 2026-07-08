@@ -2,6 +2,7 @@
 
 #include "optiflow/numerics/Interpolator.h"
 
+#include <cmath>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -19,7 +20,7 @@ ForwardSimulator::ForwardSimulator(numerics::StateGrid state_grid,
     core::validate_solver_parameters(solver_parameters_);
 }
 
-std::vector<core::DispatchStep> ForwardSimulator::simulate_greedy(
+std::vector<core::DispatchStep> ForwardSimulator::simulate_from_value_function(
     const core::Scenario& scenario,
     const numerics::ValueFunction& value_function) const {
     std::vector<core::DispatchStep> trajectory;
@@ -44,6 +45,9 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_greedy(
                                                                           state_grid_,
                                                                           time_index + 1,
                                                                           outcome.next_state);
+            if (!std::isfinite(continuation)) {
+                continue;
+            }
             const double candidate = outcome.reward + solver_parameters_.discount_factor * continuation;
             if (candidate > best_value) {
                 best_value = candidate;
