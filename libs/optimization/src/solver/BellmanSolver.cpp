@@ -11,26 +11,21 @@
 
 namespace optiflow {
 
-BellmanSolver::BellmanSolver(BellmanSolverConfig config) : config_(config) {
-    if (config_.volume_grid_points < 2) {
-        throw std::invalid_argument("volume grid must contain at least two points");
-    }
-}
+OptimizationResult BellmanSolver::solve(const DeterministicProblem& problem) const {
+    validate_problem(problem);
 
-OptimizationResult BellmanSolver::solve(const DeterministicSeries& series,
-                                         const ModelParameters& parameters) const {
-    if (series.empty()) {
-        throw std::invalid_argument("deterministic series must not be empty");
-    }
+    const auto parameters = to_model_parameters(problem);
+    const auto& series = problem.exogenous;
+    const auto& config = problem.solver;
 
     PumpedStorageModel model(parameters);
     const StateGrid state_grid(parameters.min_reservoir_volume_m3,
                                parameters.max_reservoir_volume_m3,
-                               config_.volume_grid_points);
+                               config.volume_grid_points);
     const ActionGrid action_grid(ActionGridConfig{parameters.max_turbine_flow_m3_s,
                                                   parameters.max_pump_flow_m3_s,
-                                                  config_.turbine_flow_steps,
-                                                  config_.pump_flow_steps});
+                                                  config.turbine_flow_steps,
+                                                  config.pump_flow_steps});
 
     ValueFunction value_function(series.size(), state_grid.size());
     Policy policy(series.size(), state_grid.size());
@@ -84,7 +79,7 @@ OptimizationResult BellmanSolver::solve(const DeterministicSeries& series,
                                                        0,
                                                        parameters.initial_reservoir_volume_m3);
 
-    return OptimizationResult{state_grid, value_function, policy, parameters, objective};
+    return OptimizationResult{state_grid, value_function, policy, problem, objective};
 }
 
 } // namespace optiflow

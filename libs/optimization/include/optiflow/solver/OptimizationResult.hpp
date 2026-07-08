@@ -1,9 +1,9 @@
 #pragma once
 
-#include <optiflow/core/StorageTypes.hpp>
 #include <optiflow/numerics/Policy.hpp>
 #include <optiflow/numerics/StateGrid.hpp>
 #include <optiflow/numerics/ValueFunction.hpp>
+#include <optiflow/solver/DeterministicProblem.hpp>
 
 namespace optiflow {
 
@@ -14,7 +14,7 @@ struct OptimizationResult {
     StateGrid state_grid;
     ValueFunction value_function;
     Policy policy;
-    ModelParameters parameters;
+    DeterministicProblem problem;
     double objective_value_eur{};
 };
 

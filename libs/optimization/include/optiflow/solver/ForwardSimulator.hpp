@@ -30,10 +30,9 @@ struct DispatchStep {
 class ForwardSimulator {
 public:
     /**
-     * @brief Simulate the policy from the model initial reservoir volume.
+     * @brief Simulate the policy from the problem initial reservoir volume.
      */
-    [[nodiscard]] static std::vector<DispatchStep> simulate(const OptimizationResult& result,
-                                                            const DeterministicSeries& series);
+    [[nodiscard]] static std::vector<DispatchStep> simulate(const OptimizationResult& result);
 };
 
 } // namespace optiflow

@@ -6,20 +6,21 @@
 
 namespace optiflow {
 
-std::vector<DispatchStep> ForwardSimulator::simulate(const OptimizationResult& result,
-                                                     const DeterministicSeries& series) {
+std::vector<DispatchStep> ForwardSimulator::simulate(const OptimizationResult& result) {
+    const auto& series = result.problem.exogenous;
     if (series.empty()) {
-        throw std::invalid_argument("deterministic series must not be empty");
+        throw std::invalid_argument("deterministic exogenous series must not be empty");
     }
     if (result.policy.time_count() != series.size()) {
-        throw std::invalid_argument("policy horizon does not match deterministic series");
+        throw std::invalid_argument("policy horizon does not match deterministic exogenous series");
     }
 
-    PumpedStorageModel model(result.parameters);
+    const auto parameters = to_model_parameters(result.problem);
+    PumpedStorageModel model(parameters);
     std::vector<DispatchStep> steps;
     steps.reserve(series.size());
 
-    ReservoirState state{result.parameters.initial_reservoir_volume_m3};
+    ReservoirState state{result.problem.reservoir.initial_volume_m3};
 
     for (std::size_t time_index = 0; time_index < series.size(); ++time_index) {
         const auto state_index = result.state_grid.nearest_index(state.reservoir_volume_m3);

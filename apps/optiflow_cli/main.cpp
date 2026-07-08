@@ -111,35 +111,38 @@ int main(int argc, char** argv) {
         const auto price_path = get_required_path(args, "--prices");
         const auto inflow_path = get_required_path(args, "--inflows");
 
-        optiflow::ModelParameters parameters;
-        parameters.initial_reservoir_volume_m3 =
+        optiflow::DeterministicProblem problem;
+        problem.exogenous = optiflow::read_deterministic_series(price_path, inflow_path);
+
+        problem.reservoir.initial_volume_m3 =
             get_double(args, "--initial-reservoir-volume", 500000.0);
-        parameters.min_reservoir_volume_m3 = get_double(args, "--min-reservoir-volume", 100000.0);
-        parameters.max_reservoir_volume_m3 = get_double(args, "--max-reservoir-volume", 1000000.0);
-        parameters.max_turbine_flow_m3_s = get_double(args, "--max-turbine-flow", 80.0);
-        parameters.max_pump_flow_m3_s = get_double(args, "--max-pump-flow", 60.0);
-        parameters.hydraulic_head_m = get_double(args, "--hydraulic-head", 300.0);
-        parameters.turbine_efficiency = get_double(args, "--turbine-efficiency", 0.90);
-        parameters.pump_efficiency = get_double(args, "--pump-efficiency", 0.85);
-        parameters.timestep_hours = get_double(args, "--timestep-hours", 1.0);
-        parameters.discount_factor = get_double(args, "--discount-factor", 1.0);
-        parameters.target_final_reservoir_volume_m3 =
-            get_double(args, "--target-final-reservoir-volume",
-                       parameters.initial_reservoir_volume_m3);
-        parameters.terminal_reservoir_penalty_eur_per_m3 =
-            get_double(args, "--terminal-reservoir-penalty", 0.10);
-        parameters.overflow_spill_penalty_eur_per_m3 =
+        problem.reservoir.min_volume_m3 = get_double(args, "--min-reservoir-volume", 100000.0);
+        problem.reservoir.max_volume_m3 = get_double(args, "--max-reservoir-volume", 1000000.0);
+        problem.reservoir.max_turbine_flow_m3_s = get_double(args, "--max-turbine-flow", 80.0);
+        problem.reservoir.max_pump_flow_m3_s = get_double(args, "--max-pump-flow", 60.0);
+
+        problem.hydro.hydraulic_head_m = get_double(args, "--hydraulic-head", 300.0);
+        problem.hydro.turbine_efficiency = get_double(args, "--turbine-efficiency", 0.90);
+        problem.hydro.pump_efficiency = get_double(args, "--pump-efficiency", 0.85);
+        problem.hydro.timestep_hours = get_double(args, "--timestep-hours", 1.0);
+
+        problem.economics.discount_factor = get_double(args, "--discount-factor", 1.0);
+        problem.economics.overflow_spill_penalty_eur_per_m3 =
             get_double(args, "--overflow-spill-penalty", 0.01);
 
-        optiflow::BellmanSolverConfig solver_config;
-        solver_config.volume_grid_points = get_size(args, "--volume-grid-points", 101);
-        solver_config.turbine_flow_steps = get_size(args, "--turbine-flow-steps", 8);
-        solver_config.pump_flow_steps = get_size(args, "--pump-flow-steps", 6);
+        problem.terminal_reservoir.target_volume_m3 =
+            get_double(args, "--target-final-reservoir-volume",
+                       problem.reservoir.initial_volume_m3);
+        problem.terminal_reservoir.penalty_eur_per_m3 =
+            get_double(args, "--terminal-reservoir-penalty", 0.10);
 
-        const auto series = optiflow::read_deterministic_series(price_path, inflow_path);
-        const optiflow::BellmanSolver solver(solver_config);
-        const auto result = solver.solve(series, parameters);
-        const auto dispatch = optiflow::ForwardSimulator::simulate(result, series);
+        problem.solver.volume_grid_points = get_size(args, "--volume-grid-points", 101);
+        problem.solver.turbine_flow_steps = get_size(args, "--turbine-flow-steps", 8);
+        problem.solver.pump_flow_steps = get_size(args, "--pump-flow-steps", 6);
+
+        const optiflow::BellmanSolver solver;
+        const auto result = solver.solve(problem);
+        const auto dispatch = optiflow::ForwardSimulator::simulate(result);
 
         double total_reward = 0.0;
         double total_turbine_mwh = 0.0;
@@ -147,18 +150,18 @@ int main(int argc, char** argv) {
         double total_spill_m3 = 0.0;
         for (const auto& step : dispatch) {
             total_reward += step.reward_eur;
-            total_turbine_mwh += step.turbine_power_mw * parameters.timestep_hours;
-            total_pump_mwh += step.pump_power_mw * parameters.timestep_hours;
+            total_turbine_mwh += step.turbine_power_mw * problem.hydro.timestep_hours;
+            total_pump_mwh += step.pump_power_mw * problem.hydro.timestep_hours;
             total_spill_m3 += step.overflow_spill_m3;
         }
 
         const double final_reservoir_m3 = dispatch.empty()
-                                             ? parameters.initial_reservoir_volume_m3
+                                             ? problem.reservoir.initial_volume_m3
                                              : dispatch.back().reservoir_end_m3;
         const double final_reservoir_deviation_m3 =
-            std::abs(final_reservoir_m3 - parameters.target_final_reservoir_volume_m3);
+            std::abs(final_reservoir_m3 - problem.terminal_reservoir.target_volume_m3);
         const double terminal_reservoir_penalty_eur =
-            final_reservoir_deviation_m3 * parameters.terminal_reservoir_penalty_eur_per_m3;
+            final_reservoir_deviation_m3 * problem.terminal_reservoir.penalty_eur_per_m3;
         const double forward_total_value_eur = total_reward - terminal_reservoir_penalty_eur;
 
         std::cout << std::fixed << std::setprecision(3);
@@ -168,7 +171,7 @@ int main(int argc, char** argv) {
         std::cout << "forward_total_value_eur," << forward_total_value_eur << "\n";
         std::cout << "final_reservoir_m3," << final_reservoir_m3 << "\n";
         std::cout << "target_final_reservoir_m3,"
-                  << parameters.target_final_reservoir_volume_m3 << "\n";
+                  << problem.terminal_reservoir.target_volume_m3 << "\n";
         std::cout << "final_reservoir_deviation_m3," << final_reservoir_deviation_m3 << "\n";
         std::cout << "total_turbine_mwh," << total_turbine_mwh << "\n";
         std::cout << "total_pump_mwh," << total_pump_mwh << "\n";

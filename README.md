@@ -44,6 +44,22 @@ The Bellman recursion is:
 V_t(s) = max_a [ r(s, a, x_t) + gamma V_{t+1}(f(s, a, x_t)) ]
 ```
 
+## Solver boundary
+
+The solver does not read files or parse CLI arguments. CSV and CLI code build a validated in-memory `DeterministicProblem`:
+
+```text
+DeterministicProblem =
+  exogenous price/inflow series
+  reservoir constraints
+  hydro physics
+  economic parameters
+  terminal reservoir target
+  solver discretization config
+```
+
+`BellmanSolver::solve()` accepts this problem object directly. This keeps the optimization core independent from CSV, JSON, HTTP, databases, and future frontend/API DTOs.
+
 ## CSV formats
 
 Price CSV:

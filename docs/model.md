@@ -2,6 +2,23 @@
 
 This restart models a single upper reservoir with deterministic price and inflow inputs.
 
+## Problem boundary
+
+The deterministic solver receives a `DeterministicProblem` object. Transport-specific code is outside the solver boundary. CSV readers, the CLI, and future API/database adapters are responsible for building this object before optimization.
+
+The problem is split into explicit components:
+
+```text
+exogenous:              price and natural inflow time series
+reservoir constraints:  hard physical limits and initial reservoir volume
+hydro physics:          head, efficiencies, and timestep
+economics:              discount factor and spill penalty
+terminal target:        final reservoir target and deviation penalty
+solver config:          grid and action discretization
+```
+
+This distinction keeps hard feasibility constraints separate from soft terminal-state objectives.
+
 ## State
 
 ```text

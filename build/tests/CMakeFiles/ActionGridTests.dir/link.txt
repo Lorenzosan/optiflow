@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/ActionGridTests.dir/unit/ActionGridTests.cpp.o -o ActionGridTests  ../libs/optimization/liboptiflow_optimization.a

@@ -8,6 +8,7 @@ add_library(optiflow_optimization
     src/numerics/Policy.cpp
     src/numerics/StateGrid.cpp
     src/numerics/ValueFunction.cpp
+    src/solver/DeterministicProblem.cpp
     src/solver/BellmanSolver.cpp
     src/solver/ForwardSimulator.cpp
     src/solver/OptimizationResult.cpp

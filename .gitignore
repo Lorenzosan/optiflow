@@ -1,0 +1,25 @@
+# CMake build outputs
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+
+# Compiled outputs
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Emacs intermediate save
+*~
+
+# Local tooling
+.cache/
+.clangd/
+compile_commands.json
