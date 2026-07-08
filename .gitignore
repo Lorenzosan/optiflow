@@ -1,2 +1,38 @@
-# Emacs autosave files
-*~
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+
+# Binaries and libraries
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Generated outputs
+dispatch.csv
+*.log
+
+# Doxygen generated docs
+docs/html/
+docs/latex/
+
+# macOS
+.DS_Store
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
