@@ -1,0 +1,15 @@
+.git
+build
+build*
+cmake-build-*
+out
+dist
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+.DS_Store
+.vscode
+.idea

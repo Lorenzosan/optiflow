@@ -1,0 +1,90 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "OPTIFLOW_BUILD_TESTS": "ON",
+        "OPTIFLOW_BUILD_CLI": "ON",
+        "OPTIFLOW_BUILD_DOCS": "OFF",
+        "OPTIFLOW_BUILD_SERVICES": "OFF"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "OPTIFLOW_BUILD_TESTS": "ON",
+        "OPTIFLOW_BUILD_CLI": "ON",
+        "OPTIFLOW_BUILD_DOCS": "OFF",
+        "OPTIFLOW_BUILD_SERVICES": "OFF"
+      }
+    },
+    {
+      "name": "services",
+      "displayName": "Services",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/services",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "OPTIFLOW_BUILD_TESTS": "ON",
+        "OPTIFLOW_BUILD_CLI": "ON",
+        "OPTIFLOW_BUILD_DOCS": "OFF",
+        "OPTIFLOW_BUILD_SERVICES": "ON"
+      }
+    },
+    {
+      "name": "docs",
+      "displayName": "Documentation",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/docs",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OPTIFLOW_BUILD_TESTS": "OFF",
+        "OPTIFLOW_BUILD_CLI": "OFF",
+        "OPTIFLOW_BUILD_DOCS": "ON",
+        "OPTIFLOW_BUILD_SERVICES": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "services",
+      "configurePreset": "services"
+    },
+    {
+      "name": "docs",
+      "configurePreset": "docs",
+      "targets": [
+        "optiflow_docs"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

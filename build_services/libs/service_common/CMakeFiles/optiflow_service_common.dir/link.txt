@@ -1,0 +1,2 @@
+/usr/bin/ar qc liboptiflow_service_common.a CMakeFiles/optiflow_service_common.dir/src/Http.cpp.o
+/usr/bin/ranlib liboptiflow_service_common.a

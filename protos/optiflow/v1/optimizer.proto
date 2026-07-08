@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package optiflow.v1;
+
+message State {
+  double reservoir_volume_m3 = 1;
+  double battery_soc_mwh = 2;
+}
+
+message Action {
+  double turbine_flow_m3_s = 1;
+  double spill_flow_m3_s = 2;
+  double pump_flow_m3_s = 3;
+  double battery_charge_mw = 4;
+  double battery_discharge_mw = 5;
+}
+
+message Exogenous {
+  double price_eur_per_mwh = 1;
+  double natural_inflow_m3_s = 2;
+}
+
+message HydroParameters {
+  double min_reservoir_volume_m3 = 1;
+  double max_reservoir_volume_m3 = 2;
+  double max_turbine_flow_m3_s = 3;
+  double max_pump_flow_m3_s = 4;
+  double max_spill_flow_m3_s = 5;
+  double hydraulic_head_m = 6;
+  double turbine_efficiency = 7;
+  double pump_efficiency = 8;
+  double turbine_cost_eur_per_mwh = 9;
+  double pump_cost_eur_per_mwh = 10;
+  double spill_penalty_eur_per_m3 = 11;
+}
+
+message BatteryParameters {
+  bool enabled = 1;
+  double capacity_mwh = 2;
+  double max_charge_mw = 3;
+  double max_discharge_mw = 4;
+  double charge_efficiency = 5;
+  double discharge_efficiency = 6;
+  double degradation_cost_eur_per_mwh = 7;
+}
+
+message ModelParameters {
+  HydroParameters hydro = 1;
+  BatteryParameters battery = 2;
+  double timestep_hours = 3;
+  double terminal_water_value_eur_per_m3 = 4;
+  double terminal_battery_value_eur_per_mwh = 5;
+}
+
+message OptimizeRequest {
+  string scenario_name = 1;
+  ModelParameters parameters = 2;
+  State initial_state = 3;
+  repeated Exogenous exogenous = 4;
+}
+
+message Outcome {
+  State next_state = 1;
+  double turbine_power_mw = 2;
+  double pump_power_mw = 3;
+  double battery_power_mw = 4;
+  double net_power_mw = 5;
+  double market_revenue_eur = 6;
+  double operating_cost_eur = 7;
+  double penalty_cost_eur = 8;
+  double reward_eur = 9;
+  bool feasible = 10;
+}
+
+message DispatchStep {
+  uint64 time_index = 1;
+  State state = 2;
+  Action action = 3;
+  Exogenous exogenous = 4;
+  Outcome outcome = 5;
+  double cumulative_profit_eur = 6;
+}
+
+message OptimizeResponse {
+  string status = 1;
+  double total_profit_eur = 2;
+  State final_state = 3;
+  repeated DispatchStep steps = 4;
+}
+
+service Optimizer {
+  rpc Optimize(OptimizeRequest) returns (OptimizeResponse);
+}
