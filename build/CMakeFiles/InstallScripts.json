@@ -1,0 +1,14 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/lorenzo/work/optiflow/build/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/libs/optimization/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/libs/demo/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/apps/optiflow_cli/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/libs/service_common/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/services/optimizer_service/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/services/api_service/cmake_install.cmake",
+		"/Users/lorenzo/work/optiflow/build/tests/optimization_scenarios/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

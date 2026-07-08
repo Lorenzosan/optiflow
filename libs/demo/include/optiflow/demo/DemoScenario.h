@@ -4,7 +4,6 @@
 #include "optiflow/numerics/ActionGrid.h"
 #include "optiflow/numerics/StateGrid.h"
 #include "optiflow/solver/ForwardSimulator.h"
-#include "optiflow/stochastic/StochasticTypes.h"
 
 #include <string>
 #include <vector>
@@ -16,18 +15,8 @@ namespace optiflow::demo {
 [[nodiscard]] auto make_default_state_grid() -> StateGrid;
 [[nodiscard]] auto make_default_action_grid() -> ActionGrid;
 [[nodiscard]] auto make_default_initial_state() -> State;
-[[nodiscard]] auto make_default_optimization_config() -> OptimizationConfig;
 
 [[nodiscard]] auto run_dispatch(const std::vector<Exogenous>& exogenous) -> SimulationResult;
-[[nodiscard]] auto run_dispatch(const std::vector<Exogenous>& exogenous,
-                                const ModelParameters& parameters,
-                                State initial_state,
-                                OptimizationConfig config) -> SimulationResult;
-[[nodiscard]] auto run_stochastic_dispatch(const StochasticExogenousProcess& process) -> SimulationResult;
-[[nodiscard]] auto run_stochastic_dispatch(const StochasticExogenousProcess& process,
-                                           const ModelParameters& parameters,
-                                           State initial_state,
-                                           OptimizationConfig config) -> SimulationResult;
 [[nodiscard]] auto run_default_dispatch() -> SimulationResult;
 
 [[nodiscard]] auto scenario_to_json(const std::vector<Exogenous>& exogenous,

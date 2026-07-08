@@ -4,7 +4,7 @@ The repository now contains a runnable local demo path. The remaining improvemen
 
 ## 1. JSON scenario mapping
 
-Current state: the optimizer service parses the lightweight local request JSON for solver selection and exogenous inputs. Deterministic requests map to `std::vector<Exogenous>`. Stochastic requests map to `StochasticExogenousProcess`.
+Current state: the optimizer service parses the lightweight local request JSON for deterministic exogenous inputs. Requests map to `std::vector<Exogenous>`.
 
 Remaining next step:
 
@@ -53,5 +53,4 @@ Next step:
 - Add greedy forward simulation using `V[t + 1]` rather than nearest-grid policy lookup.
 - Add ramp limits.
 - Add nonlinear efficiency curves.
-- Add stochastic Markov regimes.
 - Add performance benchmarks.

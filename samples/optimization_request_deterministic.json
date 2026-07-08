@@ -1,39 +1,4 @@
 {
-  "solver_kind": "deterministic",
-  "initial_state": {
-    "reservoir_volume_m3": 50000000.0,
-    "battery_soc_mwh": 25.0
-  },
-  "parameters": {
-    "timestep_hours": 1.0,
-    "terminal_water_value_eur_per_m3": 0.001,
-    "terminal_battery_value_eur_per_mwh": 5.0,
-    "hydro": {
-      "min_reservoir_volume_m3": 0.0,
-      "max_reservoir_volume_m3": 100000000.0,
-      "max_turbine_flow_m3_s": 150.0,
-      "max_pump_flow_m3_s": 75.0,
-      "max_spill_flow_m3_s": 260.0,
-      "hydraulic_head_m": 120.0,
-      "turbine_efficiency": 0.90,
-      "pump_efficiency": 0.85,
-      "turbine_cost_eur_per_mwh": 1.0,
-      "pump_cost_eur_per_mwh": 0.5,
-      "spill_penalty_eur_per_m3": 0.0
-    },
-    "battery": {
-      "enabled": true,
-      "capacity_mwh": 50.0,
-      "max_charge_mw": 25.0,
-      "max_discharge_mw": 25.0,
-      "charge_efficiency": 0.95,
-      "discharge_efficiency": 0.95,
-      "degradation_cost_eur_per_mwh": 1.0
-    }
-  },
-  "optimization_config": {
-    "discount_factor": 1.0
-  },
   "exogenous": [
     {"time_index": 0, "price_eur_per_mwh": 15.0, "natural_inflow_m3_s": 0.0},
     {"time_index": 1, "price_eur_per_mwh": -20.0, "natural_inflow_m3_s": 0.0},

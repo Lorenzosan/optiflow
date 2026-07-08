@@ -1,0 +1,98 @@
+[
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/numerics/ActionGrid.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/numerics/ActionGrid.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/numerics/ActionGrid.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/ActionGrid.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/numerics/Interpolator.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/numerics/Interpolator.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/numerics/Interpolator.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/Interpolator.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/numerics/Policy.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/numerics/Policy.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/numerics/Policy.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/Policy.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/numerics/StateGrid.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/numerics/StateGrid.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/numerics/StateGrid.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/StateGrid.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/numerics/ValueFunction.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/numerics/ValueFunction.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/numerics/ValueFunction.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/numerics/ValueFunction.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/model/PumpedStorageModel.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/model/PumpedStorageModel.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/model/PumpedStorageModel.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/solver/BellmanSolver.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/solver/BellmanSolver.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/solver/BellmanSolver.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/solver/BellmanSolver.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/optimization",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_optimization.dir/src/solver/ForwardSimulator.cpp.o -c /Users/lorenzo/work/optiflow/libs/optimization/src/solver/ForwardSimulator.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/optimization/src/solver/ForwardSimulator.cpp",
+  "output": "libs/optimization/CMakeFiles/optiflow_optimization.dir/src/solver/ForwardSimulator.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/demo",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_demo.dir/src/CsvScenarioLoader.cpp.o -c /Users/lorenzo/work/optiflow/libs/demo/src/CsvScenarioLoader.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/demo/src/CsvScenarioLoader.cpp",
+  "output": "libs/demo/CMakeFiles/optiflow_demo.dir/src/CsvScenarioLoader.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/demo",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_demo.dir/src/DemoScenario.cpp.o -c /Users/lorenzo/work/optiflow/libs/demo/src/DemoScenario.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/demo/src/DemoScenario.cpp",
+  "output": "libs/demo/CMakeFiles/optiflow_demo.dir/src/DemoScenario.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/demo",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_demo.dir/src/OptimizationRequest.cpp.o -c /Users/lorenzo/work/optiflow/libs/demo/src/OptimizationRequest.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/demo/src/OptimizationRequest.cpp",
+  "output": "libs/demo/CMakeFiles/optiflow_demo.dir/src/OptimizationRequest.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/apps/optiflow_cli",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -o CMakeFiles/optiflow_cli.dir/main.cpp.o -c /Users/lorenzo/work/optiflow/apps/optiflow_cli/main.cpp",
+  "file": "/Users/lorenzo/work/optiflow/apps/optiflow_cli/main.cpp",
+  "output": "apps/optiflow_cli/CMakeFiles/optiflow_cli.dir/main.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/libs/service_common",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/service_common/include -std=c++20 -arch arm64 -Wall -Wextra -Wpedantic -o CMakeFiles/optiflow_service_common.dir/src/Http.cpp.o -c /Users/lorenzo/work/optiflow/libs/service_common/src/Http.cpp",
+  "file": "/Users/lorenzo/work/optiflow/libs/service_common/src/Http.cpp",
+  "output": "libs/service_common/CMakeFiles/optiflow_service_common.dir/src/Http.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/services/optimizer_service",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -I/Users/lorenzo/work/optiflow/libs/service_common/include -std=c++20 -arch arm64 -o CMakeFiles/optiflow_optimizer_service.dir/src/main.cpp.o -c /Users/lorenzo/work/optiflow/services/optimizer_service/src/main.cpp",
+  "file": "/Users/lorenzo/work/optiflow/services/optimizer_service/src/main.cpp",
+  "output": "services/optimizer_service/CMakeFiles/optiflow_optimizer_service.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/services/api_service",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -I/Users/lorenzo/work/optiflow/libs/service_common/include -std=c++20 -arch arm64 -o CMakeFiles/optiflow_api_service.dir/src/main.cpp.o -c /Users/lorenzo/work/optiflow/services/api_service/src/main.cpp",
+  "file": "/Users/lorenzo/work/optiflow/services/api_service/src/main.cpp",
+  "output": "services/api_service/CMakeFiles/optiflow_api_service.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/lorenzo/work/optiflow/build/tests/optimization_scenarios",
+  "command": "/usr/bin/c++  -I/Users/lorenzo/work/optiflow/libs/demo/include -I/Users/lorenzo/work/optiflow/libs/optimization/include -std=c++20 -arch arm64 -o CMakeFiles/optiflow_scenario_tests.dir/main.cpp.o -c /Users/lorenzo/work/optiflow/tests/optimization_scenarios/main.cpp",
+  "file": "/Users/lorenzo/work/optiflow/tests/optimization_scenarios/main.cpp",
+  "output": "tests/optimization_scenarios/CMakeFiles/optiflow_scenario_tests.dir/main.cpp.o"
+}
+]
