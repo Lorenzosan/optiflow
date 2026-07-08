@@ -233,3 +233,41 @@ V_t(s) = max_a E_w [ r(s, a, w) + gamma V_{t+1}(f(s, a, w)) ]
 This is a demo model, not a production hydro-bidding system. Current simplifications include deterministic default inputs, fixed hydraulic head, simplified battery degradation, discrete state/action grids, no ramp constraints, no market gate closure, no reserve products, no stochastic forward simulation, and no runtime database persistence yet.
 
 Those limitations are explicit because they create a clean interview discussion path: first the numerical core, then service boundaries, then persistence, then stochastic and market-realism extensions.
+
+## Predictable constraint sensitivity tests
+
+When checking whether the optimizer is behaving soundly, do not start with the one-year synthetic stochastic scenario. Use a short deterministic horizon first and change one constraint at a time while keeping the CSV inputs and initial state fixed.
+
+A useful baseline is a 24-hour price path with low prices overnight, high prices in the evening, and low or zero inflow. With a battery enabled, the expected behavior is charging at low prices and discharging at high prices. With hydro enabled and enough stored water, the expected behavior is turbining during high-price hours. Pumping should mainly occur during low or negative-price hours. Spill should be zero unless the reservoir cannot store incoming water or spill penalties are too low.
+
+Recommended one-parameter checks:
+
+1. Set `max_turbine_flow_m3_s` to zero. Turbine generation should disappear and profit should fall or stay unchanged.
+2. Increase `max_turbine_flow_m3_s`. Turbine MWh and profit should usually rise until water or price opportunities become limiting.
+3. Set `max_pump_flow_m3_s` to zero. Pumping should disappear. Profit may fall if there are low-price refill opportunities.
+4. Set `max_spill_flow_m3_s` to zero with positive inflow. The run should remain feasible only if the reservoir has enough space or turbine/pump actions can absorb the water.
+5. Disable the battery. Battery charge/discharge should disappear and profit should not increase relative to the same case with a useful battery.
+6. Increase battery capacity while keeping charge/discharge power fixed. Profit should rise only when duration, not power, is limiting.
+7. Increase `max_charge_mw` and `max_discharge_mw` while keeping capacity fixed. Profit should rise only when power, not capacity, is limiting.
+8. Raise degradation or operating costs. The corresponding actions should become less frequent and profit should fall or stay unchanged.
+9. Increase terminal water value. The optimizer should retain more reservoir volume near the end of the horizon.
+10. Increase spill penalty. Spill should decrease if there is any feasible alternative.
+
+For each run, check physical balances before interpreting profit:
+
+```text
+reservoir_next ~= reservoir_current
+  + timestep_seconds * natural_inflow_m3_s
+  - timestep_seconds * turbine_flow_m3_s
+  - timestep_seconds * spill_flow_m3_s
+  + timestep_seconds * pump_flow_m3_s
+```
+
+and:
+
+```text
+market_revenue_eur ~= price_eur_per_mwh * net_power_mw * timestep_hours
+```
+
+The one-year deterministic files are useful for longer regression tests. The one-year stochastic files are intentionally large because they contain five joint realizations per hour. Through the browser they are converted into a large JSON request, so NGINX sets an explicit `client_max_body_size` limit. If a stochastic frontend run returns HTTP 413, the reverse proxy rejected the request before it reached the API service.
+
