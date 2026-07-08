@@ -4,15 +4,13 @@ The repository now contains a runnable local demo path. The remaining improvemen
 
 ## 1. JSON scenario mapping
 
-Current state: the API accepts a request body but the optimizer service runs the built-in sample scenario.
+Current state: the optimizer service parses the lightweight local request JSON for solver selection and exogenous inputs. Deterministic requests map to `std::vector<Exogenous>`. Stochastic requests map to `StochasticExogenousProcess`.
 
-Next step:
+Remaining next step:
 
-- Add request validation.
-- Map JSON input to `ModelParameters`, `State`, and `std::vector<Exogenous>`.
+- Map JSON input to `ModelParameters`, `State`, state-grid settings, action-grid settings, and `OptimizationConfig`.
 - Return validation errors for bad units, missing time points, negative capacities, and inconsistent horizons.
-
-Keep the mapper outside `libs/optimization`.
+- Keep the mapper outside `libs/optimization`.
 
 ## 2. PostgreSQL persistence
 

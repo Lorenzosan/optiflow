@@ -27,7 +27,6 @@ using RequestHandler = std::function<HttpResponse(const HttpRequest&)>;
 [[nodiscard]] auto make_text_response(std::string body, int status_code = 200) -> HttpResponse;
 [[nodiscard]] auto make_error_response(std::string message, int status_code) -> HttpResponse;
 
-void add_cors_headers(HttpResponse& response);
 void serve_forever(std::uint16_t port, const RequestHandler& handler);
 
 [[nodiscard]] auto http_post(std::string url, std::string body, std::string content_type) -> HttpResponse;

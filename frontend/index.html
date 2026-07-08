@@ -16,8 +16,34 @@
       </div>
       <div class="actions">
         <button id="loadScenarioButton">Load sample scenario</button>
+        <button id="loadCsvButton">Load CSV files</button>
         <button id="runOptimizationButton">Run optimization</button>
       </div>
+    </section>
+
+    <section class="panel input-panel">
+      <div>
+        <h2>Scenario input</h2>
+        <p class="hint">Use separate price and inflow files. Deterministic files use one row per time step. Stochastic files use one row per time step and realization.</p>
+      </div>
+      <div class="input-grid">
+        <label>
+          Solver
+          <select id="solverSelect">
+            <option value="deterministic">Deterministic</option>
+            <option value="stochastic">Stochastic</option>
+          </select>
+        </label>
+        <label>
+          Price CSV
+          <input id="priceCsvInput" type="file" accept=".csv,text/csv">
+        </label>
+        <label>
+          Inflow CSV
+          <input id="inflowCsvInput" type="file" accept=".csv,text/csv">
+        </label>
+      </div>
+      <p class="hint" id="scenarioSummary">No CSV scenario loaded.</p>
     </section>
 
     <section class="cards">
@@ -37,11 +63,19 @@
         <span class="label">Final battery SOC</span>
         <strong id="batteryText">-</strong>
       </article>
+      <article>
+        <span class="label">Next signal</span>
+        <strong id="nextSignalText">-</strong>
+      </article>
+      <article>
+        <span class="label">Net exposure</span>
+        <strong id="netExposureText">-</strong>
+      </article>
     </section>
 
     <section class="grid">
       <article class="panel">
-        <h2>Price</h2>
+        <h2>Price and inflow inputs</h2>
         <canvas id="priceChart" width="700" height="260"></canvas>
       </article>
       <article class="panel">
@@ -59,6 +93,27 @@
     </section>
 
     <section class="panel">
+      <h2>Trader view</h2>
+      <p class="hint">Net MWh is the pathwise price exposure. Positive means export/sell power; negative means consume/buy power. For stochastic runs this demo plots the expected exogenous path.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>signal</th>
+              <th>price</th>
+              <th>net MW</th>
+              <th>net MWh</th>
+              <th>reward</th>
+              <th>cum. profit</th>
+            </tr>
+          </thead>
+          <tbody id="traderTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
       <h2>Dispatch table</h2>
       <div class="table-wrap">
         <table>
@@ -66,10 +121,13 @@
             <tr>
               <th>t</th>
               <th>price</th>
+              <th>inflow</th>
               <th>reservoir</th>
               <th>SOC</th>
               <th>turbine</th>
               <th>pump</th>
+              <th>charge</th>
+              <th>discharge</th>
               <th>net MW</th>
               <th>reward</th>
               <th>cum. profit</th>

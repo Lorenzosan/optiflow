@@ -33,7 +33,7 @@ Then test:
 
 ```bash
 curl http://127.0.0.1:8080/api/scenarios/sample
-curl -X POST http://127.0.0.1:8080/api/optimizations -H 'Content-Type: application/json' -d '{}'
+curl -X POST http://127.0.0.1:8080/api/optimizations -H 'Content-Type: application/json' -d @samples/optimization_request_deterministic.json
 ```
 
 ## Docker Compose

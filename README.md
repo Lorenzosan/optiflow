@@ -67,7 +67,7 @@ Then:
 
 ```bash
 curl http://127.0.0.1:8080/api/scenarios/sample
-curl -X POST http://127.0.0.1:8080/api/optimizations -H 'Content-Type: application/json' -d '{}'
+curl -X POST http://127.0.0.1:8080/api/optimizations -H 'Content-Type: application/json' -d @samples/optimization_request_deterministic.json
 ```
 
 ## Run the local full-stack demo
@@ -106,7 +106,7 @@ browser -> nginx -> api service -> optimizer service -> optimization library
 
 The optimizer service currently uses lightweight HTTP on port `50051`. The protobuf contract is included under `protos/` as the intended migration path to real gRPC once `grpc++` and `protobuf` are added to the build environment.
 
-PostgreSQL is included in Docker Compose and the schema is applied automatically, but the API service currently keeps the latest optimization result in memory. Runtime PostgreSQL persistence is intentionally isolated as the next backend increment so that it does not pollute the numerical library.
+The lightweight optimizer request path accepts deterministic and stochastic exogenous data in JSON and selects the corresponding solver. PostgreSQL is included in Docker Compose and the schema is applied automatically, but the API service currently keeps the latest optimization result in memory. Runtime PostgreSQL persistence is intentionally isolated as the next backend increment so that it does not pollute the numerical library.
 
 ## Mathematical model
 

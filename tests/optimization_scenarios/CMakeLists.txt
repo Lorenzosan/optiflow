@@ -4,7 +4,7 @@ add_executable(optiflow_scenario_tests
 
 target_link_libraries(optiflow_scenario_tests
   PRIVATE
-    optiflow::optimization
+    optiflow::demo
 )
 
 add_test(NAME optiflow_scenario_tests COMMAND optiflow_scenario_tests)

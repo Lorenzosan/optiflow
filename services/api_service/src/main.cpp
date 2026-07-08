@@ -12,10 +12,6 @@ namespace {
 std::string latest_result_json;
 
 [[nodiscard]] auto handle_request(const optiflow::service::HttpRequest& request) -> optiflow::service::HttpResponse {
-  if (request.method == "OPTIONS") {
-    return optiflow::service::make_text_response({}, 204);
-  }
-
   if (request.method == "GET" && (request.path == "/health" || request.path == "/api/health")) {
     return optiflow::service::make_json_response("{\"service\":\"api\",\"status\":\"ok\"}");
   }

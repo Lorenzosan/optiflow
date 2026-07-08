@@ -279,12 +279,6 @@ void send_all(const int socket_fd, const std::string& payload) {
   return make_json_response(stream.str(), status_code);
 }
 
-void add_cors_headers(HttpResponse& response) {
-  response.headers["Access-Control-Allow-Origin"] = "*";
-  response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
-  response.headers["Access-Control-Allow-Headers"] = "Content-Type";
-}
-
 void serve_forever(const std::uint16_t port, const RequestHandler& handler) {
   const auto server_fd = ::socket(AF_INET6, SOCK_STREAM, 0);
   if (server_fd < 0) {
@@ -323,12 +317,10 @@ void serve_forever(const std::uint16_t port, const RequestHandler& handler) {
     try {
       const auto raw_request = read_http_message(client_fd);
       const auto request = parse_request(raw_request);
-      auto response = handler(request);
-      add_cors_headers(response);
+      const auto response = handler(request);
       send_all(client_fd, serialize_response(response));
     } catch (const std::exception& error) {
-      auto response = make_error_response(error.what(), 500);
-      add_cors_headers(response);
+      const auto response = make_error_response(error.what(), 500);
       send_all(client_fd, serialize_response(response));
     }
 
