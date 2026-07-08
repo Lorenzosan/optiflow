@@ -1,4 +1,5 @@
 #include "optiflow/demo/DemoScenario.h"
+#include "optiflow/demo/OptimizationRequest.h"
 #include "optiflow/service/Http.h"
 
 #include <cstdlib>
@@ -17,8 +18,15 @@ namespace {
   }
 
   if (request.method == "POST" && request.path == "/v1/optimize") {
-    const auto result = optiflow::demo::run_default_dispatch();
-    return optiflow::service::make_json_response(optiflow::demo::simulation_to_json(result));
+    try {
+      const auto optimization_request = optiflow::demo::parse_optimization_request_json(request.body);
+      const auto result = optimization_request.solver_kind == optiflow::demo::RequestSolverKind::Stochastic
+          ? optiflow::demo::run_stochastic_dispatch(optimization_request.stochastic_process)
+          : optiflow::demo::run_dispatch(optimization_request.exogenous);
+      return optiflow::service::make_json_response(optiflow::demo::simulation_to_json(result));
+    } catch (const std::invalid_argument& error) {
+      return optiflow::service::make_error_response(error.what(), 400);
+    }
   }
 
   return optiflow::service::make_error_response("route not found", 404);

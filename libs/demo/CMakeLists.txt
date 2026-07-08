@@ -1,6 +1,7 @@
 add_library(optiflow_demo STATIC
   src/CsvScenarioLoader.cpp
   src/DemoScenario.cpp
+  src/OptimizationRequest.cpp
 )
 
 add_library(optiflow::demo ALIAS optiflow_demo)

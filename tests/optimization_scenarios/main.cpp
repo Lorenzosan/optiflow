@@ -1,6 +1,7 @@
 #include "optiflow/core/StorageTypes.h"
 #include "optiflow/demo/CsvScenarioLoader.h"
 #include "optiflow/demo/DemoScenario.h"
+#include "optiflow/demo/OptimizationRequest.h"
 #include "optiflow/model/PumpedStorageModel.h"
 #include "optiflow/numerics/ActionGrid.h"
 #include "optiflow/numerics/StateGrid.h"
@@ -308,6 +309,66 @@ void test_demo_stochastic_dispatch_uses_expected_path() {
           "demo stochastic dispatch must forward-simulate with the expected inflow path");
 }
 
+void test_parse_deterministic_optimization_request_json() {
+  const auto request = optiflow::demo::parse_optimization_request_json(R"json({
+    "solver_kind": "deterministic",
+    "exogenous": [
+      {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0},
+      {"time_index": 1, "price_eur_per_mwh": -10.0, "natural_inflow_m3_s": 2.5}
+    ]
+  })json");
+
+  require(request.solver_kind == optiflow::demo::RequestSolverKind::Deterministic,
+          "request parser must read deterministic solver kind");
+  require(request.exogenous.size() == 2U, "request parser must read deterministic exogenous inputs");
+  require(near(request.exogenous[0].price_eur_per_mwh, 20.0), "request parser must read deterministic prices");
+  require(near(request.exogenous[1].natural_inflow_m3_s, 2.5), "request parser must read deterministic inflows");
+}
+
+void test_parse_stochastic_optimization_request_json() {
+  const auto request = optiflow::demo::parse_optimization_request_json(R"json({
+    "solver_kind": "stochastic",
+    "stochastic_process": [
+      {"time_index": 0, "realizations": [
+        {"realization_index": 0, "probability": 0.25, "price_eur_per_mwh": 10.0, "natural_inflow_m3_s": 0.0},
+        {"realization_index": 1, "probability": 0.75, "price_eur_per_mwh": 90.0, "natural_inflow_m3_s": 4.0}
+      ]}
+    ]
+  })json");
+
+  require(request.solver_kind == optiflow::demo::RequestSolverKind::Stochastic,
+          "request parser must read stochastic solver kind");
+  require(request.stochastic_process.size() == 1U, "request parser must read stochastic stages");
+  require(request.stochastic_process[0].size() == 2U, "request parser must read stochastic realizations");
+  require(near(request.stochastic_process[0][1].probability, 0.75), "request parser must read probabilities");
+  require(near(request.stochastic_process[0][1].value.price_eur_per_mwh, 90.0), "request parser must read stochastic prices");
+  require(near(request.stochastic_process[0][1].value.natural_inflow_m3_s, 4.0), "request parser must read stochastic inflows");
+}
+
+void test_parse_empty_optimization_request_uses_default_scenario() {
+  const auto request = optiflow::demo::parse_optimization_request_json("{}");
+
+  require(request.solver_kind == optiflow::demo::RequestSolverKind::Deterministic,
+          "empty request parser must default to deterministic mode");
+  require(!request.exogenous.empty(), "empty request parser must use the default deterministic scenario");
+}
+
+void test_parse_invalid_optimization_request_rejects_bad_time_index() {
+  auto failed = false;
+  try {
+    static_cast<void>(optiflow::demo::parse_optimization_request_json(R"json({
+      "solver_kind": "deterministic",
+      "exogenous": [
+        {"time_index": 1, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
+      ]
+    })json"));
+  } catch (const std::invalid_argument&) {
+    failed = true;
+  }
+
+  require(failed, "request parser must reject non-contiguous deterministic time indices");
+}
+
 void test_longer_horizon_stress() {
   std::vector<optiflow::Exogenous> exogenous;
   exogenous.reserve(48U);
@@ -340,6 +401,10 @@ int main() {
     test_separated_stochastic_csv_loader();
     test_stochastic_solver_probability_validation_and_policy();
     test_demo_stochastic_dispatch_uses_expected_path();
+    test_parse_deterministic_optimization_request_json();
+    test_parse_stochastic_optimization_request_json();
+    test_parse_empty_optimization_request_uses_default_scenario();
+    test_parse_invalid_optimization_request_rejects_bad_time_index();
     test_longer_horizon_stress();
   } catch (const std::exception& error) {
     std::cerr << "test failure: " << error.what() << '\n';

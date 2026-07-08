@@ -1,4 +1,5 @@
 #include "optiflow/demo/DemoScenario.h"
+#include "optiflow/demo/OptimizationRequest.h"
 #include "optiflow/service/Http.h"
 
 #include <cstdlib>
@@ -42,9 +43,16 @@ std::string latest_result_json;
         return optiflow::service::make_error_response(std::string{"optimizer unavailable: "} + error.what(), 502);
       }
 
-      const auto result = optiflow::demo::run_default_dispatch();
-      latest_result_json = optiflow::demo::simulation_to_json(result);
-      return optiflow::service::make_json_response(latest_result_json);
+      try {
+        const auto optimization_request = optiflow::demo::parse_optimization_request_json(request.body);
+        const auto result = optimization_request.solver_kind == optiflow::demo::RequestSolverKind::Stochastic
+            ? optiflow::demo::run_stochastic_dispatch(optimization_request.stochastic_process)
+            : optiflow::demo::run_dispatch(optimization_request.exogenous);
+        latest_result_json = optiflow::demo::simulation_to_json(result);
+        return optiflow::service::make_json_response(latest_result_json);
+      } catch (const std::invalid_argument& validation_error) {
+        return optiflow::service::make_error_response(validation_error.what(), 400);
+      }
     }
   }
 

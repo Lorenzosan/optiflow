@@ -116,6 +116,10 @@ namespace {
   stream << "Content-Length: " << response.body.size() << "\r\n";
   stream << "Connection: close\r\n";
   for (const auto& [name, value] : response.headers) {
+    const auto normalized_name = lower_copy(name);
+    if (normalized_name == "content-type" || normalized_name == "content-length" || normalized_name == "connection") {
+      continue;
+    }
     stream << name << ": " << value << "\r\n";
   }
   stream << "\r\n" << response.body;
@@ -239,7 +243,7 @@ struct ParsedUrl final {
     const auto value = trim(line.substr(separator + 1U));
     if (name == "content-type") {
       response.content_type = value;
-    } else {
+    } else if (name != "content-length" && name != "connection") {
       response.headers.emplace(name, value);
     }
   }
