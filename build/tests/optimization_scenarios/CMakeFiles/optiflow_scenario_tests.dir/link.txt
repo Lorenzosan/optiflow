@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/optiflow_scenario_tests.dir/main.cpp.o -o optiflow_scenario_tests  ../../libs/demo/liboptiflow_demo.a ../../libs/optimization/liboptiflow_optimization.a

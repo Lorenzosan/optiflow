@@ -1,2 +1,0 @@
-/usr/bin/ar qc liboptiflow_demo.a CMakeFiles/optiflow_demo.dir/src/CsvScenarioLoader.cpp.o CMakeFiles/optiflow_demo.dir/src/DemoScenario.cpp.o CMakeFiles/optiflow_demo.dir/src/OptimizationRequest.cpp.o
-/usr/bin/ranlib liboptiflow_demo.a
