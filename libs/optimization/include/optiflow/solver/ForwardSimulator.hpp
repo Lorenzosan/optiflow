@@ -8,7 +8,7 @@
 namespace optiflow {
 
 /**
- * @brief One simulated dispatch step from a solved deterministic policy.
+ * @brief One simulated dispatch step from a solved deterministic problem.
  */
 struct DispatchStep {
     std::size_t time_index{};
@@ -25,12 +25,16 @@ struct DispatchStep {
 };
 
 /**
- * @brief Forward simulation of a solved deterministic policy.
+ * @brief Forward rollout using the solved Bellman value functions.
+ *
+ * The simulator re-evaluates the Bellman action criterion at the actual
+ * reservoir volume reached during the rollout. This avoids replaying a
+ * nearest-grid policy when the physical state is between grid points.
  */
 class ForwardSimulator {
 public:
     /**
-     * @brief Simulate the policy from the problem initial reservoir volume.
+     * @brief Simulate the solved problem from the initial reservoir volume.
      */
     [[nodiscard]] static std::vector<DispatchStep> simulate(const OptimizationResult& result);
 };

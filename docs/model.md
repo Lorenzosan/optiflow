@@ -37,6 +37,19 @@ pump(q)
 
 The model does not expose spill as an independent control yet. Overflow spill is derived when the raw next reservoir volume exceeds the maximum reservoir volume.
 
+
+## State grid
+
+The solver starts from a uniform reservoir grid and then inserts anchor points. The current deterministic implementation anchors at least:
+
+```text
+initial reservoir volume
+target final reservoir volume
+reservoir volumes reachable from the initial state under the configured action grid
+```
+
+These anchors reduce interpolation artifacts at important physical states. They also keep the Bellman objective and the forward rollout consistent for deterministic runs from the configured initial condition.
+
 ## Transition
 
 ```text

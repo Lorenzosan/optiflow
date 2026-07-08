@@ -6,7 +6,7 @@
 namespace optiflow {
 
 /**
- * @brief Uniform grid for reservoir volume states.
+ * @brief Ordered grid for reservoir volume states.
  */
 class StateGrid {
 public:
@@ -16,6 +16,19 @@ public:
      * @throws std::invalid_argument if the bounds or number of points are invalid.
      */
     StateGrid(double min_value, double max_value, std::size_t num_points);
+
+    /**
+     * @brief Construct a grid with additional anchor points.
+     *
+     * The grid starts from a uniform discretization and then inserts important
+     * reservoir volumes, such as the initial and target final volumes. This
+     * keeps the value function exact at economically important states while
+     * preserving a regular base resolution.
+     *
+     * @throws std::invalid_argument if the bounds, number of points, or anchors are invalid.
+     */
+    StateGrid(double min_value, double max_value, std::size_t num_points,
+              const std::vector<double>& anchors);
 
     /**
      * @brief Return all grid values in ascending order.

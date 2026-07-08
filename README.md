@@ -9,8 +9,9 @@ This restart intentionally focuses on the deterministic model core. It does not 
 - Read deterministic price and inflow CSV files.
 - Validate physical and numerical model constraints.
 - Build a reservoir state grid and a hydro action grid.
+- Add reachable-state and terminal-target anchors to the reservoir grid.
 - Solve a deterministic Bellman recursion with a final-reservoir target penalty.
-- Simulate the selected policy forward from the initial reservoir volume.
+- Simulate a forward rollout from the initial reservoir volume using the solved Bellman value functions.
 - Provide Doxygen-ready public headers.
 - Provide unit tests for CSV loading, model validation, numerics, Bellman recursion, and forward simulation.
 
@@ -59,6 +60,8 @@ DeterministicProblem =
 ```
 
 `BellmanSolver::solve()` accepts this problem object directly. This keeps the optimization core independent from CSV, JSON, HTTP, databases, and future frontend/API DTOs.
+
+The state grid starts from the requested uniform resolution and then inserts important physical states, including the initial reservoir volume, target final reservoir volume, and reservoir volumes reachable from the initial condition under the configured action grid. This keeps the reported Bellman objective consistent with the forward rollout for the deterministic CLI case.
 
 ## CSV formats
 

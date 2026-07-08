@@ -163,12 +163,20 @@ int main(int argc, char** argv) {
         const double terminal_reservoir_penalty_eur =
             final_reservoir_deviation_m3 * problem.terminal_reservoir.penalty_eur_per_m3;
         const double forward_total_value_eur = total_reward - terminal_reservoir_penalty_eur;
+        const double value_realization_gap_eur = result.objective_value_eur - forward_total_value_eur;
+        const double value_realization_gap_pct =
+            result.objective_value_eur == 0.0
+                ? 0.0
+                : 100.0 * value_realization_gap_eur / std::abs(result.objective_value_eur);
 
         std::cout << std::fixed << std::setprecision(3);
         std::cout << "objective_value_eur," << result.objective_value_eur << "\n";
         std::cout << "forward_reward_eur," << total_reward << "\n";
         std::cout << "terminal_reservoir_penalty_eur," << terminal_reservoir_penalty_eur << "\n";
         std::cout << "forward_total_value_eur," << forward_total_value_eur << "\n";
+        std::cout << "value_realization_gap_eur," << value_realization_gap_eur << "\n";
+        std::cout << "value_realization_gap_pct," << value_realization_gap_pct << "\n";
+        std::cout << "state_grid_points," << result.state_grid.size() << "\n";
         std::cout << "final_reservoir_m3," << final_reservoir_m3 << "\n";
         std::cout << "target_final_reservoir_m3,"
                   << problem.terminal_reservoir.target_volume_m3 << "\n";

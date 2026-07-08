@@ -1,15 +1,60 @@
 #include <optiflow/solver/BellmanSolver.hpp>
 
+#include <algorithm>
 #include <cmath>
-#include <limits>
-#include <stdexcept>
+#include <vector>
 
 #include <optiflow/model/PumpedStorageModel.hpp>
 #include <optiflow/model/TerminalPenaltyModel.hpp>
 #include <optiflow/numerics/ActionGrid.hpp>
 #include <optiflow/numerics/Interpolator.hpp>
+#include <optiflow/solver/BellmanEvaluator.hpp>
 
 namespace optiflow {
+namespace {
+
+constexpr double anchor_tolerance = 1.0e-9;
+
+void sort_and_deduplicate(std::vector<double>& values) {
+    std::sort(values.begin(), values.end());
+    values.erase(std::unique(values.begin(), values.end(), [](double lhs, double rhs) {
+                     return std::abs(lhs - rhs) <= anchor_tolerance;
+                 }),
+                 values.end());
+}
+
+std::vector<double> make_reachable_state_anchors(const PumpedStorageModel& model,
+                                                 const ActionGrid& action_grid,
+                                                 const DeterministicSeries& series,
+                                                 double initial_reservoir_volume_m3) {
+    std::vector<double> anchors{initial_reservoir_volume_m3};
+    std::vector<double> current_states{initial_reservoir_volume_m3};
+
+    for (const auto& exogenous : series.points) {
+        std::vector<double> next_states;
+        next_states.reserve(current_states.size() * action_grid.size());
+
+        for (const double reservoir_volume_m3 : current_states) {
+            const ReservoirState state{reservoir_volume_m3};
+            for (const auto& action : action_grid.actions()) {
+                const auto transition = model.transition(state, action, exogenous);
+                if (!transition.feasible) {
+                    continue;
+                }
+                next_states.push_back(transition.next_reservoir_volume_m3);
+            }
+        }
+
+        sort_and_deduplicate(next_states);
+        anchors.insert(anchors.end(), next_states.begin(), next_states.end());
+        current_states = std::move(next_states);
+    }
+
+    sort_and_deduplicate(anchors);
+    return anchors;
+}
+
+} // namespace
 
 OptimizationResult BellmanSolver::solve(const DeterministicProblem& problem) const {
     validate_problem(problem);
@@ -19,13 +64,22 @@ OptimizationResult BellmanSolver::solve(const DeterministicProblem& problem) con
     const auto& config = problem.solver;
 
     PumpedStorageModel model(parameters);
-    const StateGrid state_grid(parameters.min_reservoir_volume_m3,
-                               parameters.max_reservoir_volume_m3,
-                               config.volume_grid_points);
     const ActionGrid action_grid(ActionGridConfig{parameters.max_turbine_flow_m3_s,
                                                   parameters.max_pump_flow_m3_s,
                                                   config.turbine_flow_steps,
                                                   config.pump_flow_steps});
+
+    auto state_anchors = make_reachable_state_anchors(model,
+                                                       action_grid,
+                                                       series,
+                                                       parameters.initial_reservoir_volume_m3);
+    state_anchors.push_back(parameters.initial_reservoir_volume_m3);
+    state_anchors.push_back(parameters.target_final_reservoir_volume_m3);
+
+    const StateGrid state_grid(parameters.min_reservoir_volume_m3,
+                               parameters.max_reservoir_volume_m3,
+                               config.volume_grid_points,
+                               state_anchors);
 
     ValueFunction value_function(series.size(), state_grid.size());
     Policy policy(series.size(), state_grid.size());
@@ -42,35 +96,16 @@ OptimizationResult BellmanSolver::solve(const DeterministicProblem& problem) con
         const auto& exogenous = series.points.at(time_index);
 
         for (std::size_t state_index = 0; state_index < state_grid.size(); ++state_index) {
-            const ReservoirState state{state_grid.at(state_index)};
-            double best_value = -std::numeric_limits<double>::infinity();
-            HydroAction best_action{};
-
-            for (const auto& action : action_grid.actions()) {
-                const auto transition = model.transition(state, action, exogenous);
-                if (!transition.feasible) {
-                    continue;
-                }
-
-                const double continuation = Interpolator::interpolate(state_grid,
-                                                                       value_function,
-                                                                       time_index + 1,
-                                                                       transition.next_reservoir_volume_m3);
-                const double candidate_value = transition.reward_eur +
-                                               parameters.discount_factor * continuation;
-
-                if (candidate_value > best_value) {
-                    best_value = candidate_value;
-                    best_action = action;
-                }
-            }
-
-            if (!std::isfinite(best_value)) {
-                throw std::runtime_error("no feasible action found during Bellman recursion");
-            }
-
-            value_function.set(time_index, state_index, best_value);
-            policy.set(time_index, state_index, best_action);
+            const auto decision = BellmanEvaluator::select_action(model,
+                                                                  state_grid,
+                                                                  value_function,
+                                                                  action_grid,
+                                                                  time_index,
+                                                                  state_grid.at(state_index),
+                                                                  exogenous,
+                                                                  parameters.discount_factor);
+            value_function.set(time_index, state_index, decision.total_value_eur);
+            policy.set(time_index, state_index, decision.action);
         }
     }
 
