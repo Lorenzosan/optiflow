@@ -12,6 +12,8 @@ namespace optiflow::demo {
 namespace {
 
 constexpr double grid_flow_m3_s = 69.4444444444;
+constexpr double default_reservoir_max_m3 = 1.6e9;
+constexpr double default_flow_max_m3_s = 200.0;
 
 void append_state_json(std::ostringstream& stream, const State& state) {
   stream << "{\"reservoir_volume_m3\":" << state.reservoir_volume_m3
@@ -53,13 +55,13 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
   return ModelParameters{
       .hydro = HydroParameters{
           .min_reservoir_volume_m3 = 0.0,
-          .max_reservoir_volume_m3 = 0.0,
-          .max_turbine_flow_m3_s = 0.0,
-          .max_pump_flow_m3_s = 0.0,
-          .max_spill_flow_m3_s = 0.0,
-          .hydraulic_head_m = 1.0,
-          .turbine_efficiency = 1.0,
-          .pump_efficiency = 1.0,
+          .max_reservoir_volume_m3 = default_reservoir_max_m3,
+          .max_turbine_flow_m3_s = default_flow_max_m3_s,
+          .max_pump_flow_m3_s = default_flow_max_m3_s,
+          .max_spill_flow_m3_s = default_flow_max_m3_s,
+          .hydraulic_head_m = 300.0,
+          .turbine_efficiency = 0.90,
+          .pump_efficiency = 0.85,
           .turbine_cost_eur_per_mwh = 0.0,
           .pump_cost_eur_per_mwh = 0.0,
           .spill_penalty_eur_per_m3 = 0.0,
@@ -97,16 +99,16 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
 
 [[nodiscard]] auto make_default_state_grid() -> StateGrid {
   return StateGrid{
-      std::vector<double>{0.0},
+      std::vector<double>{0.0, default_reservoir_max_m3 * 0.5, default_reservoir_max_m3},
       std::vector<double>{0.0, 1.0},
   };
 }
 
 [[nodiscard]] auto make_default_action_grid() -> ActionGrid {
   return ActionGrid::from_axes(ActionAxes{
-      .turbine_flow_m3_s = {0.0},
-      .spill_flow_m3_s = {0.0},
-      .pump_flow_m3_s = {0.0},
+      .turbine_flow_m3_s = {0.0, grid_flow_m3_s, 2.0 * grid_flow_m3_s},
+      .spill_flow_m3_s = {0.0, grid_flow_m3_s, 2.0 * grid_flow_m3_s, default_flow_max_m3_s},
+      .pump_flow_m3_s = {0.0, grid_flow_m3_s, 2.0 * grid_flow_m3_s},
       .battery_charge_mw = {0.0, 1.0},
       .battery_discharge_mw = {0.0, 1.0},
   });

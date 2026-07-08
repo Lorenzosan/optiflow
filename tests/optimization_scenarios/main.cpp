@@ -192,6 +192,23 @@ void test_hydro_only_mode() {
 
 
 
+
+void test_default_dispatch_accepts_positive_inflows() {
+  std::vector<optiflow::Exogenous> exogenous;
+  exogenous.reserve(24U);
+  for (std::size_t hour = 0U; hour < 24U; ++hour) {
+    exogenous.push_back(optiflow::Exogenous{
+        .price_eur_per_mwh = hour >= 9U && hour <= 20U ? 100.0 : 30.0,
+        .natural_inflow_m3_s = 180.0,
+    });
+  }
+
+  const auto result = optiflow::demo::run_dispatch(exogenous);
+
+  require(result.steps.size() == exogenous.size(), "default dispatch must handle positive inflow scenarios");
+  require(result.final_state.reservoir_volume_m3 >= 0.0, "default dispatch final reservoir must be feasible");
+}
+
 void test_separated_csv_loader() {
   const auto directory = std::filesystem::temp_directory_path();
   const auto price_path = directory / "optiflow_test_prices.csv";
@@ -289,6 +306,7 @@ int main() {
     test_peak_price_arbitrage();
     test_inflow_boundary_pressure();
     test_hydro_only_mode();
+    test_default_dispatch_accepts_positive_inflows();
     test_separated_csv_loader();
     test_parse_deterministic_optimization_request_json();
     test_parse_empty_optimization_request_uses_default_scenario();
