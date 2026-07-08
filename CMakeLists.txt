@@ -6,6 +6,26 @@ project(OptiFlow
     LANGUAGES CXX)
 
 option(OPTIFLOW_BUILD_TESTS "Build OptiFlow tests" ON)
+option(OPTIFLOW_ENABLE_WARNINGS "Enable compiler warnings" ON)
+
+add_library(optiflow_project_warnings INTERFACE)
+
+if(OPTIFLOW_ENABLE_WARNINGS)
+    target_compile_options(optiflow_project_warnings INTERFACE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wshadow
+            -Wnon-virtual-dtor
+            -Wold-style-cast
+            -Woverloaded-virtual
+        >
+        $<$<CXX_COMPILER_ID:MSVC>:
+            /W4
+        >
+    )
+endif()
 
 add_subdirectory(libs/optimization)
 add_subdirectory(apps/solve_cli)

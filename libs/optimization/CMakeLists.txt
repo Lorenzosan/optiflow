@@ -17,7 +17,7 @@ target_include_directories(optiflow_optimization
         ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_compile_features(optiflow_optimization PUBLIC cxx_std_20)
-
-target_compile_options(optiflow_optimization PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic -Wconversion>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>)
+ 
+target_link_libraries(optiflow_optimization
+    PRIVATE
+        optiflow_project_warnings)

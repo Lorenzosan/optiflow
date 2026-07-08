@@ -33,3 +33,6 @@ docs/latex/
 
 # Emacs autosave
 *~
+
+# Patch files
+*.patch
