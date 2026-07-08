@@ -1,4 +1,6 @@
 #include "optiflow/core/StorageTypes.h"
+#include "optiflow/demo/CsvScenarioLoader.h"
+#include "optiflow/demo/DemoScenario.h"
 #include "optiflow/model/PumpedStorageModel.h"
 #include "optiflow/numerics/ActionGrid.h"
 #include "optiflow/numerics/StateGrid.h"
@@ -9,6 +11,8 @@
 #include <cmath>
 #include <cstddef>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -187,6 +191,81 @@ void test_hydro_only_mode() {
 }
 
 
+
+void test_separated_csv_loader() {
+  const auto directory = std::filesystem::temp_directory_path();
+  const auto price_path = directory / "optiflow_test_prices.csv";
+  const auto inflow_path = directory / "optiflow_test_inflows.csv";
+
+  {
+    std::ofstream prices{price_path};
+    prices << "time_index,price_eur_per_mwh\n"
+           << "0,20.0\n"
+           << "1,-10.0\n"
+           << "2,80.0\n";
+  }
+
+  {
+    std::ofstream inflows{inflow_path};
+    inflows << "time_index,natural_inflow_m3_s\n"
+            << "0,0.0\n"
+            << "1,2.5\n"
+            << "2,0.0\n";
+  }
+
+  const auto exogenous = optiflow::demo::load_deterministic_exogenous_csv(
+      price_path.string(),
+      inflow_path.string());
+
+  std::filesystem::remove(price_path);
+  std::filesystem::remove(inflow_path);
+
+  require(exogenous.size() == 3U, "CSV loader must create one exogenous value per time step");
+  require(near(exogenous[0].price_eur_per_mwh, 20.0), "CSV loader must read prices from the price file");
+  require(near(exogenous[1].natural_inflow_m3_s, 2.5), "CSV loader must read inflows from the inflow file");
+  require(near(exogenous[2].price_eur_per_mwh, 80.0), "CSV loader must preserve time order");
+}
+
+
+void test_separated_stochastic_csv_loader() {
+  const auto directory = std::filesystem::temp_directory_path();
+  const auto price_path = directory / "optiflow_test_stochastic_prices.csv";
+  const auto inflow_path = directory / "optiflow_test_stochastic_inflows.csv";
+
+  {
+    std::ofstream prices{price_path};
+    prices << "time_index,realization_index,probability,price_eur_per_mwh\n"
+           << "0,0,0.25,10.0\n"
+           << "0,1,0.75,90.0\n"
+           << "1,0,0.40,20.0\n"
+           << "1,1,0.60,120.0\n";
+  }
+
+  {
+    std::ofstream inflows{inflow_path};
+    inflows << "time_index,realization_index,probability,natural_inflow_m3_s\n"
+            << "0,0,0.25,0.0\n"
+            << "0,1,0.75,4.0\n"
+            << "1,0,0.40,2.0\n"
+            << "1,1,0.60,0.0\n";
+  }
+
+  const auto process = optiflow::demo::load_stochastic_exogenous_csv(
+      price_path.string(),
+      inflow_path.string());
+
+  std::filesystem::remove(price_path);
+  std::filesystem::remove(inflow_path);
+
+  require(process.size() == 2U, "stochastic CSV loader must create one distribution per time step");
+  require(process[0].size() == 2U, "stochastic CSV loader must preserve realizations at time zero");
+  require(process[1].size() == 2U, "stochastic CSV loader must preserve realizations at time one");
+  require(near(process[0][0].probability, 0.25), "stochastic CSV loader must read probabilities");
+  require(near(process[0][1].value.price_eur_per_mwh, 90.0), "stochastic CSV loader must read price realizations");
+  require(near(process[0][1].value.natural_inflow_m3_s, 4.0), "stochastic CSV loader must join inflow realizations by key");
+  require(near(process[1][0].value.natural_inflow_m3_s, 2.0), "stochastic CSV loader must preserve time order");
+}
+
 void test_stochastic_solver_probability_validation_and_policy() {
   const auto parameters = make_parameters(true);
   const auto state_grid = make_state_grid(true);
@@ -207,6 +286,26 @@ void test_stochastic_solver_probability_validation_and_policy() {
   const auto result = solver.solve(process);
   const auto action = result.policy.action_at(0U, optiflow::StateIndex{.reservoir_index = 2U, .battery_index = 1U});
   require(action.has_value(), "stochastic solver must produce a policy action");
+}
+
+void test_demo_stochastic_dispatch_uses_expected_path() {
+  const optiflow::StochasticExogenousProcess process{
+      optiflow::StageDistribution{
+          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 10.0, .natural_inflow_m3_s = 0.0}, .probability = 0.25},
+          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 50.0, .natural_inflow_m3_s = 0.0}, .probability = 0.75},
+      },
+      optiflow::StageDistribution{
+          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 100.0, .natural_inflow_m3_s = 0.0}, .probability = 1.0},
+      },
+  };
+
+  const auto result = optiflow::demo::run_stochastic_dispatch(process);
+
+  require(result.steps.size() == 2U, "demo stochastic dispatch must produce one step per stochastic stage");
+  require(near(result.steps[0].exogenous.price_eur_per_mwh, 40.0),
+          "demo stochastic dispatch must forward-simulate with the expected price path");
+  require(near(result.steps[0].exogenous.natural_inflow_m3_s, 0.0),
+          "demo stochastic dispatch must forward-simulate with the expected inflow path");
 }
 
 void test_longer_horizon_stress() {
@@ -237,7 +336,10 @@ int main() {
     test_peak_price_arbitrage();
     test_inflow_boundary_pressure();
     test_hydro_only_mode();
+    test_separated_csv_loader();
+    test_separated_stochastic_csv_loader();
     test_stochastic_solver_probability_validation_and_policy();
+    test_demo_stochastic_dispatch_uses_expected_path();
     test_longer_horizon_stress();
   } catch (const std::exception& error) {
     std::cerr << "test failure: " << error.what() << '\n';

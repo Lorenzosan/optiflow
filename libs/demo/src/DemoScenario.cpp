@@ -2,9 +2,12 @@
 
 #include "optiflow/model/PumpedStorageModel.h"
 #include "optiflow/solver/BellmanSolver.h"
+#include "optiflow/stochastic/StochasticBellmanSolver.h"
 
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
+#include <vector>
 
 namespace optiflow::demo {
 namespace {
@@ -41,6 +44,30 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
          << ",\"penalty_cost_eur\":" << outcome.penalty_cost_eur
          << ",\"reward_eur\":" << outcome.reward_eur
          << ",\"feasible\":" << (outcome.feasible ? "true" : "false") << '}';
+}
+
+[[nodiscard]] auto make_expected_exogenous_path(const StochasticExogenousProcess& process) -> std::vector<Exogenous> {
+  if (process.empty()) {
+    throw std::invalid_argument{"stochastic process must contain at least one time step"};
+  }
+
+  std::vector<Exogenous> expected_path;
+  expected_path.reserve(process.size());
+
+  for (const auto& distribution : process) {
+    if (distribution.empty()) {
+      throw std::invalid_argument{"each stochastic stage must contain at least one realization"};
+    }
+
+    Exogenous expected{};
+    for (const auto& realization : distribution) {
+      expected.price_eur_per_mwh += realization.probability * realization.value.price_eur_per_mwh;
+      expected.natural_inflow_m3_s += realization.probability * realization.value.natural_inflow_m3_s;
+    }
+    expected_path.push_back(expected);
+  }
+
+  return expected_path;
 }
 
 }  // namespace
@@ -115,9 +142,8 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
   };
 }
   
-[[nodiscard]] auto run_default_dispatch() -> SimulationResult {
+[[nodiscard]] auto run_dispatch(const std::vector<Exogenous>& exogenous) -> SimulationResult {
   const auto parameters = make_default_parameters();
-  const auto exogenous = make_default_exogenous();
   const auto state_grid = make_default_state_grid();
   const auto action_grid = make_default_action_grid();
 
@@ -127,6 +153,24 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
 
   const ForwardSimulator simulator{model, state_grid};
   return simulator.simulate(make_default_initial_state(), exogenous, optimization_result.policy);
+}
+
+[[nodiscard]] auto run_stochastic_dispatch(const StochasticExogenousProcess& process) -> SimulationResult {
+  const auto parameters = make_default_parameters();
+  const auto state_grid = make_default_state_grid();
+  const auto action_grid = make_default_action_grid();
+
+  const PumpedStorageModel model{parameters};
+  const StochasticBellmanSolver solver{model, state_grid, action_grid};
+  const auto optimization_result = solver.solve(process);
+
+  const auto expected_path = make_expected_exogenous_path(process);
+  const ForwardSimulator simulator{model, state_grid};
+  return simulator.simulate(make_default_initial_state(), expected_path, optimization_result.policy);
+}
+
+[[nodiscard]] auto run_default_dispatch() -> SimulationResult {
+  return run_dispatch(make_default_exogenous());
 }
 
 [[nodiscard]] auto scenario_to_json(const std::vector<Exogenous>& exogenous,

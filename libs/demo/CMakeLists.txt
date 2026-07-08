@@ -1,4 +1,5 @@
 add_library(optiflow_demo STATIC
+  src/CsvScenarioLoader.cpp
   src/DemoScenario.cpp
 )
 
