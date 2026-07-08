@@ -30,13 +30,13 @@ public:
                      core::SolverParameters solver_parameters);
 
     /**
-     * @brief Simulate dispatch by recomputing the greedy action at each physical state.
+     * @brief Simulate dispatch by recomputing the Bellman action from the value function at each physical state.
      *
      * @param scenario Input scenario.
      * @param value_function Solved value-function table.
      * @return Dispatch trajectory.
      */
-    std::vector<core::DispatchStep> simulate_greedy(const core::Scenario& scenario,
+    std::vector<core::DispatchStep> simulate_from_value_function(const core::Scenario& scenario,
                                                     const numerics::ValueFunction& value_function) const;
 
     /**

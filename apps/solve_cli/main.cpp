@@ -31,7 +31,9 @@ struct CliOptions {
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name
-              << " --timeseries <price_inflow.csv> --constraints <constraints.csv> --output <dispatch.csv>\n";
+              << " --timeseries <price_inflow.csv> --constraints <constraints.csv> --output <dispatch.csv>\n"
+              << "       " << program_name
+              << " --scenario <price_inflow.csv> --constraints <constraints.csv> --output <dispatch.csv>\n";
 }
 
 CliOptions parse_args(int argc, char** argv) {
@@ -41,7 +43,7 @@ CliOptions parse_args(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
-        if (arg == "--timeseries" && i + 1 < argc) {
+        if ((arg == "--timeseries" || arg == "--scenario") && i + 1 < argc) {
             timeseries_path = argv[++i];
         } else if (arg == "--constraints" && i + 1 < argc) {
             constraints_path = argv[++i];
@@ -56,7 +58,7 @@ CliOptions parse_args(int argc, char** argv) {
     }
 
     if (timeseries_path.empty()) {
-        throw std::invalid_argument("--timeseries is required");
+        throw std::invalid_argument("--timeseries or --scenario is required");
     }
     if (constraints_path.empty()) {
         throw std::invalid_argument("--constraints is required");
@@ -125,7 +127,7 @@ int main(int argc, char** argv) {
                                                            model,
                                                            bundle.solver_parameters);
         const std::vector<optiflow::core::DispatchStep> trajectory =
-            simulator.simulate_greedy(bundle.scenario, result.value_function);
+            simulator.simulate_from_value_function(bundle.scenario, result.value_function);
 
         write_dispatch_csv(options.output_path, trajectory);
 

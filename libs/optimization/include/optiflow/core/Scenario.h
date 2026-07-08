@@ -20,11 +20,13 @@ public:
      * @param initial_state Initial physical state.
      * @param exogenous_series Price and inflow series.
      * @param model_parameters Physical and economic model parameters.
+     * @param terminal_parameters Terminal-state requirements and penalties.
      */
     Scenario(std::string name,
              State initial_state,
              std::vector<Exogenous> exogenous_series,
-             ModelParameters model_parameters);
+             ModelParameters model_parameters,
+             TerminalParameters terminal_parameters);
 
     /**
      * @brief Return the scenario name.
@@ -55,6 +57,13 @@ public:
     const ModelParameters& model_parameters() const;
 
     /**
+     * @brief Return terminal-state requirements and penalties.
+     *
+     * @return Terminal-state parameters.
+     */
+    const TerminalParameters& terminal_parameters() const;
+
+    /**
      * @brief Return the finite-horizon length.
      *
      * @return Number of optimization time steps.
@@ -66,6 +75,7 @@ private:
     State initial_state_;
     std::vector<Exogenous> exogenous_series_;
     ModelParameters model_parameters_;
+    TerminalParameters terminal_parameters_;
 
     /**
      * @brief Validate internal consistency.

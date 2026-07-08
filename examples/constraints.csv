@@ -20,6 +20,14 @@ operating_cost_per_mwh,1
 infeasibility_penalty,1000000
 initial_reservoir_volume,120
 initial_battery_soc,20
+terminal_reservoir_min_volume,0
+terminal_reservoir_max_volume,200
+terminal_battery_min_soc,0
+terminal_battery_max_soc,50
+terminal_target_reservoir_volume,50
+terminal_target_battery_soc,0
+terminal_reservoir_target_penalty,0
+terminal_battery_target_penalty,0
 reservoir_volume_grid_points,21
 battery_soc_grid_points,11
 turbine_flow_steps,4

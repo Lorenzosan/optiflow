@@ -1,6 +1,34 @@
 #include "optiflow/numerics/Interpolator.h"
 
+#include <cmath>
+#include <limits>
+
 namespace optiflow::numerics {
+
+namespace {
+
+constexpr double tolerance = 1.0e-12;
+
+double weighted_value(double weight, double value) {
+    if (std::abs(weight) <= tolerance) {
+        return 0.0;
+    }
+    if (!std::isfinite(value)) {
+        return value;
+    }
+    return weight * value;
+}
+
+double combine(double first_weight, double first_value, double second_weight, double second_value) {
+    const double first = weighted_value(first_weight, first_value);
+    const double second = weighted_value(second_weight, second_value);
+    if (!std::isfinite(first) || !std::isfinite(second)) {
+        return -std::numeric_limits<double>::infinity();
+    }
+    return first + second;
+}
+
+}  // namespace
 
 double Interpolator::bilinear(const ValueFunction& value_function,
                               const StateGrid& state_grid,
@@ -21,9 +49,9 @@ double Interpolator::bilinear(const ValueFunction& value_function,
     const double v_ul = value_function.get(time_index, ul);
     const double v_uu = value_function.get(time_index, uu);
 
-    const double lower_reservoir_value = (1.0 - w_battery) * v_ll + w_battery * v_lu;
-    const double upper_reservoir_value = (1.0 - w_battery) * v_ul + w_battery * v_uu;
-    return (1.0 - w_reservoir) * lower_reservoir_value + w_reservoir * upper_reservoir_value;
+    const double lower_reservoir_value = combine(1.0 - w_battery, v_ll, w_battery, v_lu);
+    const double upper_reservoir_value = combine(1.0 - w_battery, v_ul, w_battery, v_uu);
+    return combine(1.0 - w_reservoir, lower_reservoir_value, w_reservoir, upper_reservoir_value);
 }
 
 }  // namespace optiflow::numerics

@@ -191,6 +191,15 @@ ScenarioBundle CsvScenarioReader::read(const std::filesystem::path& timeseries_p
                                            required_double(values, "operating_cost_per_mwh"),
                                            required_double(values, "infeasibility_penalty"));
 
+    const TerminalParameters terminal_parameters(required_double(values, "terminal_reservoir_min_volume"),
+                                                 required_double(values, "terminal_reservoir_max_volume"),
+                                                 required_double(values, "terminal_battery_min_soc"),
+                                                 required_double(values, "terminal_battery_max_soc"),
+                                                 required_double(values, "terminal_target_reservoir_volume"),
+                                                 required_double(values, "terminal_target_battery_soc"),
+                                                 required_double(values, "terminal_reservoir_target_penalty"),
+                                                 required_double(values, "terminal_battery_target_penalty"));
+
     const SolverParameters solver_parameters(required_size(values, "reservoir_volume_grid_points"),
                                              required_size(values, "battery_soc_grid_points"),
                                              required_size(values, "turbine_flow_steps"),
@@ -206,7 +215,8 @@ ScenarioBundle CsvScenarioReader::read(const std::filesystem::path& timeseries_p
     Scenario scenario(required_string(values, "scenario_name"),
                       initial_state,
                       exogenous_series,
-                      model_parameters);
+                      model_parameters,
+                      terminal_parameters);
 
     return ScenarioBundle(std::move(scenario), solver_parameters);
 }

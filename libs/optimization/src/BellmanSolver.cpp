@@ -2,11 +2,37 @@
 
 #include "optiflow/numerics/Interpolator.h"
 
+#include <cmath>
 #include <limits>
 #include <stdexcept>
 #include <utility>
 
 namespace optiflow::solver {
+
+namespace {
+
+constexpr double tolerance = 1.0e-9;
+
+double squared(double value) {
+    return value * value;
+}
+
+double terminal_value(const core::TerminalParameters& terminal_parameters, core::State state) {
+    if (state.reservoir_volume < terminal_parameters.reservoir_min_volume - tolerance ||
+        state.reservoir_volume > terminal_parameters.reservoir_max_volume + tolerance ||
+        state.battery_soc < terminal_parameters.battery_min_soc - tolerance ||
+        state.battery_soc > terminal_parameters.battery_max_soc + tolerance) {
+        return -std::numeric_limits<double>::infinity();
+    }
+
+    const double reservoir_penalty = terminal_parameters.reservoir_target_penalty *
+                                     squared(state.reservoir_volume - terminal_parameters.target_reservoir_volume);
+    const double battery_penalty = terminal_parameters.battery_target_penalty *
+                                   squared(state.battery_soc - terminal_parameters.target_battery_soc);
+    return -(reservoir_penalty + battery_penalty);
+}
+
+}  // namespace
 
 BellmanResult::BellmanResult(numerics::ValueFunction value_function_value,
                              numerics::Policy policy_value)
@@ -29,6 +55,16 @@ BellmanResult BellmanSolver::solve(const core::Scenario& scenario) const {
 
     const auto& exogenous_series = scenario.exogenous_series();
 
+    for (std::size_t reservoir_index = 0; reservoir_index < state_grid_.reservoir_size(); ++reservoir_index) {
+        for (std::size_t battery_index = 0; battery_index < state_grid_.battery_size(); ++battery_index) {
+            const numerics::StateIndex state_index(reservoir_index, battery_index);
+            const core::State state = state_grid_.state_at(state_index);
+            value_function.set(scenario.horizon_size(),
+                               state_index,
+                               terminal_value(scenario.terminal_parameters(), state));
+        }
+    }
+
     for (std::size_t reverse_t = scenario.horizon_size(); reverse_t > 0; --reverse_t) {
         const std::size_t time_index = reverse_t - 1;
         const core::Exogenous& exogenous = exogenous_series.at(time_index);
@@ -50,6 +86,9 @@ BellmanResult BellmanSolver::solve(const core::Scenario& scenario) const {
                                                                                   state_grid_,
                                                                                   time_index + 1,
                                                                                   outcome.next_state);
+                    if (!std::isfinite(continuation)) {
+                        continue;
+                    }
                     const double candidate = outcome.reward + solver_parameters_.discount_factor * continuation;
                     if (candidate > best_value) {
                         best_value = candidate;
@@ -58,7 +97,9 @@ BellmanResult BellmanSolver::solve(const core::Scenario& scenario) const {
                 }
 
                 if (best_action == nullptr) {
-                    throw std::runtime_error("no feasible action found at a grid state");
+                    value_function.set(time_index, state_index, -std::numeric_limits<double>::infinity());
+                    policy.set(time_index, state_index, core::Action(0.0, 0.0, 0.0, 0.0, 0.0));
+                    continue;
                 }
 
                 value_function.set(time_index, state_index, best_value);

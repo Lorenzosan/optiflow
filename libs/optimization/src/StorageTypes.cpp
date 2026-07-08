@@ -101,6 +101,23 @@ ModelParameters::ModelParameters(double time_step_hours_value,
       operating_cost_per_mwh(operating_cost_per_mwh_value),
       infeasibility_penalty(infeasibility_penalty_value) {}
 
+TerminalParameters::TerminalParameters(double reservoir_min_volume_value,
+                                       double reservoir_max_volume_value,
+                                       double battery_min_soc_value,
+                                       double battery_max_soc_value,
+                                       double target_reservoir_volume_value,
+                                       double target_battery_soc_value,
+                                       double reservoir_target_penalty_value,
+                                       double battery_target_penalty_value)
+    : reservoir_min_volume(reservoir_min_volume_value),
+      reservoir_max_volume(reservoir_max_volume_value),
+      battery_min_soc(battery_min_soc_value),
+      battery_max_soc(battery_max_soc_value),
+      target_reservoir_volume(target_reservoir_volume_value),
+      target_battery_soc(target_battery_soc_value),
+      reservoir_target_penalty(reservoir_target_penalty_value),
+      battery_target_penalty(battery_target_penalty_value) {}
+
 SolverParameters::SolverParameters(std::size_t reservoir_volume_grid_points_value,
                                    std::size_t battery_soc_grid_points_value,
                                    std::size_t turbine_flow_steps_value,
@@ -163,6 +180,48 @@ void validate_model_parameters(const ModelParameters& parameters) {
     if (parameters.battery_degradation_cost_per_mwh < 0.0 ||
         parameters.operating_cost_per_mwh < 0.0 || parameters.infeasibility_penalty < 0.0) {
         throw std::invalid_argument("costs and penalties must be nonnegative");
+    }
+}
+
+void validate_terminal_parameters(const ModelParameters& model_parameters,
+                                  const TerminalParameters& terminal_parameters) {
+    require_finite(terminal_parameters.reservoir_min_volume, "terminal_reservoir_min_volume");
+    require_finite(terminal_parameters.reservoir_max_volume, "terminal_reservoir_max_volume");
+    require_finite(terminal_parameters.battery_min_soc, "terminal_battery_min_soc");
+    require_finite(terminal_parameters.battery_max_soc, "terminal_battery_max_soc");
+    require_finite(terminal_parameters.target_reservoir_volume, "terminal_target_reservoir_volume");
+    require_finite(terminal_parameters.target_battery_soc, "terminal_target_battery_soc");
+    require_finite(terminal_parameters.reservoir_target_penalty, "terminal_reservoir_target_penalty");
+    require_finite(terminal_parameters.battery_target_penalty, "terminal_battery_target_penalty");
+
+    if (terminal_parameters.reservoir_min_volume > terminal_parameters.reservoir_max_volume) {
+        throw std::invalid_argument("terminal_reservoir_min_volume exceeds terminal_reservoir_max_volume");
+    }
+    if (terminal_parameters.battery_min_soc > terminal_parameters.battery_max_soc) {
+        throw std::invalid_argument("terminal_battery_min_soc exceeds terminal_battery_max_soc");
+    }
+
+    if (terminal_parameters.reservoir_min_volume < model_parameters.reservoir_min_volume ||
+        terminal_parameters.reservoir_max_volume > model_parameters.reservoir_max_volume) {
+        throw std::invalid_argument("terminal reservoir bounds must be inside model reservoir bounds");
+    }
+    if (terminal_parameters.battery_min_soc < model_parameters.battery_min_soc ||
+        terminal_parameters.battery_max_soc > model_parameters.battery_max_soc) {
+        throw std::invalid_argument("terminal battery bounds must be inside model battery bounds");
+    }
+
+    if (terminal_parameters.target_reservoir_volume < terminal_parameters.reservoir_min_volume ||
+        terminal_parameters.target_reservoir_volume > terminal_parameters.reservoir_max_volume) {
+        throw std::invalid_argument("terminal_target_reservoir_volume must be inside terminal reservoir bounds");
+    }
+    if (terminal_parameters.target_battery_soc < terminal_parameters.battery_min_soc ||
+        terminal_parameters.target_battery_soc > terminal_parameters.battery_max_soc) {
+        throw std::invalid_argument("terminal_target_battery_soc must be inside terminal battery bounds");
+    }
+
+    if (terminal_parameters.reservoir_target_penalty < 0.0 ||
+        terminal_parameters.battery_target_penalty < 0.0) {
+        throw std::invalid_argument("terminal target penalties must be nonnegative");
     }
 }
 
