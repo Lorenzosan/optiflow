@@ -1,0 +1,123 @@
+Start testing: Jul 08 21:49 CEST
+----------------------------------------------------------
+1/8 Testing: CsvReaderTests
+1/8 Test: CsvReaderTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/CsvReaderTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"CsvReaderTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"CsvReaderTests" end time: Jul 08 21:49 CEST
+"CsvReaderTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/8 Testing: StateGridTests
+2/8 Test: StateGridTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/StateGridTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"StateGridTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"StateGridTests" end time: Jul 08 21:49 CEST
+"StateGridTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/8 Testing: ActionGridTests
+3/8 Test: ActionGridTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/ActionGridTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"ActionGridTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"ActionGridTests" end time: Jul 08 21:49 CEST
+"ActionGridTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/8 Testing: ValueFunctionTests
+4/8 Test: ValueFunctionTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/ValueFunctionTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"ValueFunctionTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"ValueFunctionTests" end time: Jul 08 21:49 CEST
+"ValueFunctionTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/8 Testing: InterpolatorTests
+5/8 Test: InterpolatorTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/InterpolatorTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"InterpolatorTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"InterpolatorTests" end time: Jul 08 21:49 CEST
+"InterpolatorTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/8 Testing: PumpedStorageModelTests
+6/8 Test: PumpedStorageModelTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/PumpedStorageModelTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"PumpedStorageModelTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"PumpedStorageModelTests" end time: Jul 08 21:49 CEST
+"PumpedStorageModelTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/8 Testing: BellmanSolverTests
+7/8 Test: BellmanSolverTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/BellmanSolverTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"BellmanSolverTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"BellmanSolverTests" end time: Jul 08 21:49 CEST
+"BellmanSolverTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/8 Testing: ForwardSimulatorTests
+8/8 Test: ForwardSimulatorTests
+Command: "/Users/lorenzo/work/optiflow/build/tests/ForwardSimulatorTests"
+Directory: /Users/lorenzo/work/optiflow/build/tests
+"ForwardSimulatorTests" start time: Jul 08 21:49 CEST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"ForwardSimulatorTests" end time: Jul 08 21:49 CEST
+"ForwardSimulatorTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 08 21:49 CEST

@@ -1,0 +1,18 @@
+function(add_optiflow_unit_test test_name source_file)
+    add_executable(${test_name} ${source_file})
+    target_link_libraries(${test_name} PRIVATE OptiFlow::optimization)
+    target_compile_features(${test_name} PRIVATE cxx_std_20)
+    target_compile_options(${test_name} PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>
+    )
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endfunction()
+
+add_optiflow_unit_test(CsvReaderTests unit/CsvReaderTests.cpp)
+add_optiflow_unit_test(StateGridTests unit/StateGridTests.cpp)
+add_optiflow_unit_test(ActionGridTests unit/ActionGridTests.cpp)
+add_optiflow_unit_test(ValueFunctionTests unit/ValueFunctionTests.cpp)
+add_optiflow_unit_test(InterpolatorTests unit/InterpolatorTests.cpp)
+add_optiflow_unit_test(PumpedStorageModelTests unit/PumpedStorageModelTests.cpp)
+add_optiflow_unit_test(BellmanSolverTests unit/BellmanSolverTests.cpp)
+add_optiflow_unit_test(ForwardSimulatorTests unit/ForwardSimulatorTests.cpp)
