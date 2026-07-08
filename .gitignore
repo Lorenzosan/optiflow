@@ -31,8 +31,5 @@ docs/latex/
 # macOS
 .DS_Store
 
-# IDEs and editors
-.vscode/
-.idea/
-*.swp
-*.swo
+# Emacs autosave
+*~
