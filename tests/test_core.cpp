@@ -331,62 +331,71 @@ void test_nearest_policy_matches_value_function_simulation_on_grid_aligned_case(
 
 void test_csv_reader_rejects_missing_terminal_key() {
     const std::filesystem::path directory = std::filesystem::temp_directory_path();
-    const std::filesystem::path timeseries_path = directory / "optiflow_test_core_timeseries.csv";
-    const std::filesystem::path constraints_path = directory / "optiflow_test_core_constraints.csv";
+    const std::filesystem::path scenario_path = directory / "optiflow_test_core_scenario.csv";
+    const std::filesystem::path prices_path = directory / "optiflow_test_core_prices.csv";
+    const std::filesystem::path inflows_path = directory / "optiflow_test_core_inflows.csv";
 
     {
-        std::ofstream timeseries(timeseries_path);
-        timeseries << "time_index,price,natural_inflow\n";
-        timeseries << "0,0,0\n";
+        std::ofstream prices(prices_path);
+        prices << "time_index,price\n";
+        prices << "0,0\n";
     }
     {
-        std::ofstream constraints(constraints_path);
-        constraints << "key,value\n";
-        constraints << "scenario_name,missing_terminal\n";
-        constraints << "time_step_hours,1\n";
-        constraints << "reservoir_min_volume,0\n";
-        constraints << "reservoir_max_volume,100\n";
-        constraints << "battery_min_soc,0\n";
-        constraints << "battery_max_soc,0\n";
-        constraints << "turbine_max_flow,10\n";
-        constraints << "pump_max_flow,0\n";
-        constraints << "spill_max_flow,0\n";
-        constraints << "battery_max_charge_power,0\n";
-        constraints << "battery_max_discharge_power,0\n";
-        constraints << "turbine_efficiency,1\n";
-        constraints << "pump_efficiency,1\n";
-        constraints << "battery_charge_efficiency,1\n";
-        constraints << "battery_discharge_efficiency,1\n";
-        constraints << "water_to_power_factor,1\n";
-        constraints << "battery_degradation_cost_per_mwh,0\n";
-        constraints << "operating_cost_per_mwh,0\n";
-        constraints << "infeasibility_penalty,1000000\n";
-        constraints << "terminal_reservoir_max_volume,100\n";
-        constraints << "terminal_battery_min_soc,0\n";
-        constraints << "terminal_battery_max_soc,0\n";
-        constraints << "terminal_target_reservoir_volume,0\n";
-        constraints << "terminal_target_battery_soc,0\n";
-        constraints << "terminal_reservoir_target_penalty,0\n";
-        constraints << "terminal_battery_target_penalty,0\n";
-        constraints << "initial_reservoir_volume,50\n";
-        constraints << "initial_battery_soc,0\n";
-        constraints << "reservoir_volume_grid_points,11\n";
-        constraints << "battery_soc_grid_points,1\n";
-        constraints << "turbine_flow_steps,2\n";
-        constraints << "spill_flow_steps,1\n";
-        constraints << "pump_flow_steps,1\n";
-        constraints << "battery_charge_steps,1\n";
-        constraints << "battery_discharge_steps,1\n";
-        constraints << "discount_factor,1\n";
+        std::ofstream inflows(inflows_path);
+        inflows << "time_index,natural_inflow\n";
+        inflows << "0,0\n";
+    }
+    {
+        std::ofstream scenario(scenario_path);
+        scenario << "key,value\n";
+        scenario << "scenario_name,missing_terminal\n";
+        scenario << "time_step_hours,1\n";
+        scenario << "reservoir_min_volume,0\n";
+        scenario << "reservoir_max_volume,100\n";
+        scenario << "battery_min_soc,0\n";
+        scenario << "battery_max_soc,0\n";
+        scenario << "turbine_max_flow,10\n";
+        scenario << "pump_max_flow,0\n";
+        scenario << "spill_max_flow,0\n";
+        scenario << "battery_max_charge_power,0\n";
+        scenario << "battery_max_discharge_power,0\n";
+        scenario << "turbine_efficiency,1\n";
+        scenario << "pump_efficiency,1\n";
+        scenario << "battery_charge_efficiency,1\n";
+        scenario << "battery_discharge_efficiency,1\n";
+        scenario << "water_to_power_factor,1\n";
+        scenario << "battery_degradation_cost_per_mwh,0\n";
+        scenario << "operating_cost_per_mwh,0\n";
+        scenario << "infeasibility_penalty,1000000\n";
+        scenario << "terminal_reservoir_max_volume,100\n";
+        scenario << "terminal_battery_min_soc,0\n";
+        scenario << "terminal_battery_max_soc,0\n";
+        scenario << "terminal_target_reservoir_volume,0\n";
+        scenario << "terminal_target_battery_soc,0\n";
+        scenario << "terminal_reservoir_target_penalty,0\n";
+        scenario << "terminal_battery_target_penalty,0\n";
+        scenario << "initial_reservoir_volume,50\n";
+        scenario << "initial_battery_soc,0\n";
+        scenario << "reservoir_volume_grid_points,11\n";
+        scenario << "battery_soc_grid_points,1\n";
+        scenario << "turbine_flow_steps,2\n";
+        scenario << "spill_flow_steps,1\n";
+        scenario << "pump_flow_steps,1\n";
+        scenario << "battery_charge_steps,1\n";
+        scenario << "battery_discharge_steps,1\n";
+        scenario << "discount_factor,1\n";
     }
 
     require_throws<std::invalid_argument>([&]() {
-        const core::ScenarioBundle bundle = core::CsvScenarioReader::read(timeseries_path, constraints_path);
+        const core::ScenarioBundle bundle = core::CsvScenarioReader::read(scenario_path,
+                                                                          prices_path,
+                                                                          inflows_path);
         static_cast<void>(bundle);
     }, "terminal_reservoir_min_volume");
 
-    std::filesystem::remove(timeseries_path);
-    std::filesystem::remove(constraints_path);
+    std::filesystem::remove(scenario_path);
+    std::filesystem::remove(prices_path);
+    std::filesystem::remove(inflows_path);
 }
 
 }  // namespace

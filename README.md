@@ -6,7 +6,7 @@ This starting point intentionally contains only the optimization library, a CSV-
 
 ## What is implemented
 
-- Explicit scenario loading from CSV files.
+- Explicit scenario loading from separate CSV files.
 - No default model or solver parameters.
 - 2D state grid: reservoir volume x battery state of charge.
 - Uniform action grid generated from explicit limits and explicit step counts.
@@ -31,8 +31,9 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 ./build/apps/solve_cli/optiflow_solve \
-  --timeseries examples/price_inflow.csv \
-  --constraints examples/constraints.csv \
+  --scenario examples/scenario.csv \
+  --prices examples/prices.csv \
+  --inflows examples/inflows.csv \
   --output build/dispatch.csv
 ```
 
@@ -50,21 +51,27 @@ Generated HTML documentation will be written under `docs/html`.
 
 ## Input files
 
-The time-series CSV must contain:
-
-```csv
-time_index,price,natural_inflow
-```
-
-The constraints CSV must contain:
+The scenario CSV must contain all explicit scalar parameters:
 
 ```csv
 key,value
 ```
 
-Every required key must be present. Missing keys cause the CLI to fail. This is intentional.
+The price CSV must contain:
 
-Terminal-state behavior is controlled by explicit keys in the constraints file:
+```csv
+time_index,price
+```
+
+The inflow CSV must contain:
+
+```csv
+time_index,natural_inflow
+```
+
+The price and inflow files must have matching `time_index` values, starting at zero and increasing by one. Every required scenario key must be present. Missing keys cause the CLI to fail. This is intentional.
+
+Terminal-state behavior is controlled by explicit keys in the scenario file:
 
 ```csv
 terminal_reservoir_min_volume,0

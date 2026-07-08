@@ -11,42 +11,52 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace {
 
 struct CliOptions {
-    std::filesystem::path timeseries_path;
-    std::filesystem::path constraints_path;
+    std::filesystem::path scenario_path;
+    std::filesystem::path prices_path;
+    std::filesystem::path inflows_path;
     std::filesystem::path output_path;
 
-    CliOptions(std::filesystem::path timeseries_path,
-               std::filesystem::path constraints_path,
+    CliOptions(std::filesystem::path scenario_path,
+               std::filesystem::path prices_path,
+               std::filesystem::path inflows_path,
                std::filesystem::path output_path)
-        : timeseries_path(std::move(timeseries_path)),
-          constraints_path(std::move(constraints_path)),
+        : scenario_path(std::move(scenario_path)),
+          prices_path(std::move(prices_path)),
+          inflows_path(std::move(inflows_path)),
           output_path(std::move(output_path)) {}
 };
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name
-              << " --timeseries <price_inflow.csv> --constraints <constraints.csv> --output <dispatch.csv>\n"
-              << "       " << program_name
-              << " --scenario <price_inflow.csv> --constraints <constraints.csv> --output <dispatch.csv>\n";
+              << " --scenario <scenario.csv> --prices <prices.csv> --inflows <inflows.csv> "
+              << "--output <dispatch.csv>\n\n"
+              << "Inputs:\n"
+              << "  --scenario   CSV file with key,value rows for scenario, model, terminal, and solver parameters.\n"
+              << "  --prices     CSV file with time_index,price rows.\n"
+              << "  --inflows    CSV file with time_index,natural_inflow rows.\n"
+              << "  --output     Dispatch CSV output path.\n";
 }
 
 CliOptions parse_args(int argc, char** argv) {
-    std::string timeseries_path;
-    std::string constraints_path;
+    std::string scenario_path;
+    std::string prices_path;
+    std::string inflows_path;
     std::string output_path;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
-        if ((arg == "--timeseries" || arg == "--scenario") && i + 1 < argc) {
-            timeseries_path = argv[++i];
-        } else if (arg == "--constraints" && i + 1 < argc) {
-            constraints_path = argv[++i];
+        if (arg == "--scenario" && i + 1 < argc) {
+            scenario_path = argv[++i];
+        } else if (arg == "--prices" && i + 1 < argc) {
+            prices_path = argv[++i];
+        } else if (arg == "--inflows" && i + 1 < argc) {
+            inflows_path = argv[++i];
         } else if (arg == "--output" && i + 1 < argc) {
             output_path = argv[++i];
         } else if (arg == "--help" || arg == "-h") {
@@ -57,17 +67,20 @@ CliOptions parse_args(int argc, char** argv) {
         }
     }
 
-    if (timeseries_path.empty()) {
-        throw std::invalid_argument("--timeseries or --scenario is required");
+    if (scenario_path.empty()) {
+        throw std::invalid_argument("--scenario is required");
     }
-    if (constraints_path.empty()) {
-        throw std::invalid_argument("--constraints is required");
+    if (prices_path.empty()) {
+        throw std::invalid_argument("--prices is required");
+    }
+    if (inflows_path.empty()) {
+        throw std::invalid_argument("--inflows is required");
     }
     if (output_path.empty()) {
         throw std::invalid_argument("--output is required");
     }
 
-    return CliOptions(timeseries_path, constraints_path, output_path);
+    return CliOptions(scenario_path, prices_path, inflows_path, output_path);
 }
 
 void write_dispatch_csv(const std::filesystem::path& output_path,
@@ -106,7 +119,9 @@ int main(int argc, char** argv) {
     try {
         const CliOptions options = parse_args(argc, argv);
         const optiflow::core::ScenarioBundle bundle =
-            optiflow::core::CsvScenarioReader::read(options.timeseries_path, options.constraints_path);
+            optiflow::core::CsvScenarioReader::read(options.scenario_path,
+                                                    options.prices_path,
+                                                    options.inflows_path);
 
         const optiflow::numerics::StateGrid state_grid =
             optiflow::numerics::StateGrid::from_parameters(bundle.scenario.model_parameters(),

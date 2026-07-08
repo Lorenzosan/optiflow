@@ -1,6 +1,6 @@
 #include "optiflow/core/CsvScenarioReader.h"
 
-#include <charconv>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -12,6 +12,11 @@
 namespace optiflow::core {
 
 namespace {
+
+struct IndexedSeries {
+    std::vector<std::size_t> time_indices;
+    std::vector<double> values;
+};
 
 std::string trim(const std::string& value) {
     const std::string whitespace = " \t\r\n";
@@ -83,19 +88,21 @@ std::size_t required_size(const std::map<std::string, std::string>& values, cons
     return parse_size(required_string(values, key), key);
 }
 
-std::vector<Exogenous> read_timeseries(const std::filesystem::path& path) {
+IndexedSeries read_single_column_series(const std::filesystem::path& path,
+                                        const std::string& value_column_name,
+                                        const std::string& file_label) {
     std::ifstream input(path);
     if (!input) {
-        throw std::runtime_error("cannot open time-series file: " + path.string());
+        throw std::runtime_error("cannot open " + file_label + " file: " + path.string());
     }
 
     std::string line;
     if (!std::getline(input, line)) {
-        throw std::invalid_argument("time-series file is empty");
+        throw std::invalid_argument(file_label + " file is empty");
     }
-    require_header(split_csv_line(line), {"time_index", "price", "natural_inflow"}, "time-series file");
+    require_header(split_csv_line(line), {"time_index", value_column_name}, file_label + " file");
 
-    std::vector<Exogenous> series;
+    IndexedSeries series;
     std::size_t expected_index = 0;
     std::size_t line_number = 1;
 
@@ -105,38 +112,58 @@ std::vector<Exogenous> read_timeseries(const std::filesystem::path& path) {
             continue;
         }
         const std::vector<std::string> columns = split_csv_line(line);
-        if (columns.size() != 3) {
-            throw std::invalid_argument("time-series line " + std::to_string(line_number) +
-                                        " must have three columns");
+        if (columns.size() != 2) {
+            throw std::invalid_argument(file_label + " line " + std::to_string(line_number) +
+                                        " must have two columns");
         }
 
         const std::size_t time_index = parse_size(columns.at(0), "time_index");
         if (time_index != expected_index) {
-            throw std::invalid_argument("time_index must start at zero and increase by one");
+            throw std::invalid_argument(file_label + " time_index must start at zero and increase by one");
         }
         ++expected_index;
 
-        series.emplace_back(parse_double(columns.at(1), "price"),
-                            parse_double(columns.at(2), "natural_inflow"));
+        series.time_indices.push_back(time_index);
+        series.values.push_back(parse_double(columns.at(1), value_column_name));
     }
 
-    if (series.empty()) {
-        throw std::invalid_argument("time-series file contains no data rows");
+    if (series.values.empty()) {
+        throw std::invalid_argument(file_label + " file contains no data rows");
     }
+
     return series;
 }
 
-std::map<std::string, std::string> read_constraints(const std::filesystem::path& path) {
+std::vector<Exogenous> combine_price_and_inflow_series(const IndexedSeries& prices,
+                                                       const IndexedSeries& inflows) {
+    if (prices.values.size() != inflows.values.size()) {
+        throw std::invalid_argument("price and inflow files must contain the same number of rows");
+    }
+
+    std::vector<Exogenous> exogenous_series;
+    exogenous_series.reserve(prices.values.size());
+
+    for (std::size_t index = 0; index < prices.values.size(); ++index) {
+        if (prices.time_indices.at(index) != inflows.time_indices.at(index)) {
+            throw std::invalid_argument("price and inflow time_index values must match");
+        }
+        exogenous_series.emplace_back(prices.values.at(index), inflows.values.at(index));
+    }
+
+    return exogenous_series;
+}
+
+std::map<std::string, std::string> read_scenario_parameters(const std::filesystem::path& path) {
     std::ifstream input(path);
     if (!input) {
-        throw std::runtime_error("cannot open constraints file: " + path.string());
+        throw std::runtime_error("cannot open scenario file: " + path.string());
     }
 
     std::string line;
     if (!std::getline(input, line)) {
-        throw std::invalid_argument("constraints file is empty");
+        throw std::invalid_argument("scenario file is empty");
     }
-    require_header(split_csv_line(line), {"key", "value"}, "constraints file");
+    require_header(split_csv_line(line), {"key", "value"}, "scenario file");
 
     std::map<std::string, std::string> values;
     std::size_t line_number = 1;
@@ -148,17 +175,17 @@ std::map<std::string, std::string> read_constraints(const std::filesystem::path&
         }
         const std::vector<std::string> columns = split_csv_line(line);
         if (columns.size() != 2) {
-            throw std::invalid_argument("constraints line " + std::to_string(line_number) +
+            throw std::invalid_argument("scenario line " + std::to_string(line_number) +
                                         " must have two columns");
         }
         const std::string key = trim(columns.at(0));
         const std::string value = trim(columns.at(1));
         if (key.empty()) {
-            throw std::invalid_argument("constraints line " + std::to_string(line_number) +
+            throw std::invalid_argument("scenario line " + std::to_string(line_number) +
                                         " has an empty key");
         }
         if (values.contains(key)) {
-            throw std::invalid_argument("duplicate constraints key: " + key);
+            throw std::invalid_argument("duplicate scenario key: " + key);
         }
         values.emplace(key, value);
     }
@@ -167,10 +194,13 @@ std::map<std::string, std::string> read_constraints(const std::filesystem::path&
 
 }  // namespace
 
-ScenarioBundle CsvScenarioReader::read(const std::filesystem::path& timeseries_path,
-                                       const std::filesystem::path& constraints_path) {
-    const std::vector<Exogenous> exogenous_series = read_timeseries(timeseries_path);
-    const std::map<std::string, std::string> values = read_constraints(constraints_path);
+ScenarioBundle CsvScenarioReader::read(const std::filesystem::path& scenario_path,
+                                       const std::filesystem::path& prices_path,
+                                       const std::filesystem::path& inflows_path) {
+    const IndexedSeries prices = read_single_column_series(prices_path, "price", "prices");
+    const IndexedSeries inflows = read_single_column_series(inflows_path, "natural_inflow", "inflows");
+    const std::vector<Exogenous> exogenous_series = combine_price_and_inflow_series(prices, inflows);
+    const std::map<std::string, std::string> values = read_scenario_parameters(scenario_path);
 
     const ModelParameters model_parameters(required_double(values, "time_step_hours"),
                                            required_double(values, "reservoir_min_volume"),

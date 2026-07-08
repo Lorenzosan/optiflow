@@ -36,3 +36,4 @@ docs/latex/
 
 # Patch files
 *.patch
+*.zip
