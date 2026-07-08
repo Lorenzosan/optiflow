@@ -1,146 +1,84 @@
-# OptiFlow
+# OptiFlow starting point
 
-OptiFlow is a C++20 interview project for flexible energy-storage dispatch optimization. It models a pumped-storage asset with an optional battery, solves a finite-horizon dispatch problem with Bellman dynamic programming, and exposes the result through a local backend/frontend demo scaffold.
+OptiFlow is a C++20 interview project for deterministic dispatch optimization of a pumped-storage asset with an optional battery.
 
-The project is deliberately split into a dependency-light numerical core and optional service/deployment layers.
+This starting point intentionally contains only the optimization library, a CSV-driven CLI, examples, Doxygen configuration, and minimal tests. It does not include gRPC, REST, PostgreSQL, NGINX, Docker, or a frontend yet.
 
-## What it demonstrates
+## What is implemented
 
-- C++20 value-type domain modeling.
-- Deterministic Bellman dynamic programming over a two-dimensional state grid.
-- Bilinear interpolation of continuation values.
-- Forward simulation of the computed policy.
-- Lightweight C++ API and optimizer services for a local demo path.
-- Docker Compose deployment with NGINX, API, optimizer, and PostgreSQL.
-- Doxygen-ready public headers.
+- Explicit scenario loading from CSV files.
+- No default model or solver parameters.
+- 2D state grid: reservoir volume x battery state of charge.
+- Uniform action grid generated from explicit limits and explicit step counts.
+- Pumped-storage and battery transition model.
+- Deterministic Bellman dynamic-programming solver.
+- Bilinear interpolation of the continuation value.
+- Greedy forward simulation from the stored value function.
+- CSV dispatch output.
+- Doxygen comments on public interfaces.
 
-## Repository structure
-
-```text
-apps/optiflow_cli/                 CLI smoke-test runner
-libs/optimization/                 Numerical optimization library
-libs/demo/                         Shared sample scenario and JSON/CSV formatting
-libs/service_common/               Minimal dependency-free HTTP utilities
-services/api_service/              Lightweight C++ API service
-services/optimizer_service/        Lightweight C++ optimizer service
-frontend/                          Static browser dashboard
-infra/nginx/                       NGINX reverse-proxy config
-db/migrations/                     PostgreSQL schema
-protos/optiflow/v1/                Intended gRPC service contract
-docs/                              Architecture, model, API, and deployment notes
-tests/optimization_scenarios/      Scenario-level tests
-samples/                           Example input data
-```
-
-## Build the numerical core
+## Build
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ctest --test-dir build --output-on-failure
-./build/apps/optiflow_cli/optiflow_cli
 ```
 
-## Build the local C++ services
+## Run the sample
 
 ```bash
-cmake -S . -B build/services \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DOPTIFLOW_BUILD_SERVICES=ON
-cmake --build build/services -j
+./build/apps/solve_cli/optiflow_solve \
+  --timeseries examples/price_inflow.csv \
+  --constraints examples/constraints.csv \
+  --output build/dispatch.csv
 ```
 
-Run in separate terminals:
+The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit.
+
+## Generate documentation
+
+Doxygen is configured but not required for the build.
 
 ```bash
-OPTIFLOW_OPTIMIZER_PORT=50051 ./build/services/services/optimizer_service/optiflow_optimizer_service
+doxygen Doxyfile
 ```
 
-```bash
-OPTIFLOW_API_PORT=8080 \
-OPTIFLOW_OPTIMIZER_URL=http://127.0.0.1:50051/v1/optimize \
-./build/services/services/api_service/optiflow_api_service
+Generated HTML documentation will be written under `docs/html`.
+
+## Input files
+
+The time-series CSV must contain:
+
+```csv
+time_index,price,natural_inflow
 ```
 
-Then:
+The constraints CSV must contain:
 
-```bash
-curl http://127.0.0.1:8080/api/scenarios/sample
-curl -X POST http://127.0.0.1:8080/api/optimizations -H 'Content-Type: application/json' -d @samples/optimization_request_deterministic.json
+```csv
+key,value
 ```
 
-## Run the local full-stack demo
+Every required key must be present. Missing keys cause the CLI to fail. This is intentional.
 
-```bash
-docker compose up --build
+For a no-battery case, set:
+
+```csv
+battery_min_soc,0
+battery_max_soc,0
+battery_max_charge_power,0
+battery_max_discharge_power,0
+battery_soc_grid_points,1
+battery_charge_steps,1
+battery_discharge_steps,1
+initial_battery_soc,0
 ```
 
-Open:
+## Suggested next commits
 
-```text
-http://localhost:8080
-```
-
-The browser dashboard loads a sample price/inflow scenario, calls the C++ API, runs the optimizer service, and plots dispatch results.
-
-## Doxygen
-
-```bash
-cmake -S . -B build/docs \
-  -DOPTIFLOW_BUILD_DOCS=ON \
-  -DOPTIFLOW_BUILD_CLI=OFF \
-  -DOPTIFLOW_BUILD_TESTS=OFF
-cmake --build build/docs --target optiflow_docs
-```
-
-Generated HTML appears under the configured Doxygen output directory in the build tree.
-
-## Current backend status
-
-The repository includes a runnable dependency-free service path:
-
-```text
-browser -> nginx -> api service -> optimizer service -> optimization library
-```
-
-The optimizer service currently uses lightweight HTTP on port `50051`. The protobuf contract is included under `protos/` as the intended migration path to real gRPC once `grpc++` and `protobuf` are added to the build environment.
-
-The lightweight optimizer request path accepts deterministic exogenous data in JSON and runs the Bellman solver. PostgreSQL is included in Docker Compose and the schema is applied automatically, but the API service currently keeps the latest optimization result in memory. Runtime PostgreSQL persistence is intentionally isolated as the next backend increment so that it does not pollute the numerical library.
-
-## Mathematical model
-
-State:
-
-```text
-reservoir volume x battery state of charge
-```
-
-Action:
-
-```text
-turbine flow, spill flow, pump flow, battery charge, battery discharge
-```
-
-Exogenous input:
-
-```text
-electricity price, natural inflow
-```
-
-Objective:
-
-```text
-market revenue - operating costs - degradation costs - penalties + terminal value
-```
-
-The deterministic recursion is:
-
-```text
-V_t(s) = max_a [ r_t(s, a) + gamma V_{t+1}(f_t(s, a)) ]
-```
-
-## Limits
-
-This is a demo model, not a production hydro-bidding system. Current simplifications include deterministic default inputs, fixed hydraulic head, simplified battery degradation, discrete state/action grids, no ramp constraints, no market gate closure, no reserve products, and no runtime database persistence yet.
-
-Those limitations are explicit because they create a clean interview discussion path: first the numerical core, then service boundaries, then persistence, then market-realism extensions.
+1. Add unit tests for all infeasible transition cases.
+2. Add JSON input after CSV is stable.
+3. Add gRPC optimizer service.
+4. Add persistence schema and API service.
+5. Add Docker Compose and frontend last.

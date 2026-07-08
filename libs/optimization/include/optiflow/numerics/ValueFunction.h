@@ -1,34 +1,75 @@
 #pragma once
 
 #include "optiflow/numerics/GridTypes.h"
+#include "optiflow/numerics/StateGrid.h"
 
 #include <cstddef>
 #include <vector>
 
-namespace optiflow {
+namespace optiflow::numerics {
 
-/** Flat storage for V[time][reservoir][battery]. */
-class ValueFunction final {
+/**
+ * @brief Tabulated value function V[t, reservoir_index, battery_index].
+ */
+class ValueFunction {
 public:
-  ValueFunction(std::size_t time_count,
-                std::size_t reservoir_count,
-                std::size_t battery_count,
-                double initial_value = 0.0);
+    /**
+     * @brief Construct a value-function table.
+     *
+     * @param horizon_size Number of decision time steps.
+     * @param state_grid State grid.
+     */
+    ValueFunction(std::size_t horizon_size, const StateGrid& state_grid);
 
-  [[nodiscard]] auto time_count() const noexcept -> std::size_t;
-  [[nodiscard]] auto reservoir_count() const noexcept -> std::size_t;
-  [[nodiscard]] auto battery_count() const noexcept -> std::size_t;
+    /**
+     * @brief Return a value-function entry.
+     *
+     * @param time_index Time index in [0, horizon_size].
+     * @param state_index State-grid index.
+     * @return Value-function entry.
+     */
+    double get(std::size_t time_index, StateIndex state_index) const;
 
-  [[nodiscard]] auto operator()(std::size_t time_index, StateIndex state_index) const -> double;
-  auto operator()(std::size_t time_index, StateIndex state_index) -> double&;
+    /**
+     * @brief Set a value-function entry.
+     *
+     * @param time_index Time index in [0, horizon_size].
+     * @param state_index State-grid index.
+     * @param value Value to store.
+     */
+    void set(std::size_t time_index, StateIndex state_index, double value);
+
+    /**
+     * @brief Return the number of decision time steps.
+     *
+     * @return Horizon size.
+     */
+    std::size_t horizon_size() const;
+
+    /**
+     * @brief Return the number of reservoir grid points.
+     *
+     * @return Reservoir grid size.
+     */
+    std::size_t reservoir_size() const;
+
+    /**
+     * @brief Return the number of battery grid points.
+     *
+     * @return Battery grid size.
+     */
+    std::size_t battery_size() const;
 
 private:
-  [[nodiscard]] auto flat_index(std::size_t time_index, StateIndex state_index) const -> std::size_t;
+    std::size_t horizon_size_;
+    std::size_t reservoir_size_;
+    std::size_t battery_size_;
+    std::vector<double> values_;
 
-  std::size_t m_time_count{};
-  std::size_t m_reservoir_count{};
-  std::size_t m_battery_count{};
-  std::vector<double> m_values;
+    /**
+     * @brief Compute the flat storage offset for a table entry.
+     */
+    std::size_t offset(std::size_t time_index, StateIndex state_index) const;
 };
 
-}  // namespace optiflow
+}  // namespace optiflow::numerics

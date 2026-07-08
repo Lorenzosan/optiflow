@@ -2,35 +2,46 @@
 
 #include "optiflow/core/StorageTypes.h"
 
-namespace optiflow {
+namespace optiflow::model {
 
 /**
- * Simplified physical-economic model for pumped storage and an optional battery.
- *
- * The model owns parameters and evaluates one-step transitions. It does not know
- * about grids, value functions, policies, services, databases, or serialization.
+ * @brief Deterministic transition and reward model for pumped storage with an optional battery.
  */
-class PumpedStorageModel final {
+class PumpedStorageModel {
 public:
-  explicit PumpedStorageModel(ModelParameters parameters);
+    /**
+     * @brief Construct the physical model.
+     *
+     * @param parameters Physical and economic model parameters.
+     */
+    explicit PumpedStorageModel(core::ModelParameters parameters);
 
-  [[nodiscard]] auto parameters() const noexcept -> const ModelParameters&;
+    /**
+     * @brief Apply one action to one state under one exogenous input.
+     *
+     * @param state State before dispatch.
+     * @param action Control action.
+     * @param exogenous Price and inflow input.
+     * @return Transition outcome.
+     */
+    core::Outcome apply(core::State state,
+                        core::Action action,
+                        core::Exogenous exogenous) const;
 
-  /** Evaluate one transition and reward. Infeasible actions return feasible false. */
-  [[nodiscard]] auto evaluate(State state, Action action, Exogenous exogenous) const -> Outcome;
-
-  /** Approximate continuation value at the end of the finite horizon. */
-  [[nodiscard]] auto terminal_value(State state) const -> double;
-
-  [[nodiscard]] auto is_state_feasible(State state) const noexcept -> bool;
-  [[nodiscard]] auto is_action_structurally_feasible(Action action) const noexcept -> bool;
+    /**
+     * @brief Return model parameters.
+     *
+     * @return Physical and economic model parameters.
+     */
+    const core::ModelParameters& parameters() const;
 
 private:
-  [[nodiscard]] auto turbine_power_mw(double flow_m3_s) const noexcept -> double;
-  [[nodiscard]] auto pump_power_mw(double flow_m3_s) const noexcept -> double;
-  [[nodiscard]] auto timestep_seconds() const noexcept -> double;
+    core::ModelParameters parameters_;
 
-  ModelParameters m_parameters;
+    /**
+     * @brief Build an infeasible transition outcome.
+     */
+    core::Outcome infeasible(core::State state, const char* reason) const;
 };
 
-}  // namespace optiflow
+}  // namespace optiflow::model

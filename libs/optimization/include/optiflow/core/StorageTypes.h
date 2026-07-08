@@ -1,107 +1,222 @@
 #pragma once
 
 #include <cstddef>
-#include <limits>
-#include <vector>
+#include <stdexcept>
+#include <string>
 
-namespace optiflow {
+namespace optiflow::core {
 
-/** Physical storage state used by the dynamic program. */
-struct State final {
-  double reservoir_volume_m3{};
-  double battery_soc_mwh{};
+/**
+ * @brief Physical storage state at one time step.
+ */
+struct State {
+    double reservoir_volume; ///< Reservoir volume.
+    double battery_soc; ///< Battery state of charge.
 
-  [[nodiscard]] friend constexpr auto operator==(const State&, const State&) -> bool = default;
+    /**
+     * @brief Construct a physical storage state.
+     *
+     * @param reservoir_volume Reservoir volume.
+     * @param battery_soc Battery state of charge.
+     */
+    State(double reservoir_volume, double battery_soc);
 };
 
-/** Dispatch decision for one time step. */
-struct Action final {
-  double turbine_flow_m3_s{};
-  double spill_flow_m3_s{};
-  double pump_flow_m3_s{};
-  double battery_charge_mw{};
-  double battery_discharge_mw{};
+/**
+ * @brief Control decision applied during one time step.
+ */
+struct Action {
+    double turbine_flow; ///< Turbine flow.
+    double spill_flow; ///< Spill flow.
+    double pump_flow; ///< Pump flow.
+    double battery_charge_power; ///< Battery charging power.
+    double battery_discharge_power; ///< Battery discharging power.
 
-  [[nodiscard]] friend constexpr auto operator==(const Action&, const Action&) -> bool = default;
+    /**
+     * @brief Construct a control action.
+     *
+     * @param turbine_flow Turbine flow.
+     * @param spill_flow Spill flow.
+     * @param pump_flow Pump flow.
+     * @param battery_charge_power Battery charging power.
+     * @param battery_discharge_power Battery discharging power.
+     */
+    Action(double turbine_flow,
+           double spill_flow,
+           double pump_flow,
+           double battery_charge_power,
+           double battery_discharge_power);
 };
 
-/** Exogenous input known at one time step. */
-struct Exogenous final {
-  double price_eur_per_mwh{};
-  double natural_inflow_m3_s{};
+/**
+ * @brief Exogenous inputs for one time step.
+ */
+struct Exogenous {
+    double electricity_price; ///< Electricity price.
+    double natural_inflow; ///< Natural inflow into the upper reservoir.
+
+    /**
+     * @brief Construct exogenous inputs.
+     *
+     * @param electricity_price Electricity price.
+     * @param natural_inflow Natural inflow into the upper reservoir.
+     */
+    Exogenous(double electricity_price, double natural_inflow);
 };
 
-/** Result of applying an action to a state under one exogenous input. */
-struct Outcome final {
-  State next_state{};
-  double turbine_power_mw{};
-  double pump_power_mw{};
-  double battery_power_mw{};
-  double net_power_mw{};
-  double market_revenue_eur{};
-  double operating_cost_eur{};
-  double penalty_cost_eur{};
-  double reward_eur{};
-  bool feasible{};
+/**
+ * @brief Result of applying an action to a state.
+ */
+struct Outcome {
+    State next_state; ///< State after applying the action.
+    double turbine_power; ///< Electrical turbine power.
+    double pump_power; ///< Electrical pumping power consumption.
+    double net_power; ///< Net exported power.
+    double reward; ///< One-step economic reward.
+    bool feasible; ///< Whether all constraints are satisfied.
+    std::string infeasibility_reason; ///< Human-readable reason for infeasibility.
+
+    /**
+     * @brief Construct a model outcome.
+     *
+     * @param next_state State after the action.
+     * @param turbine_power Electrical turbine power.
+     * @param pump_power Electrical pumping power consumption.
+     * @param net_power Net exported power.
+     * @param reward One-step reward.
+     * @param feasible Whether all constraints are satisfied.
+     * @param infeasibility_reason Human-readable infeasibility reason.
+     */
+    Outcome(State next_state,
+            double turbine_power,
+            double pump_power,
+            double net_power,
+            double reward,
+            bool feasible,
+            std::string infeasibility_reason);
 };
 
-/** One row of the forward-simulated dispatch trajectory. */
-struct DispatchStep final {
-  std::size_t time_index{};
-  State state{};
-  Action action{};
-  Exogenous exogenous{};
-  Outcome outcome{};
-  double cumulative_profit_eur{};
+/**
+ * @brief Dispatch record produced by forward simulation.
+ */
+struct DispatchStep {
+    std::size_t time_index; ///< Time index.
+    State state; ///< State before dispatch.
+    Action action; ///< Applied action.
+    Exogenous exogenous; ///< Exogenous inputs.
+    State next_state; ///< State after dispatch.
+    double net_power; ///< Net exported power.
+    double reward; ///< One-step reward.
+    double cumulative_profit; ///< Profit accumulated up to this step.
+
+    /**
+     * @brief Construct one dispatch trajectory row.
+     *
+     * @param time_index Time index.
+     * @param state State before dispatch.
+     * @param action Applied action.
+     * @param exogenous Exogenous inputs.
+     * @param next_state State after dispatch.
+     * @param net_power Net exported power.
+     * @param reward One-step reward.
+     * @param cumulative_profit Profit accumulated up to this step.
+     */
+    DispatchStep(std::size_t time_index,
+                 State state,
+                 Action action,
+                 Exogenous exogenous,
+                 State next_state,
+                 double net_power,
+                 double reward,
+                 double cumulative_profit);
 };
 
-/** Hydro plant parameters used by the simplified pumped-storage model. */
-struct HydroParameters final {
-  double min_reservoir_volume_m3{};
-  double max_reservoir_volume_m3{};
-  double max_turbine_flow_m3_s{};
-  double max_pump_flow_m3_s{};
-  double max_spill_flow_m3_s{};
-  double hydraulic_head_m{};
-  double turbine_efficiency{};
-  double pump_efficiency{};
-  double turbine_cost_eur_per_mwh{};
-  double pump_cost_eur_per_mwh{};
-  double spill_penalty_eur_per_m3{};
+/**
+ * @brief Physical and economic model parameters.
+ */
+struct ModelParameters {
+    double time_step_hours; ///< Duration of one time step in hours.
+    double reservoir_min_volume; ///< Minimum reservoir volume.
+    double reservoir_max_volume; ///< Maximum reservoir volume.
+    double battery_min_soc; ///< Minimum battery state of charge.
+    double battery_max_soc; ///< Maximum battery state of charge.
+    double turbine_max_flow; ///< Maximum turbine flow.
+    double pump_max_flow; ///< Maximum pump flow.
+    double spill_max_flow; ///< Maximum spill flow.
+    double battery_max_charge_power; ///< Maximum battery charging power.
+    double battery_max_discharge_power; ///< Maximum battery discharging power.
+    double turbine_efficiency; ///< Turbine conversion efficiency.
+    double pump_efficiency; ///< Pump conversion efficiency.
+    double battery_charge_efficiency; ///< Battery charging efficiency.
+    double battery_discharge_efficiency; ///< Battery discharging efficiency.
+    double water_to_power_factor; ///< Conversion factor from water flow to electrical power.
+    double battery_degradation_cost_per_mwh; ///< Battery degradation cost per MWh of throughput.
+    double operating_cost_per_mwh; ///< Operating cost per MWh of throughput.
+    double infeasibility_penalty; ///< Penalty assigned to infeasible transitions.
+
+    /**
+     * @brief Construct physical and economic model parameters.
+     */
+    ModelParameters(double time_step_hours,
+                    double reservoir_min_volume,
+                    double reservoir_max_volume,
+                    double battery_min_soc,
+                    double battery_max_soc,
+                    double turbine_max_flow,
+                    double pump_max_flow,
+                    double spill_max_flow,
+                    double battery_max_charge_power,
+                    double battery_max_discharge_power,
+                    double turbine_efficiency,
+                    double pump_efficiency,
+                    double battery_charge_efficiency,
+                    double battery_discharge_efficiency,
+                    double water_to_power_factor,
+                    double battery_degradation_cost_per_mwh,
+                    double operating_cost_per_mwh,
+                    double infeasibility_penalty);
 };
 
-/** Optional battery parameters. Set enabled to false for hydro-only mode. */
-struct BatteryParameters final {
-  bool enabled{};
-  double capacity_mwh{};
-  double max_charge_mw{};
-  double max_discharge_mw{};
-  double charge_efficiency{};
-  double discharge_efficiency{};
-  double degradation_cost_eur_per_mwh{};
+/**
+ * @brief Numerical parameters used by grids and the Bellman solver.
+ */
+struct SolverParameters {
+    std::size_t reservoir_volume_grid_points; ///< Number of reservoir-volume grid points.
+    std::size_t battery_soc_grid_points; ///< Number of battery-SOC grid points.
+    std::size_t turbine_flow_steps; ///< Number of turbine-flow action candidates.
+    std::size_t spill_flow_steps; ///< Number of spill-flow action candidates.
+    std::size_t pump_flow_steps; ///< Number of pump-flow action candidates.
+    std::size_t battery_charge_steps; ///< Number of battery-charge action candidates.
+    std::size_t battery_discharge_steps; ///< Number of battery-discharge action candidates.
+    double discount_factor; ///< Bellman discount factor.
+
+    /**
+     * @brief Construct numerical solver parameters.
+     */
+    SolverParameters(std::size_t reservoir_volume_grid_points,
+                     std::size_t battery_soc_grid_points,
+                     std::size_t turbine_flow_steps,
+                     std::size_t spill_flow_steps,
+                     std::size_t pump_flow_steps,
+                     std::size_t battery_charge_steps,
+                     std::size_t battery_discharge_steps,
+                     double discount_factor);
 };
 
-/** Full physical and economic model configuration. */
-struct ModelParameters final {
-  HydroParameters hydro{};
-  BatteryParameters battery{};
-  double timestep_hours{};
-  double terminal_water_value_eur_per_m3{};
-  double terminal_battery_value_eur_per_mwh{};
-};
+/**
+ * @brief Validate physical and economic model parameters.
+ *
+ * @param parameters Parameters to validate.
+ * @throws std::invalid_argument if a value is inconsistent.
+ */
+void validate_model_parameters(const ModelParameters& parameters);
 
-/** Scenario input to the optimizer. */
-struct Scenario final {
-  ModelParameters parameters{};
-  std::vector<Exogenous> exogenous{};
-};
+/**
+ * @brief Validate numerical solver parameters.
+ *
+ * @param parameters Parameters to validate.
+ * @throws std::invalid_argument if a value is inconsistent.
+ */
+void validate_solver_parameters(const SolverParameters& parameters);
 
-/** Numerical and policy constraints for Bellman optimization. */
-struct OptimizationConfig final {
-  double discount_factor{1.0};
-  double infeasible_value{-std::numeric_limits<double>::infinity()};
-  bool forbid_simultaneous_pump_and_turbine{true};
-  bool forbid_simultaneous_charge_and_discharge{true};
-};
-
-}  // namespace optiflow
+}  // namespace optiflow::core

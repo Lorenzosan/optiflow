@@ -1,0 +1,91 @@
+#include "optiflow/numerics/ActionGrid.h"
+
+#include <cmath>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+namespace optiflow::numerics {
+
+ActionGrid::ActionGrid(std::vector<core::Action> actions) : actions_(std::move(actions)) {
+    if (actions_.empty()) {
+        throw std::invalid_argument("action grid must contain at least one action");
+    }
+}
+
+ActionGrid ActionGrid::from_parameters(const core::ModelParameters& model_parameters,
+                                       const core::SolverParameters& solver_parameters) {
+    const std::vector<double> turbine_axis = uniform_axis(model_parameters.turbine_max_flow,
+                                                          solver_parameters.turbine_flow_steps,
+                                                          "turbine_flow_steps");
+    const std::vector<double> spill_axis = uniform_axis(model_parameters.spill_max_flow,
+                                                       solver_parameters.spill_flow_steps,
+                                                       "spill_flow_steps");
+    const std::vector<double> pump_axis = uniform_axis(model_parameters.pump_max_flow,
+                                                      solver_parameters.pump_flow_steps,
+                                                      "pump_flow_steps");
+    const std::vector<double> charge_axis = uniform_axis(model_parameters.battery_max_charge_power,
+                                                        solver_parameters.battery_charge_steps,
+                                                        "battery_charge_steps");
+    const std::vector<double> discharge_axis = uniform_axis(model_parameters.battery_max_discharge_power,
+                                                           solver_parameters.battery_discharge_steps,
+                                                           "battery_discharge_steps");
+
+    std::vector<core::Action> actions;
+    actions.reserve(turbine_axis.size() * spill_axis.size() * pump_axis.size() * charge_axis.size() *
+                    discharge_axis.size());
+
+    for (double turbine_flow : turbine_axis) {
+        for (double spill_flow : spill_axis) {
+            for (double pump_flow : pump_axis) {
+                for (double battery_charge_power : charge_axis) {
+                    for (double battery_discharge_power : discharge_axis) {
+                        actions.emplace_back(turbine_flow,
+                                             spill_flow,
+                                             pump_flow,
+                                             battery_charge_power,
+                                             battery_discharge_power);
+                    }
+                }
+            }
+        }
+    }
+
+    return ActionGrid(std::move(actions));
+}
+
+const std::vector<core::Action>& ActionGrid::actions() const {
+    return actions_;
+}
+
+std::size_t ActionGrid::size() const {
+    return actions_.size();
+}
+
+std::vector<double> ActionGrid::uniform_axis(double max_value, std::size_t steps, const char* name) {
+    if (!std::isfinite(max_value)) {
+        throw std::invalid_argument(std::string(name) + " max value must be finite");
+    }
+    if (max_value < 0.0) {
+        throw std::invalid_argument(std::string(name) + " max value must be nonnegative");
+    }
+    if (steps == 0) {
+        throw std::invalid_argument(std::string(name) + " must be positive");
+    }
+
+    std::vector<double> axis;
+    axis.reserve(steps);
+
+    if (steps == 1) {
+        axis.push_back(0.0);
+        return axis;
+    }
+
+    const double step = max_value / static_cast<double>(steps - 1);
+    for (std::size_t i = 0; i < steps; ++i) {
+        axis.push_back(step * static_cast<double>(i));
+    }
+    return axis;
+}
+
+}  // namespace optiflow::numerics

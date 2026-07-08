@@ -2,34 +2,72 @@
 
 #include "optiflow/core/StorageTypes.h"
 #include "optiflow/numerics/GridTypes.h"
+#include "optiflow/numerics/StateGrid.h"
 
 #include <cstddef>
 #include <optional>
 #include <vector>
 
-namespace optiflow {
+namespace optiflow::numerics {
 
-/** Lookup table storing the best action at each time and grid state. */
-class Policy final {
+/**
+ * @brief Tabulated best action for each time and grid state.
+ */
+class Policy {
 public:
-  Policy(std::size_t time_count, std::size_t reservoir_count, std::size_t battery_count);
+    /**
+     * @brief Construct an empty policy table.
+     *
+     * @param horizon_size Number of decision time steps.
+     * @param state_grid State grid.
+     */
+    Policy(std::size_t horizon_size, const StateGrid& state_grid);
 
-  [[nodiscard]] auto time_count() const noexcept -> std::size_t;
-  [[nodiscard]] auto reservoir_count() const noexcept -> std::size_t;
-  [[nodiscard]] auto battery_count() const noexcept -> std::size_t;
+    /**
+     * @brief Store the best action for a time and grid state.
+     *
+     * @param time_index Time index in [0, horizon_size - 1].
+     * @param state_index State-grid index.
+     * @param action Best action.
+     */
+    void set(std::size_t time_index, StateIndex state_index, core::Action action);
 
-  [[nodiscard]] auto action_at(std::size_t time_index,
-                               StateIndex state_index) const -> std::optional<Action>;
+    /**
+     * @brief Return the stored action for a time and grid state.
+     *
+     * @param time_index Time index in [0, horizon_size - 1].
+     * @param state_index State-grid index.
+     * @return Stored action.
+     * @throws std::runtime_error if the entry was not set.
+     */
+    const core::Action& get(std::size_t time_index, StateIndex state_index) const;
 
-  void set_action(std::size_t time_index, StateIndex state_index, Action action);
+    /**
+     * @brief Return whether an entry has been set.
+     *
+     * @param time_index Time index in [0, horizon_size - 1].
+     * @param state_index State-grid index.
+     * @return True if an action is stored.
+     */
+    bool has_action(std::size_t time_index, StateIndex state_index) const;
+
+    /**
+     * @brief Return the number of decision time steps.
+     *
+     * @return Horizon size.
+     */
+    std::size_t horizon_size() const;
 
 private:
-  [[nodiscard]] auto flat_index(std::size_t time_index, StateIndex state_index) const -> std::size_t;
+    std::size_t horizon_size_;
+    std::size_t reservoir_size_;
+    std::size_t battery_size_;
+    std::vector<std::optional<core::Action>> actions_;
 
-  std::size_t m_time_count{};
-  std::size_t m_reservoir_count{};
-  std::size_t m_battery_count{};
-  std::vector<std::optional<Action>> m_actions;
+    /**
+     * @brief Compute the flat storage offset for a policy entry.
+     */
+    std::size_t offset(std::size_t time_index, StateIndex state_index) const;
 };
 
-}  // namespace optiflow
+}  // namespace optiflow::numerics

@@ -1,46 +1,61 @@
 #pragma once
 
-#include "optiflow/core/StorageTypes.h"
+#include "optiflow/core/Scenario.h"
 #include "optiflow/model/PumpedStorageModel.h"
 #include "optiflow/numerics/ActionGrid.h"
 #include "optiflow/numerics/Policy.h"
 #include "optiflow/numerics/StateGrid.h"
 #include "optiflow/numerics/ValueFunction.h"
 
-#include <span>
-#include <utility>
+namespace optiflow::solver {
 
-namespace optiflow {
+/**
+ * @brief Result of a Bellman dynamic-programming solve.
+ */
+struct BellmanResult {
+    numerics::ValueFunction value_function; ///< Solved value-function table.
+    numerics::Policy policy; ///< Solved best-action policy.
 
-/** Output of a Bellman solve. */
-struct OptimizationResult final {
-  ValueFunction value_function;
-  Policy policy;
+    /**
+     * @brief Construct a Bellman solve result.
+     *
+     * @param value_function Value-function table.
+     * @param policy Best-action lookup table.
+     */
+    BellmanResult(numerics::ValueFunction value_function, numerics::Policy policy);
 };
 
-/** Deterministic finite-horizon Bellman dynamic-programming solver. */
-class BellmanSolver final {
+/**
+ * @brief Deterministic finite-horizon Bellman dynamic-programming solver.
+ */
+class BellmanSolver {
 public:
-  BellmanSolver(PumpedStorageModel model,
-                StateGrid state_grid,
-                ActionGrid action_grid,
-                OptimizationConfig config = {});
+    /**
+     * @brief Construct a Bellman solver.
+     *
+     * @param state_grid State grid.
+     * @param action_grid Action grid.
+     * @param model Transition and reward model.
+     * @param solver_parameters Numerical solver parameters.
+     */
+    BellmanSolver(numerics::StateGrid state_grid,
+                  numerics::ActionGrid action_grid,
+                  model::PumpedStorageModel model,
+                  core::SolverParameters solver_parameters);
 
-  /** Solve the backward induction problem for the supplied exogenous time series. */
-  [[nodiscard]] auto solve(std::span<const Exogenous> exogenous) const -> OptimizationResult;
+    /**
+     * @brief Solve a scenario by backward induction.
+     *
+     * @param scenario Input scenario.
+     * @return Value function and tabulated policy.
+     */
+    BellmanResult solve(const core::Scenario& scenario) const;
 
 private:
-  [[nodiscard]] auto best_action_at(std::size_t time_index,
-                                    State state,
-                                    Exogenous exogenous,
-                                    const ValueFunction& value_function) const -> std::pair<double, Action>;
-
-  [[nodiscard]] auto action_allowed_by_config(Action action) const noexcept -> bool;
-
-  PumpedStorageModel m_model;
-  StateGrid m_state_grid;
-  ActionGrid m_action_grid;
-  OptimizationConfig m_config;
+    numerics::StateGrid state_grid_;
+    numerics::ActionGrid action_grid_;
+    model::PumpedStorageModel model_;
+    core::SolverParameters solver_parameters_;
 };
 
-}  // namespace optiflow
+}  // namespace optiflow::solver

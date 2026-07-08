@@ -3,34 +3,53 @@
 #include "optiflow/core/StorageTypes.h"
 
 #include <cstddef>
-#include <span>
 #include <vector>
 
-namespace optiflow {
+namespace optiflow::numerics {
 
-/** Axis specification used to build a Cartesian action grid. */
-struct ActionAxes final {
-  std::vector<double> turbine_flow_m3_s;
-  std::vector<double> spill_flow_m3_s;
-  std::vector<double> pump_flow_m3_s;
-  std::vector<double> battery_charge_mw;
-  std::vector<double> battery_discharge_mw;
-};
-
-/** Collection of candidate actions considered by the Bellman solver. */
-class ActionGrid final {
+/**
+ * @brief Finite action set used by the Bellman solver.
+ */
+class ActionGrid {
 public:
-  explicit ActionGrid(std::vector<Action> actions);
+    /**
+     * @brief Construct an action grid from explicit action candidates.
+     *
+     * @param actions Candidate actions.
+     */
+    explicit ActionGrid(std::vector<core::Action> actions);
 
-  [[nodiscard]] auto size() const noexcept -> std::size_t;
-  [[nodiscard]] auto actions() const noexcept -> std::span<const Action>;
-  [[nodiscard]] auto operator[](std::size_t index) const -> const Action&;
+    /**
+     * @brief Build a uniform action grid from model and solver parameters.
+     *
+     * @param model_parameters Physical model parameters.
+     * @param solver_parameters Numerical solver parameters.
+     * @return Action grid.
+     */
+    static ActionGrid from_parameters(const core::ModelParameters& model_parameters,
+                                      const core::SolverParameters& solver_parameters);
 
-  /** Build a Cartesian action grid from axes. Keep axes small. */
-  [[nodiscard]] static auto from_axes(const ActionAxes& axes) -> ActionGrid;
+    /**
+     * @brief Return all candidate actions.
+     *
+     * @return Candidate action list.
+     */
+    const std::vector<core::Action>& actions() const;
+
+    /**
+     * @brief Return the number of candidate actions.
+     *
+     * @return Action count.
+     */
+    std::size_t size() const;
 
 private:
-  std::vector<Action> m_actions;
+    std::vector<core::Action> actions_;
+
+    /**
+     * @brief Build a uniform axis from zero to a maximum value.
+     */
+    static std::vector<double> uniform_axis(double max_value, std::size_t steps, const char* name);
 };
 
-}  // namespace optiflow
+}  // namespace optiflow::numerics

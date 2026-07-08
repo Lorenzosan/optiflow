@@ -4,43 +4,135 @@
 #include "optiflow/numerics/GridTypes.h"
 
 #include <cstddef>
-#include <span>
-#include <vector>
 
-namespace optiflow {
+namespace optiflow::numerics {
 
-/** Tensor-product grid for reservoir volume and battery state of charge. */
-class StateGrid final {
+/**
+ * @brief Uniform 2D grid for reservoir volume and battery state of charge.
+ */
+class StateGrid {
 public:
-  /**
-   * Construct a state grid from sorted reservoir and battery points.
-   * Throws std::invalid_argument if either axis is empty or not sorted.
-   */
-  StateGrid(std::vector<double> reservoir_points_m3, std::vector<double> battery_points_mwh);
+    /**
+     * @brief Construct a uniform 2D state grid.
+     *
+     * @param reservoir_min_volume Minimum reservoir volume.
+     * @param reservoir_max_volume Maximum reservoir volume.
+     * @param reservoir_points Number of reservoir grid points.
+     * @param battery_min_soc Minimum battery state of charge.
+     * @param battery_max_soc Maximum battery state of charge.
+     * @param battery_points Number of battery grid points.
+     */
+    StateGrid(double reservoir_min_volume,
+              double reservoir_max_volume,
+              std::size_t reservoir_points,
+              double battery_min_soc,
+              double battery_max_soc,
+              std::size_t battery_points);
 
-  [[nodiscard]] auto reservoir_size() const noexcept -> std::size_t;
-  [[nodiscard]] auto battery_size() const noexcept -> std::size_t;
-  [[nodiscard]] auto state_count() const noexcept -> std::size_t;
+    /**
+     * @brief Build a state grid from model and solver parameters.
+     *
+     * @param model_parameters Physical model parameters.
+     * @param solver_parameters Numerical solver parameters.
+     * @return State grid.
+     */
+    static StateGrid from_parameters(const core::ModelParameters& model_parameters,
+                                     const core::SolverParameters& solver_parameters);
 
-  [[nodiscard]] auto reservoir_points() const noexcept -> std::span<const double>;
-  [[nodiscard]] auto battery_points() const noexcept -> std::span<const double>;
+    /**
+     * @brief Return the physical state at a grid index.
+     *
+     * @param index Grid index.
+     * @return Physical state.
+     */
+    core::State state_at(StateIndex index) const;
 
-  [[nodiscard]] auto state_at(StateIndex index) const -> State;
-  [[nodiscard]] auto flat_index(StateIndex index) const -> std::size_t;
-  [[nodiscard]] auto index_from_flat(std::size_t flat_index) const -> StateIndex;
+    /**
+     * @brief Return a reservoir grid coordinate.
+     *
+     * @param index Reservoir index.
+     * @return Reservoir volume.
+     */
+    double reservoir_volume_at(std::size_t index) const;
 
-  [[nodiscard]] auto nearest_index(State state) const -> StateIndex;
-  [[nodiscard]] auto bracket(State state) const -> GridBracket2D;
+    /**
+     * @brief Return a battery grid coordinate.
+     *
+     * @param index Battery index.
+     * @return Battery state of charge.
+     */
+    double battery_soc_at(std::size_t index) const;
 
-  [[nodiscard]] auto contains(State state) const noexcept -> bool;
+    /**
+     * @brief Return the interpolation cell containing a physical state.
+     *
+     * @param state Physical state.
+     * @return Bilinear interpolation cell.
+     */
+    GridCell cell_for(core::State state) const;
+
+    /**
+     * @brief Return the nearest grid index to a physical state.
+     *
+     * @param state Physical state.
+     * @return Nearest state-grid index.
+     */
+    StateIndex nearest_index(core::State state) const;
+
+    /**
+     * @brief Return the number of reservoir grid points.
+     *
+     * @return Reservoir grid size.
+     */
+    std::size_t reservoir_size() const;
+
+    /**
+     * @brief Return the number of battery grid points.
+     *
+     * @return Battery grid size.
+     */
+    std::size_t battery_size() const;
+
+    /**
+     * @brief Check whether a physical state is inside the grid bounds.
+     *
+     * @param state Physical state.
+     * @return True if the state is inside bounds.
+     */
+    bool contains(core::State state) const;
 
 private:
-  [[nodiscard]] static auto nearest_axis_index(std::span<const double> axis, double value) -> std::size_t;
-  [[nodiscard]] static auto bracket_axis(std::span<const double> axis, double value) -> GridBracket1D;
-  static void validate_axis(std::span<const double> axis, const char* name);
+    double reservoir_min_volume_;
+    double reservoir_max_volume_;
+    std::size_t reservoir_points_;
+    double battery_min_soc_;
+    double battery_max_soc_;
+    std::size_t battery_points_;
 
-  std::vector<double> m_reservoir_points_m3;
-  std::vector<double> m_battery_points_mwh;
+    /**
+     * @brief Return a one-dimensional uniform-grid coordinate.
+     */
+    static double coordinate_at(double min_value,
+                                double max_value,
+                                std::size_t points,
+                                std::size_t index);
+
+    /**
+     * @brief Return a one-dimensional interpolation bracket.
+     */
+    static GridBracket bracket_for(double min_value,
+                                   double max_value,
+                                   std::size_t points,
+                                   double value,
+                                   const char* axis_name);
+
+    /**
+     * @brief Return the nearest one-dimensional grid index.
+     */
+    static std::size_t nearest_axis_index(double min_value,
+                                          double max_value,
+                                          std::size_t points,
+                                          double value);
 };
 
-}  // namespace optiflow
+}  // namespace optiflow::numerics
