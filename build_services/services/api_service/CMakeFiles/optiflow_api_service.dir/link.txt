@@ -1,1 +1,0 @@
-/usr/bin/c++ -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/optiflow_api_service.dir/src/main.cpp.o -o optiflow_api_service  ../../libs/demo/liboptiflow_demo.a ../../libs/service_common/liboptiflow_service_common.a ../../libs/optimization/liboptiflow_optimization.a

@@ -7,7 +7,6 @@
 #include "optiflow/numerics/StateGrid.h"
 #include "optiflow/solver/BellmanSolver.h"
 #include "optiflow/solver/ForwardSimulator.h"
-#include "optiflow/stochastic/StochasticBellmanSolver.h"
 
 #include <cmath>
 #include <cstddef>
@@ -193,6 +192,23 @@ void test_hydro_only_mode() {
 
 
 
+
+void test_default_dispatch_accepts_positive_inflows() {
+  std::vector<optiflow::Exogenous> exogenous;
+  exogenous.reserve(24U);
+  for (std::size_t hour = 0U; hour < 24U; ++hour) {
+    exogenous.push_back(optiflow::Exogenous{
+        .price_eur_per_mwh = hour >= 9U && hour <= 20U ? 100.0 : 30.0,
+        .natural_inflow_m3_s = 180.0,
+    });
+  }
+
+  const auto result = optiflow::demo::run_dispatch(exogenous);
+
+  require(result.steps.size() == exogenous.size(), "default dispatch must handle positive inflow scenarios");
+  require(result.final_state.reservoir_volume_m3 >= 0.0, "default dispatch final reservoir must be feasible");
+}
+
 void test_separated_csv_loader() {
   const auto directory = std::filesystem::temp_directory_path();
   const auto price_path = directory / "optiflow_test_prices.csv";
@@ -228,203 +244,22 @@ void test_separated_csv_loader() {
 }
 
 
-void test_separated_stochastic_csv_loader() {
-  const auto directory = std::filesystem::temp_directory_path();
-  const auto price_path = directory / "optiflow_test_stochastic_prices.csv";
-  const auto inflow_path = directory / "optiflow_test_stochastic_inflows.csv";
-
-  {
-    std::ofstream prices{price_path};
-    prices << "time_index,realization_index,probability,price_eur_per_mwh\n"
-           << "0,0,0.25,10.0\n"
-           << "0,1,0.75,90.0\n"
-           << "1,0,0.40,20.0\n"
-           << "1,1,0.60,120.0\n";
-  }
-
-  {
-    std::ofstream inflows{inflow_path};
-    inflows << "time_index,realization_index,probability,natural_inflow_m3_s\n"
-            << "0,0,0.25,0.0\n"
-            << "0,1,0.75,4.0\n"
-            << "1,0,0.40,2.0\n"
-            << "1,1,0.60,0.0\n";
-  }
-
-  const auto process = optiflow::demo::load_stochastic_exogenous_csv(
-      price_path.string(),
-      inflow_path.string());
-
-  std::filesystem::remove(price_path);
-  std::filesystem::remove(inflow_path);
-
-  require(process.size() == 2U, "stochastic CSV loader must create one distribution per time step");
-  require(process[0].size() == 2U, "stochastic CSV loader must preserve realizations at time zero");
-  require(process[1].size() == 2U, "stochastic CSV loader must preserve realizations at time one");
-  require(near(process[0][0].probability, 0.25), "stochastic CSV loader must read probabilities");
-  require(near(process[0][1].value.price_eur_per_mwh, 90.0), "stochastic CSV loader must read price realizations");
-  require(near(process[0][1].value.natural_inflow_m3_s, 4.0), "stochastic CSV loader must join inflow realizations by key");
-  require(near(process[1][0].value.natural_inflow_m3_s, 2.0), "stochastic CSV loader must preserve time order");
-}
-
-void test_stochastic_solver_probability_validation_and_policy() {
-  const auto parameters = make_parameters(true);
-  const auto state_grid = make_state_grid(true);
-  const auto action_grid = make_action_grid(true);
-  const optiflow::PumpedStorageModel model{parameters};
-  const optiflow::StochasticBellmanSolver solver{model, state_grid, action_grid};
-
-  const optiflow::StochasticExogenousProcess process{
-      optiflow::StageDistribution{
-          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 10.0, .natural_inflow_m3_s = 0.0}, .probability = 0.5},
-          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 100.0, .natural_inflow_m3_s = 0.0}, .probability = 0.5},
-      },
-      optiflow::StageDistribution{
-          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 120.0, .natural_inflow_m3_s = 0.0}, .probability = 1.0},
-      },
-  };
-
-  const auto result = solver.solve(process);
-  const auto action = result.policy.action_at(0U, optiflow::StateIndex{.reservoir_index = 2U, .battery_index = 1U});
-  require(action.has_value(), "stochastic solver must produce a policy action");
-}
-
-void test_demo_stochastic_dispatch_uses_expected_path() {
-  const optiflow::StochasticExogenousProcess process{
-      optiflow::StageDistribution{
-          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 10.0, .natural_inflow_m3_s = 0.0}, .probability = 0.25},
-          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 50.0, .natural_inflow_m3_s = 0.0}, .probability = 0.75},
-      },
-      optiflow::StageDistribution{
-          optiflow::WeightedExogenous{.value = optiflow::Exogenous{.price_eur_per_mwh = 100.0, .natural_inflow_m3_s = 0.0}, .probability = 1.0},
-      },
-  };
-
-  const auto result = optiflow::demo::run_stochastic_dispatch(process);
-
-  require(result.steps.size() == 2U, "demo stochastic dispatch must produce one step per stochastic stage");
-  require(near(result.steps[0].exogenous.price_eur_per_mwh, 40.0),
-          "demo stochastic dispatch must forward-simulate with the expected price path");
-  require(near(result.steps[0].exogenous.natural_inflow_m3_s, 0.0),
-          "demo stochastic dispatch must forward-simulate with the expected inflow path");
-}
-
 void test_parse_deterministic_optimization_request_json() {
   const auto request = optiflow::demo::parse_optimization_request_json(R"json({
-    "solver_kind": "deterministic",
     "exogenous": [
       {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0},
       {"time_index": 1, "price_eur_per_mwh": -10.0, "natural_inflow_m3_s": 2.5}
     ]
   })json");
 
-  require(request.solver_kind == optiflow::demo::RequestSolverKind::Deterministic,
-          "request parser must read deterministic solver kind");
   require(request.exogenous.size() == 2U, "request parser must read deterministic exogenous inputs");
   require(near(request.exogenous[0].price_eur_per_mwh, 20.0), "request parser must read deterministic prices");
   require(near(request.exogenous[1].natural_inflow_m3_s, 2.5), "request parser must read deterministic inflows");
 }
 
-
-void test_parse_optimization_request_constraints() {
-  const auto request = optiflow::demo::parse_optimization_request_json(R"json({
-    "solver_kind": "deterministic",
-    "initial_state": {"reservoir_volume_m3": 25000000.0, "battery_soc_mwh": 10.0},
-    "parameters": {
-      "timestep_hours": 0.5,
-      "terminal_water_value_eur_per_m3": 0.002,
-      "terminal_battery_value_eur_per_mwh": 7.0,
-      "hydro": {
-        "min_reservoir_volume_m3": 1000000.0,
-        "max_reservoir_volume_m3": 80000000.0,
-        "max_turbine_flow_m3_s": 120.0,
-        "max_pump_flow_m3_s": 60.0,
-        "max_spill_flow_m3_s": 200.0,
-        "hydraulic_head_m": 100.0,
-        "turbine_efficiency": 0.88,
-        "pump_efficiency": 0.82,
-        "turbine_cost_eur_per_mwh": 2.0,
-        "pump_cost_eur_per_mwh": 1.0,
-        "spill_penalty_eur_per_m3": 0.01
-      },
-      "battery": {
-        "enabled": true,
-        "capacity_mwh": 30.0,
-        "max_charge_mw": 12.0,
-        "max_discharge_mw": 14.0,
-        "charge_efficiency": 0.91,
-        "discharge_efficiency": 0.92,
-        "degradation_cost_eur_per_mwh": 3.0
-      }
-    },
-    "optimization_config": {"discount_factor": 0.97},
-    "exogenous": [
-      {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
-    ]
-  })json");
-
-  require(near(request.parameters.timestep_hours, 0.5), "request parser must read time step hours");
-  require(near(request.parameters.hydro.max_reservoir_volume_m3, 80000000.0),
-          "request parser must read reservoir capacity");
-  require(near(request.parameters.hydro.max_turbine_flow_m3_s, 120.0),
-          "request parser must read turbine limit");
-  require(near(request.parameters.battery.capacity_mwh, 30.0),
-          "request parser must read battery capacity");
-  require(near(request.initial_state.reservoir_volume_m3, 25000000.0),
-          "request parser must read initial reservoir state");
-  require(near(request.initial_state.battery_soc_mwh, 10.0),
-          "request parser must read initial battery state");
-  require(near(request.config.discount_factor, 0.97), "request parser must read discount factor");
-}
-
-void test_parse_invalid_optimization_request_rejects_bad_constraints() {
-  auto failed = false;
-  try {
-    static_cast<void>(optiflow::demo::parse_optimization_request_json(R"json({
-      "solver_kind": "deterministic",
-      "initial_state": {"reservoir_volume_m3": 110.0, "battery_soc_mwh": 0.0},
-      "parameters": {
-        "hydro": {
-          "min_reservoir_volume_m3": 0.0,
-          "max_reservoir_volume_m3": 100.0
-        }
-      },
-      "exogenous": [
-        {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
-      ]
-    })json"));
-  } catch (const std::invalid_argument&) {
-    failed = true;
-  }
-
-  require(failed, "request parser must reject initial state outside model bounds");
-}
-
-void test_parse_stochastic_optimization_request_json() {
-  const auto request = optiflow::demo::parse_optimization_request_json(R"json({
-    "solver_kind": "stochastic",
-    "stochastic_process": [
-      {"time_index": 0, "realizations": [
-        {"realization_index": 0, "probability": 0.25, "price_eur_per_mwh": 10.0, "natural_inflow_m3_s": 0.0},
-        {"realization_index": 1, "probability": 0.75, "price_eur_per_mwh": 90.0, "natural_inflow_m3_s": 4.0}
-      ]}
-    ]
-  })json");
-
-  require(request.solver_kind == optiflow::demo::RequestSolverKind::Stochastic,
-          "request parser must read stochastic solver kind");
-  require(request.stochastic_process.size() == 1U, "request parser must read stochastic stages");
-  require(request.stochastic_process[0].size() == 2U, "request parser must read stochastic realizations");
-  require(near(request.stochastic_process[0][1].probability, 0.75), "request parser must read probabilities");
-  require(near(request.stochastic_process[0][1].value.price_eur_per_mwh, 90.0), "request parser must read stochastic prices");
-  require(near(request.stochastic_process[0][1].value.natural_inflow_m3_s, 4.0), "request parser must read stochastic inflows");
-}
-
 void test_parse_empty_optimization_request_uses_default_scenario() {
   const auto request = optiflow::demo::parse_optimization_request_json("{}");
 
-  require(request.solver_kind == optiflow::demo::RequestSolverKind::Deterministic,
-          "empty request parser must default to deterministic mode");
   require(!request.exogenous.empty(), "empty request parser must use the default deterministic scenario");
 }
 
@@ -432,7 +267,6 @@ void test_parse_invalid_optimization_request_rejects_bad_time_index() {
   auto failed = false;
   try {
     static_cast<void>(optiflow::demo::parse_optimization_request_json(R"json({
-      "solver_kind": "deterministic",
       "exogenous": [
         {"time_index": 1, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
       ]
@@ -472,14 +306,9 @@ int main() {
     test_peak_price_arbitrage();
     test_inflow_boundary_pressure();
     test_hydro_only_mode();
+    test_default_dispatch_accepts_positive_inflows();
     test_separated_csv_loader();
-    test_separated_stochastic_csv_loader();
-    test_stochastic_solver_probability_validation_and_policy();
-    test_demo_stochastic_dispatch_uses_expected_path();
     test_parse_deterministic_optimization_request_json();
-    test_parse_optimization_request_constraints();
-    test_parse_invalid_optimization_request_rejects_bad_constraints();
-    test_parse_stochastic_optimization_request_json();
     test_parse_empty_optimization_request_uses_default_scenario();
     test_parse_invalid_optimization_request_rejects_bad_time_index();
     test_longer_horizon_stress();

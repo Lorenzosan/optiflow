@@ -5,7 +5,6 @@ add_library(optiflow_optimization STATIC
   src/numerics/StateGrid.cpp
   src/numerics/ValueFunction.cpp
   src/model/PumpedStorageModel.cpp
-  src/stochastic/StochasticBellmanSolver.cpp
   src/solver/BellmanSolver.cpp
   src/solver/ForwardSimulator.cpp
 )

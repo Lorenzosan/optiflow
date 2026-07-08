@@ -49,16 +49,6 @@ V_t(s) = max_a [ r(s, a, w_t) + gamma V_{t+1}(f(s, a, w_t)) ]
 
 `V_{t+1}` is bilinearly interpolated at off-grid next states.
 
-## Stochastic Bellman recursion
-
-The included stochastic extension supports a discrete distribution at each stage:
-
-```text
-V_t(s) = max_a sum_w p(w) [ r(s, a, w) + gamma V_{t+1}(f(s, a, w)) ]
-```
-
-This assumes the exogenous realization is not observed before action selection. If the realization is observed before dispatch, the exogenous regime should be included in the policy state.
-
 ## Terminal value
 
 The terminal value approximates continuation value beyond the finite horizon:
@@ -78,4 +68,3 @@ This is a modeling choice. It should be calibrated or stress-tested because it c
 - Discrete state and action grids.
 - Nearest-grid policy lookup in forward simulation.
 - No market gate closure or ancillary-service products.
-- Stochastic solver does not yet include Markov regimes, scenario trees, or risk measures.
