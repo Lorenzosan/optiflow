@@ -18,3 +18,4 @@ add_optiflow_unit_test(DeterministicProblemTests unit/DeterministicProblemTests.
 add_optiflow_unit_test(PumpedStorageModelTests unit/PumpedStorageModelTests.cpp)
 add_optiflow_unit_test(BellmanSolverTests unit/BellmanSolverTests.cpp)
 add_optiflow_unit_test(ForwardSimulatorTests unit/ForwardSimulatorTests.cpp)
+add_optiflow_unit_test(DeterministicSanityTests unit/DeterministicSanityTests.cpp)
