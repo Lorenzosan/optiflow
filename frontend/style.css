@@ -191,3 +191,59 @@ th:first-child, td:first-child {
     grid-template-columns: 1fr;
   }
 }
+
+.constraints-panel {
+  margin-bottom: 16px;
+}
+
+.constraint-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.constraint-grid label {
+  color: #52617a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.constraint-grid input[type="number"] {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+  background: white;
+  color: #182033;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 58px;
+}
+
+.constraint-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.constraint-summary span {
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eff6ff;
+}
+
+@media (max-width: 900px) {
+  .constraint-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -32,6 +32,13 @@ public:
   [[nodiscard]] auto is_null() const noexcept -> bool { return std::holds_alternative<std::nullptr_t>(m_value); }
   [[nodiscard]] auto is_object() const noexcept -> bool { return std::holds_alternative<Object>(m_value); }
 
+  [[nodiscard]] auto as_bool(std::string_view context) const -> bool {
+    if (!std::holds_alternative<bool>(m_value)) {
+      throw std::invalid_argument{std::string{context} + " must be a boolean"};
+    }
+    return std::get<bool>(m_value);
+  }
+
   [[nodiscard]] auto as_number(std::string_view context) const -> double {
     if (!std::holds_alternative<double>(m_value)) {
       throw std::invalid_argument{std::string{context} + " must be a number"};
@@ -342,6 +349,43 @@ private:
   return value;
 }
 
+[[nodiscard]] auto optional_finite_number(const JsonValue::Object& object,
+                                          std::string_view key,
+                                          std::string_view context,
+                                          const double fallback) -> double {
+  const auto* value = find_member(object, key);
+  if (value == nullptr || value->is_null()) {
+    return fallback;
+  }
+
+  const auto number = value->as_number(std::string{context} + "." + std::string{key});
+  if (!std::isfinite(number)) {
+    throw std::invalid_argument{std::string{context} + "." + std::string{key} + " must be finite"};
+  }
+  return number;
+}
+
+[[nodiscard]] auto optional_bool(const JsonValue::Object& object,
+                                 std::string_view key,
+                                 std::string_view context,
+                                 const bool fallback) -> bool {
+  const auto* value = find_member(object, key);
+  if (value == nullptr || value->is_null()) {
+    return fallback;
+  }
+  return value->as_bool(std::string{context} + "." + std::string{key});
+}
+
+[[nodiscard]] auto optional_object(const JsonValue::Object& object,
+                                   std::string_view key,
+                                   std::string_view context) -> const JsonValue::Object* {
+  const auto* value = find_member(object, key);
+  if (value == nullptr || value->is_null()) {
+    return nullptr;
+  }
+  return &value->as_object(std::string{context} + "." + std::string{key});
+}
+
 void validate_probability_sum(const StageDistribution& distribution, const std::size_t time_index) {
   double sum{};
   for (const auto& realization : distribution) {
@@ -373,6 +417,162 @@ void validate_probability_sum(const StageDistribution& distribution, const std::
   throw std::invalid_argument{"solver_kind must be 'deterministic' or 'stochastic'"};
 }
 
+
+void require_non_negative(const double value, std::string_view name) {
+  if (value < 0.0) {
+    throw std::invalid_argument{std::string{name} + " must be non-negative"};
+  }
+}
+
+void require_positive(const double value, std::string_view name) {
+  if (value <= 0.0) {
+    throw std::invalid_argument{std::string{name} + " must be positive"};
+  }
+}
+
+void require_efficiency(const double value, std::string_view name) {
+  if (value <= 0.0 || value > 1.0) {
+    throw std::invalid_argument{std::string{name} + " must be in (0, 1]"};
+  }
+}
+
+[[nodiscard]] auto parse_parameters(const JsonValue::Object& root) -> ModelParameters {
+  auto parameters = make_default_parameters();
+
+  const auto* parameters_object = optional_object(root, "parameters", "optimization request");
+  if (parameters_object == nullptr) {
+    parameters_object = optional_object(root, "model_parameters", "optimization request");
+  }
+
+  if (parameters_object != nullptr) {
+    const auto& object = *parameters_object;
+    parameters.timestep_hours = optional_finite_number(object, "timestep_hours", "parameters", parameters.timestep_hours);
+    parameters.terminal_water_value_eur_per_m3 = optional_finite_number(
+        object, "terminal_water_value_eur_per_m3", "parameters", parameters.terminal_water_value_eur_per_m3);
+    parameters.terminal_battery_value_eur_per_mwh = optional_finite_number(
+        object, "terminal_battery_value_eur_per_mwh", "parameters", parameters.terminal_battery_value_eur_per_mwh);
+
+    if (const auto* hydro = optional_object(object, "hydro", "parameters")) {
+      parameters.hydro.min_reservoir_volume_m3 = optional_finite_number(
+          *hydro, "min_reservoir_volume_m3", "parameters.hydro", parameters.hydro.min_reservoir_volume_m3);
+      parameters.hydro.max_reservoir_volume_m3 = optional_finite_number(
+          *hydro, "max_reservoir_volume_m3", "parameters.hydro", parameters.hydro.max_reservoir_volume_m3);
+      parameters.hydro.max_turbine_flow_m3_s = optional_finite_number(
+          *hydro, "max_turbine_flow_m3_s", "parameters.hydro", parameters.hydro.max_turbine_flow_m3_s);
+      parameters.hydro.max_pump_flow_m3_s = optional_finite_number(
+          *hydro, "max_pump_flow_m3_s", "parameters.hydro", parameters.hydro.max_pump_flow_m3_s);
+      parameters.hydro.max_spill_flow_m3_s = optional_finite_number(
+          *hydro, "max_spill_flow_m3_s", "parameters.hydro", parameters.hydro.max_spill_flow_m3_s);
+      parameters.hydro.hydraulic_head_m = optional_finite_number(
+          *hydro, "hydraulic_head_m", "parameters.hydro", parameters.hydro.hydraulic_head_m);
+      parameters.hydro.turbine_efficiency = optional_finite_number(
+          *hydro, "turbine_efficiency", "parameters.hydro", parameters.hydro.turbine_efficiency);
+      parameters.hydro.pump_efficiency = optional_finite_number(
+          *hydro, "pump_efficiency", "parameters.hydro", parameters.hydro.pump_efficiency);
+      parameters.hydro.turbine_cost_eur_per_mwh = optional_finite_number(
+          *hydro, "turbine_cost_eur_per_mwh", "parameters.hydro", parameters.hydro.turbine_cost_eur_per_mwh);
+      parameters.hydro.pump_cost_eur_per_mwh = optional_finite_number(
+          *hydro, "pump_cost_eur_per_mwh", "parameters.hydro", parameters.hydro.pump_cost_eur_per_mwh);
+      parameters.hydro.spill_penalty_eur_per_m3 = optional_finite_number(
+          *hydro, "spill_penalty_eur_per_m3", "parameters.hydro", parameters.hydro.spill_penalty_eur_per_m3);
+    }
+
+    if (const auto* battery = optional_object(object, "battery", "parameters")) {
+      parameters.battery.enabled = optional_bool(*battery, "enabled", "parameters.battery", parameters.battery.enabled);
+      parameters.battery.capacity_mwh = optional_finite_number(
+          *battery, "capacity_mwh", "parameters.battery", parameters.battery.capacity_mwh);
+      parameters.battery.max_charge_mw = optional_finite_number(
+          *battery, "max_charge_mw", "parameters.battery", parameters.battery.max_charge_mw);
+      parameters.battery.max_discharge_mw = optional_finite_number(
+          *battery, "max_discharge_mw", "parameters.battery", parameters.battery.max_discharge_mw);
+      parameters.battery.charge_efficiency = optional_finite_number(
+          *battery, "charge_efficiency", "parameters.battery", parameters.battery.charge_efficiency);
+      parameters.battery.discharge_efficiency = optional_finite_number(
+          *battery, "discharge_efficiency", "parameters.battery", parameters.battery.discharge_efficiency);
+      parameters.battery.degradation_cost_eur_per_mwh = optional_finite_number(
+          *battery, "degradation_cost_eur_per_mwh", "parameters.battery", parameters.battery.degradation_cost_eur_per_mwh);
+    }
+  }
+
+  parameters.timestep_hours = optional_finite_number(root, "timestep_hours", "optimization request", parameters.timestep_hours);
+
+  require_positive(parameters.timestep_hours, "parameters.timestep_hours");
+  require_non_negative(parameters.hydro.min_reservoir_volume_m3, "parameters.hydro.min_reservoir_volume_m3");
+  require_non_negative(parameters.hydro.max_reservoir_volume_m3, "parameters.hydro.max_reservoir_volume_m3");
+  if (parameters.hydro.max_reservoir_volume_m3 <= parameters.hydro.min_reservoir_volume_m3) {
+    throw std::invalid_argument{"parameters.hydro.max_reservoir_volume_m3 must exceed min_reservoir_volume_m3"};
+  }
+  require_non_negative(parameters.hydro.max_turbine_flow_m3_s, "parameters.hydro.max_turbine_flow_m3_s");
+  require_non_negative(parameters.hydro.max_pump_flow_m3_s, "parameters.hydro.max_pump_flow_m3_s");
+  require_non_negative(parameters.hydro.max_spill_flow_m3_s, "parameters.hydro.max_spill_flow_m3_s");
+  require_positive(parameters.hydro.hydraulic_head_m, "parameters.hydro.hydraulic_head_m");
+  require_efficiency(parameters.hydro.turbine_efficiency, "parameters.hydro.turbine_efficiency");
+  require_efficiency(parameters.hydro.pump_efficiency, "parameters.hydro.pump_efficiency");
+  require_non_negative(parameters.hydro.turbine_cost_eur_per_mwh, "parameters.hydro.turbine_cost_eur_per_mwh");
+  require_non_negative(parameters.hydro.pump_cost_eur_per_mwh, "parameters.hydro.pump_cost_eur_per_mwh");
+  require_non_negative(parameters.hydro.spill_penalty_eur_per_m3, "parameters.hydro.spill_penalty_eur_per_m3");
+
+  require_non_negative(parameters.battery.capacity_mwh, "parameters.battery.capacity_mwh");
+  require_non_negative(parameters.battery.max_charge_mw, "parameters.battery.max_charge_mw");
+  require_non_negative(parameters.battery.max_discharge_mw, "parameters.battery.max_discharge_mw");
+  require_efficiency(parameters.battery.charge_efficiency, "parameters.battery.charge_efficiency");
+  require_efficiency(parameters.battery.discharge_efficiency, "parameters.battery.discharge_efficiency");
+  require_non_negative(parameters.battery.degradation_cost_eur_per_mwh, "parameters.battery.degradation_cost_eur_per_mwh");
+  if (parameters.battery.enabled && parameters.battery.capacity_mwh <= 0.0) {
+    throw std::invalid_argument{"parameters.battery.capacity_mwh must be positive when the battery is enabled"};
+  }
+
+  return parameters;
+}
+
+[[nodiscard]] auto parse_initial_state(const JsonValue::Object& root, const ModelParameters& parameters) -> State {
+  auto state = make_default_initial_state();
+  if (const auto* object = optional_object(root, "initial_state", "optimization request")) {
+    state.reservoir_volume_m3 = optional_finite_number(
+        *object, "reservoir_volume_m3", "initial_state", state.reservoir_volume_m3);
+    state.battery_soc_mwh = optional_finite_number(*object, "battery_soc_mwh", "initial_state", state.battery_soc_mwh);
+  }
+
+  if (state.reservoir_volume_m3 < parameters.hydro.min_reservoir_volume_m3
+      || state.reservoir_volume_m3 > parameters.hydro.max_reservoir_volume_m3) {
+    throw std::invalid_argument{"initial_state.reservoir_volume_m3 must lie inside reservoir bounds"};
+  }
+  if (parameters.battery.enabled) {
+    if (state.battery_soc_mwh < 0.0 || state.battery_soc_mwh > parameters.battery.capacity_mwh) {
+      throw std::invalid_argument{"initial_state.battery_soc_mwh must lie inside battery bounds"};
+    }
+  } else if (std::abs(state.battery_soc_mwh) > 1.0e-9) {
+    throw std::invalid_argument{"initial_state.battery_soc_mwh must be zero when the battery is disabled"};
+  }
+
+  return state;
+}
+
+[[nodiscard]] auto parse_optimization_config(const JsonValue::Object& root) -> OptimizationConfig {
+  auto config = make_default_optimization_config();
+  const auto* object = optional_object(root, "optimization_config", "optimization request");
+  if (object == nullptr) {
+    object = optional_object(root, "config", "optimization request");
+  }
+  if (object != nullptr) {
+    config.discount_factor = optional_finite_number(*object, "discount_factor", "optimization_config", config.discount_factor);
+    config.forbid_simultaneous_pump_and_turbine = optional_bool(
+        *object,
+        "forbid_simultaneous_pump_and_turbine",
+        "optimization_config",
+        config.forbid_simultaneous_pump_and_turbine);
+    config.forbid_simultaneous_charge_and_discharge = optional_bool(
+        *object,
+        "forbid_simultaneous_charge_and_discharge",
+        "optimization_config",
+        config.forbid_simultaneous_charge_and_discharge);
+  }
+  if (config.discount_factor < 0.0 || config.discount_factor > 1.0) {
+    throw std::invalid_argument{"optimization_config.discount_factor must be in [0, 1]"};
+  }
+  return config;
+}
+
 [[nodiscard]] auto parse_exogenous_array(const JsonValue::Object& root) -> std::vector<Exogenous> {
   const auto* value = find_member(root, "exogenous");
   if (value == nullptr || value->is_null()) {
@@ -398,6 +598,9 @@ void validate_probability_sum(const StageDistribution& distribution, const std::
         .price_eur_per_mwh = finite_number(row, "price_eur_per_mwh", context),
         .natural_inflow_m3_s = finite_number(row, "natural_inflow_m3_s", context),
     });
+    if (result.back().natural_inflow_m3_s < 0.0) {
+      throw std::invalid_argument{context + ".natural_inflow_m3_s must be non-negative"};
+    }
   }
 
   return result;
@@ -446,6 +649,9 @@ void validate_probability_sum(const StageDistribution& distribution, const std::
           },
           .probability = finite_number(realization, "probability", realization_context),
       });
+      if (distribution.back().value.natural_inflow_m3_s < 0.0) {
+        throw std::invalid_argument{realization_context + ".natural_inflow_m3_s must be non-negative"};
+      }
     }
 
     validate_probability_sum(distribution, time_index);
@@ -462,6 +668,9 @@ void validate_probability_sum(const StageDistribution& distribution, const std::
   if (json.empty()) {
     return OptimizationRequest{
         .solver_kind = RequestSolverKind::Deterministic,
+        .parameters = make_default_parameters(),
+        .initial_state = make_default_initial_state(),
+        .config = make_default_optimization_config(),
         .exogenous = make_default_exogenous(),
         .stochastic_process = {},
     };
@@ -472,12 +681,18 @@ void validate_probability_sum(const StageDistribution& distribution, const std::
   if (root.empty()) {
     return OptimizationRequest{
         .solver_kind = RequestSolverKind::Deterministic,
+        .parameters = make_default_parameters(),
+        .initial_state = make_default_initial_state(),
+        .config = make_default_optimization_config(),
         .exogenous = make_default_exogenous(),
         .stochastic_process = {},
     };
   }
 
   auto request = OptimizationRequest{};
+  request.parameters = parse_parameters(root);
+  request.initial_state = parse_initial_state(root, request.parameters);
+  request.config = parse_optimization_config(root);
   request.exogenous = parse_exogenous_array(root);
   request.stochastic_process = parse_stochastic_process(root);
   request.solver_kind = parse_solver_kind(root, !request.stochastic_process.empty());

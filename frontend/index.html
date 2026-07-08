@@ -46,6 +46,41 @@
       <p class="hint" id="scenarioSummary">No CSV scenario loaded.</p>
     </section>
 
+
+    <section class="panel constraints-panel">
+      <div>
+        <h2>Model constraints</h2>
+        <p class="hint">These values are sent with every optimization request. They control the physical limits, initial state, costs, efficiencies, and discount factor used by the solver.</p>
+      </div>
+      <div class="constraint-grid">
+        <label>Time step hours<input id="timestepHoursInput" type="number" step="0.25" min="0.01"></label>
+        <label>Discount factor<input id="discountFactorInput" type="number" step="0.001" min="0" max="1"></label>
+        <label>Initial reservoir m3<input id="initialReservoirInput" type="number" step="100000"></label>
+        <label>Min reservoir m3<input id="minReservoirInput" type="number" step="100000" min="0"></label>
+        <label>Max reservoir m3<input id="maxReservoirInput" type="number" step="100000" min="0"></label>
+        <label>Max turbine m3/s<input id="maxTurbineFlowInput" type="number" step="1" min="0"></label>
+        <label>Max pump m3/s<input id="maxPumpFlowInput" type="number" step="1" min="0"></label>
+        <label>Max spill m3/s<input id="maxSpillFlowInput" type="number" step="1" min="0"></label>
+        <label>Hydraulic head m<input id="hydraulicHeadInput" type="number" step="1" min="0.01"></label>
+        <label>Turbine efficiency<input id="turbineEfficiencyInput" type="number" step="0.01" min="0.01" max="1"></label>
+        <label>Pump efficiency<input id="pumpEfficiencyInput" type="number" step="0.01" min="0.01" max="1"></label>
+        <label>Turbine cost EUR/MWh<input id="turbineCostInput" type="number" step="0.1" min="0"></label>
+        <label>Pump cost EUR/MWh<input id="pumpCostInput" type="number" step="0.1" min="0"></label>
+        <label>Spill penalty EUR/m3<input id="spillPenaltyInput" type="number" step="0.0001" min="0"></label>
+        <label class="checkbox-label"><input id="batteryEnabledInput" type="checkbox"> Battery enabled</label>
+        <label>Initial battery MWh<input id="initialBatteryInput" type="number" step="1" min="0"></label>
+        <label>Battery capacity MWh<input id="batteryCapacityInput" type="number" step="1" min="0"></label>
+        <label>Max charge MW<input id="maxBatteryChargeInput" type="number" step="1" min="0"></label>
+        <label>Max discharge MW<input id="maxBatteryDischargeInput" type="number" step="1" min="0"></label>
+        <label>Charge efficiency<input id="batteryChargeEfficiencyInput" type="number" step="0.01" min="0.01" max="1"></label>
+        <label>Discharge efficiency<input id="batteryDischargeEfficiencyInput" type="number" step="0.01" min="0.01" max="1"></label>
+        <label>Battery degradation EUR/MWh<input id="batteryDegradationCostInput" type="number" step="0.1" min="0"></label>
+        <label>Terminal water value EUR/m3<input id="terminalWaterValueInput" type="number" step="0.0001"></label>
+        <label>Terminal battery value EUR/MWh<input id="terminalBatteryValueInput" type="number" step="0.1"></label>
+      </div>
+      <div id="constraintsSummary" class="constraint-summary"></div>
+    </section>
+
     <section class="cards">
       <article>
         <span class="label">Status</span>
@@ -126,6 +161,7 @@
               <th>SOC</th>
               <th>turbine</th>
               <th>pump</th>
+              <th>spill</th>
               <th>charge</th>
               <th>discharge</th>
               <th>net MW</th>

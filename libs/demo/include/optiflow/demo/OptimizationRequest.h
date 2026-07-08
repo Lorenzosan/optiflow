@@ -15,6 +15,9 @@ enum class RequestSolverKind {
 
 struct OptimizationRequest final {
   RequestSolverKind solver_kind{RequestSolverKind::Deterministic};
+  ModelParameters parameters{};
+  State initial_state{};
+  OptimizationConfig config{};
   std::vector<Exogenous> exogenous;
   StochasticExogenousProcess stochastic_process;
 };
@@ -25,12 +28,19 @@ struct OptimizationRequest final {
  * Supported deterministic shape:
  * {
  *   "solver_kind": "deterministic",
+ *   "initial_state": {"reservoir_volume_m3": 50000000.0, "battery_soc_mwh": 25.0},
+ *   "parameters": {
+ *     "timestep_hours": 1.0,
+ *     "hydro": {"max_reservoir_volume_m3": 100000000.0, "max_turbine_flow_m3_s": 150.0},
+ *     "battery": {"enabled": true, "capacity_mwh": 50.0}
+ *   },
+ *   "optimization_config": {"discount_factor": 1.0},
  *   "exogenous": [
  *     {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
  *   ]
  * }
  *
- * Supported stochastic shape:
+ * Supported stochastic shape uses the same parameter and initial_state fields plus:
  * {
  *   "solver_kind": "stochastic",
  *   "stochastic_process": [

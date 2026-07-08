@@ -325,6 +325,81 @@ void test_parse_deterministic_optimization_request_json() {
   require(near(request.exogenous[1].natural_inflow_m3_s, 2.5), "request parser must read deterministic inflows");
 }
 
+
+void test_parse_optimization_request_constraints() {
+  const auto request = optiflow::demo::parse_optimization_request_json(R"json({
+    "solver_kind": "deterministic",
+    "initial_state": {"reservoir_volume_m3": 25000000.0, "battery_soc_mwh": 10.0},
+    "parameters": {
+      "timestep_hours": 0.5,
+      "terminal_water_value_eur_per_m3": 0.002,
+      "terminal_battery_value_eur_per_mwh": 7.0,
+      "hydro": {
+        "min_reservoir_volume_m3": 1000000.0,
+        "max_reservoir_volume_m3": 80000000.0,
+        "max_turbine_flow_m3_s": 120.0,
+        "max_pump_flow_m3_s": 60.0,
+        "max_spill_flow_m3_s": 200.0,
+        "hydraulic_head_m": 100.0,
+        "turbine_efficiency": 0.88,
+        "pump_efficiency": 0.82,
+        "turbine_cost_eur_per_mwh": 2.0,
+        "pump_cost_eur_per_mwh": 1.0,
+        "spill_penalty_eur_per_m3": 0.01
+      },
+      "battery": {
+        "enabled": true,
+        "capacity_mwh": 30.0,
+        "max_charge_mw": 12.0,
+        "max_discharge_mw": 14.0,
+        "charge_efficiency": 0.91,
+        "discharge_efficiency": 0.92,
+        "degradation_cost_eur_per_mwh": 3.0
+      }
+    },
+    "optimization_config": {"discount_factor": 0.97},
+    "exogenous": [
+      {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
+    ]
+  })json");
+
+  require(near(request.parameters.timestep_hours, 0.5), "request parser must read time step hours");
+  require(near(request.parameters.hydro.max_reservoir_volume_m3, 80000000.0),
+          "request parser must read reservoir capacity");
+  require(near(request.parameters.hydro.max_turbine_flow_m3_s, 120.0),
+          "request parser must read turbine limit");
+  require(near(request.parameters.battery.capacity_mwh, 30.0),
+          "request parser must read battery capacity");
+  require(near(request.initial_state.reservoir_volume_m3, 25000000.0),
+          "request parser must read initial reservoir state");
+  require(near(request.initial_state.battery_soc_mwh, 10.0),
+          "request parser must read initial battery state");
+  require(near(request.config.discount_factor, 0.97), "request parser must read discount factor");
+}
+
+void test_parse_invalid_optimization_request_rejects_bad_constraints() {
+  auto failed = false;
+  try {
+    static_cast<void>(optiflow::demo::parse_optimization_request_json(R"json({
+      "solver_kind": "deterministic",
+      "initial_state": {"reservoir_volume_m3": 110.0, "battery_soc_mwh": 0.0},
+      "parameters": {
+        "hydro": {
+          "min_reservoir_volume_m3": 0.0,
+          "max_reservoir_volume_m3": 100.0
+        }
+      },
+      "exogenous": [
+        {"time_index": 0, "price_eur_per_mwh": 20.0, "natural_inflow_m3_s": 0.0}
+      ]
+    })json"));
+  } catch (const std::invalid_argument&) {
+    failed = true;
+  }
+
+  require(failed, "request parser must reject initial state outside model bounds");
+}
+
 void test_parse_stochastic_optimization_request_json() {
   const auto request = optiflow::demo::parse_optimization_request_json(R"json({
     "solver_kind": "stochastic",
@@ -402,6 +477,8 @@ int main() {
     test_stochastic_solver_probability_validation_and_policy();
     test_demo_stochastic_dispatch_uses_expected_path();
     test_parse_deterministic_optimization_request_json();
+    test_parse_optimization_request_constraints();
+    test_parse_invalid_optimization_request_rejects_bad_constraints();
     test_parse_stochastic_optimization_request_json();
     test_parse_empty_optimization_request_uses_default_scenario();
     test_parse_invalid_optimization_request_rejects_bad_time_index();

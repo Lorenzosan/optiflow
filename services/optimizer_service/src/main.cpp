@@ -17,8 +17,16 @@ namespace {
     try {
       const auto optimization_request = optiflow::demo::parse_optimization_request_json(request.body);
       const auto result = optimization_request.solver_kind == optiflow::demo::RequestSolverKind::Stochastic
-          ? optiflow::demo::run_stochastic_dispatch(optimization_request.stochastic_process)
-          : optiflow::demo::run_dispatch(optimization_request.exogenous);
+          ? optiflow::demo::run_stochastic_dispatch(
+                optimization_request.stochastic_process,
+                optimization_request.parameters,
+                optimization_request.initial_state,
+                optimization_request.config)
+          : optiflow::demo::run_dispatch(
+                optimization_request.exogenous,
+                optimization_request.parameters,
+                optimization_request.initial_state,
+                optimization_request.config);
       return optiflow::service::make_json_response(optiflow::demo::simulation_to_json(result));
     } catch (const std::invalid_argument& error) {
       return optiflow::service::make_error_response(error.what(), 400);
