@@ -76,29 +76,29 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
   return ModelParameters{
       .hydro = HydroParameters{
           .min_reservoir_volume_m3 = 0.0,
-          .max_reservoir_volume_m3 = 0.0,
-          .max_turbine_flow_m3_s = 0.0,
-          .max_pump_flow_m3_s = 0.0,
-          .max_spill_flow_m3_s = 0.0,
-          .hydraulic_head_m = 1.0,
-          .turbine_efficiency = 1.0,
-          .pump_efficiency = 1.0,
-          .turbine_cost_eur_per_mwh = 0.0,
-          .pump_cost_eur_per_mwh = 0.0,
+          .max_reservoir_volume_m3 = 100'000'000.0,
+          .max_turbine_flow_m3_s = 150.0,
+          .max_pump_flow_m3_s = 75.0,
+          .max_spill_flow_m3_s = 260.0,
+          .hydraulic_head_m = 120.0,
+          .turbine_efficiency = 0.90,
+          .pump_efficiency = 0.85,
+          .turbine_cost_eur_per_mwh = 1.0,
+          .pump_cost_eur_per_mwh = 0.5,
           .spill_penalty_eur_per_m3 = 0.0,
       },
       .battery = BatteryParameters{
           .enabled = true,
-          .capacity_mwh = 1.0,
-          .max_charge_mw = 1.0,
-          .max_discharge_mw = 1.0,
-          .charge_efficiency = 1.0,
-          .discharge_efficiency = 1.0,
-          .degradation_cost_eur_per_mwh = 0.0,
+          .capacity_mwh = 50.0,
+          .max_charge_mw = 25.0,
+          .max_discharge_mw = 25.0,
+          .charge_efficiency = 0.95,
+          .discharge_efficiency = 0.95,
+          .degradation_cost_eur_per_mwh = 1.0,
       },
       .timestep_hours = 1.0,
-      .terminal_water_value_eur_per_m3 = 0.0,
-      .terminal_battery_value_eur_per_mwh = 0.0,
+      .terminal_water_value_eur_per_m3 = 0.001,
+      .terminal_battery_value_eur_per_mwh = 5.0,
   };
 }
 
@@ -120,25 +120,25 @@ void append_outcome_json(std::ostringstream& stream, const Outcome& outcome) {
 
 [[nodiscard]] auto make_default_state_grid() -> StateGrid {
   return StateGrid{
-      std::vector<double>{0.0},
-      std::vector<double>{0.0, 1.0},
+      std::vector<double>{0.0, 25'000'000.0, 50'000'000.0, 75'000'000.0, 100'000'000.0},
+      std::vector<double>{0.0, 25.0, 50.0},
   };
 }
 
 [[nodiscard]] auto make_default_action_grid() -> ActionGrid {
   return ActionGrid::from_axes(ActionAxes{
-      .turbine_flow_m3_s = {0.0},
-      .spill_flow_m3_s = {0.0},
-      .pump_flow_m3_s = {0.0},
-      .battery_charge_mw = {0.0, 1.0},
-      .battery_discharge_mw = {0.0, 1.0},
+      .turbine_flow_m3_s = {0.0, 75.0, 150.0},
+      .spill_flow_m3_s = {0.0, 75.0, 150.0, 260.0},
+      .pump_flow_m3_s = {0.0, 75.0},
+      .battery_charge_mw = {0.0, 25.0},
+      .battery_discharge_mw = {0.0, 25.0},
   });
 }
 
 [[nodiscard]] auto make_default_initial_state() -> State {
   return State{
-      .reservoir_volume_m3 = 0.0,
-      .battery_soc_mwh = 0.0,
+      .reservoir_volume_m3 = 50'000'000.0,
+      .battery_soc_mwh = 25.0,
   };
 }
   

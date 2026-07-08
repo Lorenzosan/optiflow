@@ -34,7 +34,19 @@ public:
                               const Policy& policy) const -> SimulationResult;
 
 private:
-  [[nodiscard]] auto lookup_action(std::size_t time_index, State state, const Policy& policy) const -> Action;
+  [[nodiscard]] auto lookup_action(std::size_t time_index,
+                                   State state,
+                                   Exogenous exogenous,
+                                   const Policy& policy) const -> Action;
+
+  [[nodiscard]] auto lookup_nearest_policy_action(std::size_t time_index,
+                                                  State state,
+                                                  const Policy& policy) const -> Action;
+
+  [[nodiscard]] auto lookup_nearest_feasible_policy_action(std::size_t time_index,
+                                                           State state,
+                                                           Exogenous exogenous,
+                                                           const Policy& policy) const -> Action;
 
   PumpedStorageModel m_model;
   StateGrid m_state_grid;
