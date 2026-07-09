@@ -24,6 +24,21 @@ target_compile_features(optiflow_simple_behaviour_tests PRIVATE cxx_std_20)
 add_test(NAME optiflow_simple_behaviour_tests COMMAND optiflow_simple_behaviour_tests)
 
 
+add_test(NAME optiflow_solve_cli_example
+    COMMAND ${CMAKE_COMMAND}
+        -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+        -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_solve_cli_output.cmake)
+
+add_test(NAME optiflow_solve_cli_yearly_example
+    COMMAND ${CMAKE_COMMAND}
+        -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+        -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli-yearly
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_yearly_example.cmake)
+
+
 if(OPTIFLOW_BUILD_GRPC)
     add_executable(optiflow_proto_conversion_tests
         test_proto_conversion.cpp)

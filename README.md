@@ -22,6 +22,7 @@ OptiFlow is a C++20 interview project for deterministic dispatch optimization of
 * Local gRPC optimizer service.
 * gRPC service smoke test.
 * Runner-level optimization diagnostics shared by CLI and gRPC boundaries.
+* CLI diagnostic summary printed to stdout while keeping dispatch CSV trajectory-only.
 
 ## Build
 
@@ -41,9 +42,41 @@ ctest --test-dir build --output-on-failure
   --output build/dispatch.csv
 ```
 
-The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit.
+The repository also includes a deterministic one-year synthetic example with 8760 hourly time steps:
 
-The optimizer runner also reports diagnostics to API callers. These diagnostics include horizon length, state-grid dimensions, action-grid size, Bellman solve time, forward-simulation time, and counts of simulated turbine, pump, spill, battery charge, battery discharge, and wait steps. The CLI currently keeps the CSV output trajectory-only; service clients receive diagnostics through `OptimizeResponse.diagnostics`.
+```bash
+./build/apps/solve_cli/optiflow_solve \
+  --scenario examples/yearly/scenario.csv \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --output build/yearly_dispatch.csv
+```
+
+The one-year example is intentionally coarse: it uses 9 reservoir grid points, 5 battery grid points, and 72 generated actions. It is useful for long-horizon smoke testing and diagnostics, not for calibrated economic conclusions.
+
+The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit. The CSV schema is trajectory-only and does not include run metadata.
+
+The CLI prints a diagnostic summary to stdout after writing the dispatch CSV:
+
+```text
+Scenario: sample_day
+Time steps: 12
+Reservoir grid points: 21
+Battery grid points: 11
+Action count: 216
+Solve seconds: <wall-clock seconds>
+Simulation seconds: <wall-clock seconds>
+Turbine steps: <count>
+Pump steps: <count>
+Spill steps: <count>
+Battery charge steps: <count>
+Battery discharge steps: <count>
+Wait steps: <count>
+Cumulative profit: <value>
+Dispatch written to: build/dispatch.csv
+```
+
+The optimizer runner reports the same diagnostics to API callers. Service clients receive diagnostics through `OptimizeResponse.diagnostics`.
 
 ## Model conventions
 
@@ -118,6 +151,8 @@ time_index,natural_inflow
 
 The price and inflow files must have matching `time_index` values, starting at zero and increasing by one. Every required scenario key must be present. Missing keys cause the CLI to fail. This is intentional.
 
+The `examples/yearly/` directory follows the same schema and contains 8760 data rows in both `prices.csv` and `inflows.csv`, representing one non-leap year of hourly synthetic inputs.
+
 Terminal-state behavior is controlled by explicit keys in the scenario file:
 
 ```csv
@@ -154,7 +189,7 @@ terminal_battery_target_penalty,0
 
 1. Add a small local gRPC client for manual `OptimizeRequest` calls.
 2. Add a documented example request builder for the gRPC API.
-3. Add CLI diagnostic printing without changing the dispatch CSV schema.
-4. Add protobuf/CSV optimization parity tests.
+3. Add protobuf/CSV optimization parity tests.
+4. Document reproducible protobuf/gRPC build setup.
 5. Add persistence schema and API service only after the local optimizer service interface is stable.
 6. Add Docker Compose and frontend last.

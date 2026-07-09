@@ -6,7 +6,7 @@ This document defines the units and sign conventions used by the C++ optimizer c
 
 The optimization horizon has `N` decision steps indexed from `0` to `N - 1`. The value function has `N + 1` slices, including the terminal slice at index `N`.
 
-`time_step_hours` is the duration of one decision step in hours. Price and inflow rows must use consecutive `time_index` values starting at zero.
+`time_step_hours` is the duration of one decision step in hours. Price and inflow rows must use consecutive `time_index` values starting at zero. The yearly CSV example uses 8760 hourly rows, corresponding to one non-leap year.
 
 ## State variables
 
@@ -106,7 +106,7 @@ Use wide terminal bounds and zero target penalties when no final-state preferenc
 
 ## Optimization diagnostics
 
-`OptimizationRunner` returns diagnostics together with the dispatch trajectory and cumulative profit. These diagnostics are deterministic metadata except for wall-clock timings.
+`OptimizationRunner` returns diagnostics together with the dispatch trajectory and cumulative profit. The CLI prints these diagnostics to stdout after writing the dispatch CSV; the protobuf/gRPC boundary copies them into `OptimizeResponse.diagnostics`. The dispatch CSV remains trajectory-only and does not include run metadata. These diagnostics are deterministic metadata except for wall-clock timings.
 
 The structural fields are:
 
@@ -139,4 +139,4 @@ battery_discharge_steps
 wait_steps
 ```
 
-Each non-wait counter is incremented when the corresponding action component is positive in a dispatch row. `wait_steps` is incremented only when turbine, pump, spill, battery charge, and battery discharge actions are all zero. Tests recompute these counters from dispatch rows and compare them with runner and service diagnostics.
+Each non-wait counter is incremented when the corresponding action component is positive in a dispatch row. `wait_steps` is incremented only when turbine, pump, spill, battery charge, and battery discharge actions are all zero. Tests recompute these counters from dispatch rows and compare them with runner and service diagnostics. The CLI integration tests check that the short sample run prints the diagnostic labels and preserves the dispatch CSV header. A separate yearly-example test solves the 8760-step synthetic scenario and verifies that the generated dispatch file has one header plus 8760 trajectory rows.
