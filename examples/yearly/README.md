@@ -13,3 +13,23 @@ inflows.csv    Hourly synthetic natural inflows for one non-leap year.
 ```
 
 The scenario uses 9 reservoir grid points, 5 battery grid points, and 72 generated actions. This keeps the example suitable for local smoke testing while still covering a one-year horizon.
+
+
+Run and validate the example from the repository root:
+
+```bash
+./build/apps/solve_cli/optiflow_solve \
+  --scenario examples/yearly/scenario.csv \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --output build/yearly_dispatch.csv > build/yearly_stdout.txt
+
+python3 tools/validate_dispatch.py \
+  --scenario examples/yearly/scenario.csv \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --dispatch build/yearly_dispatch.csv \
+  --stdout build/yearly_stdout.txt
+```
+
+The validation helper checks that the generated trajectory is internally consistent with the configured model, action grid, and exogenous inputs. It is a consistency check, not a calibration claim.

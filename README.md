@@ -54,6 +54,25 @@ The repository also includes a deterministic one-year synthetic example with 876
 
 The one-year example is intentionally coarse: it uses 9 reservoir grid points, 5 battery grid points, and 72 generated actions. It is useful for long-horizon smoke testing and diagnostics, not for calibrated economic conclusions.
 
+The generated dispatch can be checked against the model equations and input files with the validation helper:
+
+```bash
+./build/apps/solve_cli/optiflow_solve \
+  --scenario examples/yearly/scenario.csv \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --output build/yearly_dispatch.csv > build/yearly_stdout.txt
+
+python3 tools/validate_dispatch.py \
+  --scenario examples/yearly/scenario.csv \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --dispatch build/yearly_dispatch.csv \
+  --stdout build/yearly_stdout.txt
+```
+
+The validator checks row counts, time indexing, state continuity, action-grid membership, physical bounds, mutual-exclusion constraints, transition equations, net power, reward, terminal hard bounds, and diagnostic activity counters. It does not prove that the one-year policy is globally optimal; that is covered by Bellman-solver tests on smaller scenarios where expected behavior is easier to assert.
+
 The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit. The CSV schema is trajectory-only and does not include run metadata.
 
 The CLI prints a diagnostic summary to stdout after writing the dispatch CSV:
