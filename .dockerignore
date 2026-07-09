@@ -1,0 +1,20 @@
+.git
+.DS_Store
+
+# Local build outputs
+build/
+build-*/
+cmake-build-*/
+out/
+
+# Python local state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Generated documentation and local artifacts
+docs/html/
+docs/latex/
+*.patch
+*.zip

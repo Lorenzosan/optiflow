@@ -35,11 +35,15 @@ docs/latex/
 # macOS
 .DS_Store
 
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
 # Emacs autosave
 *~
 
 # Patch files
 *.patch
 *.zip
-# macOS
-.DS_Store
