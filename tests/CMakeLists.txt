@@ -44,6 +44,12 @@ add_test(NAME optiflow_solve_cli_example
         -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli
         -P ${CMAKE_CURRENT_SOURCE_DIR}/check_solve_cli_output.cmake)
 
+add_test(NAME optiflow_solve_cli_invalid_input
+    COMMAND ${CMAKE_COMMAND}
+        -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+        -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli-invalid-input
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_solve_cli_invalid_input.cmake)
+
 find_package(Python3 COMPONENTS Interpreter)
 
 add_test(NAME optiflow_solve_cli_yearly_example
