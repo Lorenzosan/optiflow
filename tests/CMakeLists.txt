@@ -36,4 +36,17 @@ if(OPTIFLOW_BUILD_GRPC)
     target_compile_features(optiflow_proto_conversion_tests PRIVATE cxx_std_20)
 
     add_test(NAME optiflow_proto_conversion_tests COMMAND optiflow_proto_conversion_tests)
+
+    add_executable(optiflow_optimizer_service_smoke_tests
+        test_optimizer_service_smoke.cpp)
+
+    target_link_libraries(optiflow_optimizer_service_smoke_tests
+        PRIVATE
+            optiflow::optimizer_service
+            optiflow_project_warnings)
+
+    target_compile_features(optiflow_optimizer_service_smoke_tests PRIVATE cxx_std_20)
+
+    add_test(NAME optiflow_optimizer_service_smoke_tests
+             COMMAND optiflow_optimizer_service_smoke_tests)
 endif()
