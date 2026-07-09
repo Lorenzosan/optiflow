@@ -1,8 +1,6 @@
-# OptiFlow starting point
+# OptiFlow
 
 OptiFlow is a C++20 interview project for deterministic dispatch optimization of a pumped-storage asset with an optional battery.
-
-This starting point intentionally contains the optimization library, a CSV-driven CLI, examples, Doxygen configuration, minimal tests, and an optional protobuf/gRPC contract target. It does not include a running gRPC service, REST, PostgreSQL, NGINX, Docker, or a frontend yet.
 
 ## What is implemented
 

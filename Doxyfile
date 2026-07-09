@@ -1,7 +1,7 @@
 PROJECT_NAME           = "OptiFlow"
 PROJECT_BRIEF          = "Pumped-storage and battery dispatch optimization demo"
 OUTPUT_DIRECTORY       = docs
-INPUT                  = README.md docs/model.md libs/optimization/include
+INPUT                  = README.md docs/model.md libs/optimization/include libs/optimizer_service/include
 RECURSIVE              = YES
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = NO
