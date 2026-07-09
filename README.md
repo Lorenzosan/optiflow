@@ -41,6 +41,7 @@ The CTest suite is split by responsibility:
 * `optiflow_solve_cli_invalid_input` checks that malformed scenario input fails deterministically, reports the parse error on stderr, prints usage text, and does not create a dispatch CSV.
 * `optiflow_solve_cli_yearly_example` checks the yearly synthetic scenario end to end, including terminal inventory bands and diagnostic counters.
 * `optiflow_yearly_dispatch_summary` checks the summary tool against a generated yearly dispatch and verifies recomputed economic and energy-flow fields.
+* `optiflow_dispatch_validator_regression` checks that the dispatch validator accepts a generated dispatch with CLI diagnostics and rejects a deliberately corrupted dispatch with a precise model-equation error.
 * `optiflow_yearly_scenario_comparison` checks the comparison tool across the base, no-battery, and high-degradation yearly scenarios. It verifies that the physically unavailable battery case and the economically unattractive battery case are distinct inputs but produce the expected equal-profit comparison in the synthetic setup.
 
 The C++ oracle tests are deliberately small and deterministic. They are meant to catch optimizer regressions before larger yearly examples or future service adapters are considered.

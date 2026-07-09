@@ -69,6 +69,14 @@ if(Python3_Interpreter_FOUND)
             -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/yearly-summary
             -P ${CMAKE_CURRENT_SOURCE_DIR}/check_yearly_summary.cmake)
 
+    add_test(NAME optiflow_dispatch_validator_regression
+        COMMAND ${CMAKE_COMMAND}
+            -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+            -DOPTIFLOW_PYTHON=${Python3_EXECUTABLE}
+            -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+            -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/dispatch-validator
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/check_dispatch_validator_regression.cmake)
+
     add_test(NAME optiflow_yearly_scenario_comparison
         COMMAND ${CMAKE_COMMAND}
             -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
