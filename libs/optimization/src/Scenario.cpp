@@ -80,12 +80,25 @@ void Scenario::validate() const {
     for (const Exogenous& exogenous : exogenous_series_) {
         require_finite(exogenous.electricity_price, "electricity_price");
         require_finite(exogenous.natural_inflow, "natural_inflow");
+        if (exogenous.natural_inflow < 0.0) {
+            throw std::invalid_argument("natural_inflow must be nonnegative");
+        }
     }
 }
 
 ScenarioBundle::ScenarioBundle(Scenario scenario_value, SolverParameters solver_parameters_value)
     : scenario(std::move(scenario_value)), solver_parameters(solver_parameters_value) {
     validate_solver_parameters(solver_parameters);
+
+    const ModelParameters& model_parameters = scenario.model_parameters();
+    const bool has_reservoir_range = model_parameters.reservoir_min_volume < model_parameters.reservoir_max_volume;
+    const bool has_battery_range = model_parameters.battery_min_soc < model_parameters.battery_max_soc;
+    if (has_reservoir_range && solver_parameters.reservoir_volume_grid_points < 2) {
+        throw std::invalid_argument("reservoir_volume_grid_points must be at least two when reservoir bounds have nonzero width");
+    }
+    if (has_battery_range && solver_parameters.battery_soc_grid_points < 2) {
+        throw std::invalid_argument("battery_soc_grid_points must be at least two when battery bounds have nonzero width");
+    }
 }
 
 }  // namespace optiflow::core

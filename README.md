@@ -39,6 +39,10 @@ ctest --test-dir build --output-on-failure
 
 The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit.
 
+## Model conventions
+
+The model units and sign conventions are documented in [`docs/model.md`](docs/model.md).
+
 ## Generate documentation
 
 Doxygen is configured but not required for the build.

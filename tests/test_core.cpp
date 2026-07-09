@@ -206,6 +206,77 @@ void test_value_function_policy_and_interpolation() {
     require_near(policy.get(0, policy_index).turbine_flow, 3.0, "stored policy action");
 }
 
+
+void test_value_function_policy_and_interpolation_bounds() {
+    const numerics::StateGrid grid(0.0, 10.0, 3, 0.0, 20.0, 3);
+    numerics::ValueFunction value_function(2, grid);
+
+    value_function.set(0, numerics::StateIndex(0, 0), 1.0);
+    value_function.set(0, numerics::StateIndex(1, 2), 12.0);
+    value_function.set(2, numerics::StateIndex(2, 1), 21.0);
+
+    require_near(value_function.get(0, numerics::StateIndex(0, 0)), 1.0, "value function lower offset");
+    require_near(value_function.get(0, numerics::StateIndex(1, 2)), 12.0, "value function middle offset");
+    require_near(value_function.get(2, numerics::StateIndex(2, 1)), 21.0, "value function terminal offset");
+    require_throws<std::out_of_range>([&]() {
+        static_cast<void>(value_function.get(3, numerics::StateIndex(0, 0)));
+    }, "time");
+    require_throws<std::out_of_range>([&]() {
+        static_cast<void>(value_function.get(0, numerics::StateIndex(3, 0)));
+    }, "state");
+
+    numerics::Policy policy(2, grid);
+    require_throws<std::runtime_error>([&]() {
+        static_cast<void>(policy.get(0, numerics::StateIndex(0, 0)));
+    }, "not been set");
+    require_throws<std::out_of_range>([&]() {
+        static_cast<void>(policy.has_action(2, numerics::StateIndex(0, 0)));
+    }, "time");
+}
+
+void test_scenario_validation_rejects_negative_inflow() {
+    require_throws<std::invalid_argument>([]() {
+        const core::Scenario scenario("negative_inflow",
+                                      core::State(50.0, 10.0),
+                                      {core::Exogenous(30.0, -1.0)},
+                                      model_parameters(),
+                                      open_terminal_parameters());
+        static_cast<void>(scenario);
+    }, "natural_inflow");
+}
+
+void test_scenario_bundle_rejects_invalid_state_grid_sizes() {
+    require_throws<std::invalid_argument>([]() {
+        const core::Scenario scenario("bad_reservoir_grid",
+                                      core::State(50.0, 10.0),
+                                      {core::Exogenous(30.0, 0.0)},
+                                      model_parameters(),
+                                      open_terminal_parameters());
+        const core::ScenarioBundle bundle(scenario,
+                                          core::SolverParameters(1, 5, 1, 1, 1, 1, 1, 1.0));
+        static_cast<void>(bundle);
+    }, "reservoir_volume_grid_points");
+
+    require_throws<std::invalid_argument>([]() {
+        const core::Scenario scenario("bad_battery_grid",
+                                      core::State(50.0, 10.0),
+                                      {core::Exogenous(30.0, 0.0)},
+                                      model_parameters(),
+                                      open_terminal_parameters());
+        const core::ScenarioBundle bundle(scenario,
+                                          core::SolverParameters(2, 1, 1, 1, 1, 1, 1, 1.0));
+        static_cast<void>(bundle);
+    }, "battery_soc_grid_points");
+}
+
+void test_model_validation_rejects_efficiency_greater_than_one() {
+    require_throws<std::invalid_argument>([]() {
+        core::ModelParameters parameters = model_parameters();
+        parameters.turbine_efficiency = 1.01;
+        validate_model_parameters(parameters);
+    }, "efficiencies");
+}
+
 void test_small_bellman_solve_and_forward_simulation() {
     const core::ModelParameters mp = model_parameters();
     const core::SolverParameters sp = solver_parameters();
@@ -329,6 +400,77 @@ void test_nearest_policy_matches_value_function_simulation_on_grid_aligned_case(
     }
 }
 
+
+void test_csv_reader_rejects_duplicate_scenario_key() {
+    const std::filesystem::path directory = std::filesystem::temp_directory_path();
+    const std::filesystem::path scenario_path = directory / "optiflow_test_duplicate_scenario.csv";
+    const std::filesystem::path prices_path = directory / "optiflow_test_duplicate_prices.csv";
+    const std::filesystem::path inflows_path = directory / "optiflow_test_duplicate_inflows.csv";
+
+    {
+        std::ofstream prices(prices_path);
+        prices << "time_index,price\n";
+        prices << "0,0\n";
+    }
+    {
+        std::ofstream inflows(inflows_path);
+        inflows << "time_index,natural_inflow\n";
+        inflows << "0,0\n";
+    }
+    {
+        std::ofstream scenario(scenario_path);
+        scenario << "key,value\n";
+        scenario << "scenario_name,first\n";
+        scenario << "scenario_name,second\n";
+    }
+
+    require_throws<std::invalid_argument>([&]() {
+        const core::ScenarioBundle bundle = core::CsvScenarioReader::read(scenario_path,
+                                                                          prices_path,
+                                                                          inflows_path);
+        static_cast<void>(bundle);
+    }, "duplicate scenario key");
+
+    std::filesystem::remove(scenario_path);
+    std::filesystem::remove(prices_path);
+    std::filesystem::remove(inflows_path);
+}
+
+void test_csv_reader_rejects_mismatched_price_and_inflow_indices() {
+    const std::filesystem::path directory = std::filesystem::temp_directory_path();
+    const std::filesystem::path scenario_path = directory / "optiflow_test_mismatch_scenario.csv";
+    const std::filesystem::path prices_path = directory / "optiflow_test_mismatch_prices.csv";
+    const std::filesystem::path inflows_path = directory / "optiflow_test_mismatch_inflows.csv";
+
+    {
+        std::ofstream prices(prices_path);
+        prices << "time_index,price\n";
+        prices << "0,0\n";
+        prices << "1,0\n";
+    }
+    {
+        std::ofstream inflows(inflows_path);
+        inflows << "time_index,natural_inflow\n";
+        inflows << "0,0\n";
+    }
+    {
+        std::ofstream scenario(scenario_path);
+        scenario << "key,value\n";
+        scenario << "scenario_name,unused\n";
+    }
+
+    require_throws<std::invalid_argument>([&]() {
+        const core::ScenarioBundle bundle = core::CsvScenarioReader::read(scenario_path,
+                                                                          prices_path,
+                                                                          inflows_path);
+        static_cast<void>(bundle);
+    }, "same number of rows");
+
+    std::filesystem::remove(scenario_path);
+    std::filesystem::remove(prices_path);
+    std::filesystem::remove(inflows_path);
+}
+
 void test_csv_reader_rejects_missing_terminal_key() {
     const std::filesystem::path directory = std::filesystem::temp_directory_path();
     const std::filesystem::path scenario_path = directory / "optiflow_test_core_scenario.csv";
@@ -407,9 +549,15 @@ int main() {
     test_scenario_rejects_initial_state_outside_bounds();
     test_state_grid_coordinates_and_nearest_index();
     test_value_function_policy_and_interpolation();
+    test_value_function_policy_and_interpolation_bounds();
+    test_scenario_validation_rejects_negative_inflow();
+    test_scenario_bundle_rejects_invalid_state_grid_sizes();
+    test_model_validation_rejects_efficiency_greater_than_one();
     test_small_bellman_solve_and_forward_simulation();
     test_terminal_target_changes_final_state();
     test_nearest_policy_matches_value_function_simulation_on_grid_aligned_case();
+    test_csv_reader_rejects_duplicate_scenario_key();
+    test_csv_reader_rejects_mismatched_price_and_inflow_indices();
     test_csv_reader_rejects_missing_terminal_key();
     return 0;
 }

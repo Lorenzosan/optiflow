@@ -174,6 +174,11 @@ void validate_model_parameters(const ModelParameters& parameters) {
         parameters.battery_discharge_efficiency <= 0.0) {
         throw std::invalid_argument("efficiencies must be positive");
     }
+    if (parameters.turbine_efficiency > 1.0 || parameters.pump_efficiency > 1.0 ||
+        parameters.battery_charge_efficiency > 1.0 ||
+        parameters.battery_discharge_efficiency > 1.0) {
+        throw std::invalid_argument("efficiencies must be less than or equal to one");
+    }
     if (parameters.water_to_power_factor <= 0.0) {
         throw std::invalid_argument("water_to_power_factor must be positive");
     }
