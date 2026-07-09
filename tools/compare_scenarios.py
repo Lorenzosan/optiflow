@@ -268,6 +268,7 @@ def write_results(rows: list[dict[str, str]], output: Path | None) -> None:
             handle.close()
 
 
+
 def parse_float_field(row: dict[str, str], key: str) -> float:
     try:
         return float(row[key])
@@ -285,8 +286,7 @@ def print_human_summary(rows: list[dict[str, str]], output: Path | None) -> None
     if not rows:
         return
 
-    base = rows[0]
-    base_profit = parse_float_field(base, "cumulative_profit")
+    base_profit = parse_float_field(rows[0], "cumulative_profit")
 
     table_rows: list[list[str]] = []
     for row in rows:
@@ -321,28 +321,27 @@ def print_human_summary(rows: list[dict[str, str]], output: Path | None) -> None
         "Net MWh",
         "Final res.",
         "Final batt.",
-        "Actions",
+        "Action grid",
         "Solve s",
     ]
+
     widths = [len(header) for header in headers]
     for table_row in table_rows:
         widths = [max(width, len(cell)) for width, cell in zip(widths, table_row)]
 
     def render(values: list[str]) -> str:
-        return "  ".join(value.rjust(width) if index > 0 else value.ljust(width)
-                         for index, (value, width) in enumerate(zip(values, widths)))
+        return "  ".join(
+            value.rjust(width) if index > 0 else value.ljust(width)
+            for index, (value, width) in enumerate(zip(values, widths))
+        )
 
     print("Scenario comparison")
+    print("Delta column is measured relative to the first scenario.")
+    print()
     print(render(headers))
     print(render(["-" * width for width in widths]))
     for table_row in table_rows:
         print(render(table_row))
-
-    if len(rows) >= 2:
-        comparison_profit = parse_float_field(rows[1], "cumulative_profit")
-        delta = comparison_profit - base_profit
-        print()
-        print(f"Delta vs {base.get('scenario', 'base')}: {format_table_number(delta, 0)}")
 
     if output is not None:
         print()

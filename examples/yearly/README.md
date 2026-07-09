@@ -130,3 +130,12 @@ Compare the base and no-battery cases with:
       --summary-output build/yearly-comparison.csv
 
 The comparison tool runs the CLI once per scenario and writes one dispatch CSV per scenario under the selected output directory. The comparison CSV reports cumulative profit, energy import/export totals, final inventory, action counts, and solver diagnostics.
+
+## Additional yearly variants
+
+The yearly directory includes additional scenarios for sensitivity checks:
+
+- `scenario_no_battery.csv`: battery physically disabled.
+- `scenario_high_battery_degradation.csv`: battery available, but with high throughput cost.
+
+Use these variants with `tools/compare_scenarios.py` to separate physical battery availability from economic battery use under the synthetic price spread.

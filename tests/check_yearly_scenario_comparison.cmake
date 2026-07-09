@@ -24,6 +24,7 @@ execute_process(
         --output-dir "${OPTIFLOW_TEST_OUTPUT_DIR}"
         --scenario "${OPTIFLOW_SOURCE_DIR}/examples/yearly/scenario.csv"
         --scenario "${OPTIFLOW_SOURCE_DIR}/examples/yearly/scenario_no_battery.csv"
+        --scenario "${OPTIFLOW_SOURCE_DIR}/examples/yearly/scenario_high_battery_degradation.csv"
         --summary-output "${summary_csv}"
     RESULT_VARIABLE compare_result
     OUTPUT_VARIABLE compare_stdout
@@ -40,8 +41,8 @@ endif()
 if(NOT compare_stdout MATCHES "Scenario comparison")
     message(FATAL_ERROR "comparison stdout is missing the readable table heading")
 endif()
-if(NOT compare_stdout MATCHES "Delta vs synthetic_year")
-    message(FATAL_ERROR "comparison stdout is missing the baseline delta line")
+if(NOT compare_stdout MATCHES "Delta column is measured relative to the first scenario")
+    message(FATAL_ERROR "comparison stdout is missing the generic delta explanation")
 endif()
 
 file(READ "${summary_csv}" summary_text)
@@ -57,4 +58,7 @@ if(NOT summary_text MATCHES "synthetic_year_no_battery")
 endif()
 if(NOT summary_text MATCHES "synthetic_year_no_battery,[^\n]*,0,0,")
     message(FATAL_ERROR "no-battery scenario should start and finish with zero battery SOC")
+endif()
+if(NOT summary_text MATCHES "synthetic_year_high_battery_degradation")
+    message(FATAL_ERROR "comparison output is missing the high-degradation battery scenario")
 endif()

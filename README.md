@@ -202,3 +202,5 @@ terminal_battery_target_penalty,0
 2. Add small oracle tests for Bellman-solver decisions on hand-checkable horizons.
 3. Add scenario-comparison reporting so multiple CSV scenarios can be compared consistently.
 4. Reintroduce a service adapter only after the serialization/toolchain path is pinned and tested end to end.
+
+The yearly comparison examples include `examples/yearly/scenario_no_battery.csv`, where the battery is physically disabled, and `examples/yearly/scenario_high_battery_degradation.csv`, where the battery remains available but throughput is made expensive. Together they separate physical battery availability from economic battery use under the synthetic yearly assumptions.

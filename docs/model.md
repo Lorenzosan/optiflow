@@ -147,3 +147,5 @@ The optional `tools/summarize_dispatch.py` helper reads the same scenario, price
 
 
 The optional `tools/compare_scenarios.py` helper runs the CLI for multiple scenario CSV files on a shared price and inflow series, then writes a compact comparison CSV. It is intended for sensitivity checks such as comparing the base yearly scenario with `examples/yearly/scenario_no_battery.csv`. The comparison table is not a replacement for dispatch validation; it assumes each generated dispatch can still be checked with `tools/validate_dispatch.py`.
+
+The yearly comparison can include `examples/yearly/scenario_no_battery.csv` and `examples/yearly/scenario_high_battery_degradation.csv`. The first removes the battery physically; the second keeps it available but makes battery throughput expensive. This separates physical battery availability from economic battery use under the same price and inflow series.
