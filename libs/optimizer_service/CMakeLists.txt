@@ -1,4 +1,5 @@
 add_library(optiflow_optimizer_service STATIC
+    src/OptimizerServiceImpl.cpp
     src/ProtoConversion.cpp)
 
 add_library(optiflow::optimizer_service ALIAS optiflow_optimizer_service)

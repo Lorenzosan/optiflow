@@ -37,6 +37,10 @@ endif()
 
 add_subdirectory(apps/solve_cli)
 
+if(OPTIFLOW_BUILD_GRPC)
+    add_subdirectory(apps/optimizer_service)
+endif()
+
 if(OPTIFLOW_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
