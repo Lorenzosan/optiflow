@@ -81,6 +81,21 @@ python3 tools/summarize_dispatch.py \
 
 The summary reports export revenue, import cost, net market cashflow, operating cost, battery degradation cost, recomputed reward, energy imports and exports, weighted average operating prices, action counts, and final inventory relative to the configured terminal targets. It is an explanation tool, not a substitute for validation.
 
+The yearly scenarios can also be compared in one command. The comparison tool runs the CLI for each scenario, writes one dispatch file per scenario, and emits a compact CSV table for profit, energy, inventory, action counts, and solver diagnostics:
+
+```bash
+python3 tools/compare_scenarios.py \
+  --solve ./build/apps/solve_cli/optiflow_solve \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --output-dir build/yearly-comparison \
+  --scenario examples/yearly/scenario.csv \
+  --scenario examples/yearly/scenario_no_battery.csv \
+  --summary-output build/yearly-comparison.csv
+```
+
+The included `scenario_no_battery.csv` uses the same yearly prices and inflows but sets the battery state range and battery power limits to zero. It is intended to isolate the marginal value of the battery under the synthetic yearly assumptions.
+
 The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit. The CSV schema is trajectory-only and does not include run metadata.
 
 The CLI prints a diagnostic summary to stdout after writing the dispatch CSV:

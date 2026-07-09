@@ -113,3 +113,20 @@ The summary reports:
 - terminal target deviations.
 
 This is the preferred way to explain why the yearly cumulative profit has a given magnitude.
+
+## Compare yearly scenarios
+
+The directory also includes `scenario_no_battery.csv`. It uses the same prices and inflows as the base yearly scenario, but disables the battery by setting the battery state range and battery power limits to zero.
+
+Compare the base and no-battery cases with:
+
+    python3 tools/compare_scenarios.py \
+      --solve ./build/apps/solve_cli/optiflow_solve \
+      --prices examples/yearly/prices.csv \
+      --inflows examples/yearly/inflows.csv \
+      --output-dir build/yearly-comparison \
+      --scenario examples/yearly/scenario.csv \
+      --scenario examples/yearly/scenario_no_battery.csv \
+      --summary-output build/yearly-comparison.csv
+
+The comparison tool runs the CLI once per scenario and writes one dispatch CSV per scenario under the selected output directory. The comparison CSV reports cumulative profit, energy import/export totals, final inventory, action counts, and solver diagnostics.
