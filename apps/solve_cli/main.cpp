@@ -18,14 +18,14 @@ struct CliOptions {
     std::filesystem::path inflows_path;
     std::filesystem::path output_path;
 
-    CliOptions(std::filesystem::path scenario_path,
-               std::filesystem::path prices_path,
-               std::filesystem::path inflows_path,
-               std::filesystem::path output_path)
-        : scenario_path(std::move(scenario_path)),
-          prices_path(std::move(prices_path)),
-          inflows_path(std::move(inflows_path)),
-          output_path(std::move(output_path)) {}
+    CliOptions(std::filesystem::path scenario_path_arg,
+               std::filesystem::path prices_path_arg,
+               std::filesystem::path inflows_path_arg,
+               std::filesystem::path output_path_arg)
+        : scenario_path(std::move(scenario_path_arg)),
+          prices_path(std::move(prices_path_arg)),
+          inflows_path(std::move(inflows_path_arg)),
+          output_path(std::move(output_path_arg)) {}
 };
 
 void print_usage(const char* program_name) {
