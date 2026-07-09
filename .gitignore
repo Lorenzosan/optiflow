@@ -41,3 +41,5 @@ docs/latex/
 # Patch files
 *.patch
 *.zip
+# macOS
+.DS_Store
