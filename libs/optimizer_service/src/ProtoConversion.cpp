@@ -313,38 +313,30 @@ void fill_dispatch_row(const core::DispatchStep& step, optimizer::v1::DispatchRo
 
 void fill_diagnostics(const runner::OptimizationResult& result,
                       optimizer::v1::OptimizationDiagnostics& diagnostics) {
-    diagnostics.set_horizon_steps(checked_uint32(result.dispatch.size(), "diagnostics.horizon_steps"));
+    const runner::OptimizationDiagnostics& runner_diagnostics = result.diagnostics;
 
-    std::size_t turbine_steps = 0;
-    std::size_t pump_steps = 0;
-    std::size_t spill_steps = 0;
-    std::size_t battery_charge_steps = 0;
-    std::size_t battery_discharge_steps = 0;
-    std::size_t wait_steps = 0;
-
-    for (const core::DispatchStep& step : result.dispatch) {
-        const bool turbines = step.action.turbine_flow > 0.0;
-        const bool pumps = step.action.pump_flow > 0.0;
-        const bool spills = step.action.spill_flow > 0.0;
-        const bool charges = step.action.battery_charge_power > 0.0;
-        const bool discharges = step.action.battery_discharge_power > 0.0;
-
-        turbine_steps += turbines ? 1U : 0U;
-        pump_steps += pumps ? 1U : 0U;
-        spill_steps += spills ? 1U : 0U;
-        battery_charge_steps += charges ? 1U : 0U;
-        battery_discharge_steps += discharges ? 1U : 0U;
-        wait_steps += (!turbines && !pumps && !spills && !charges && !discharges) ? 1U : 0U;
-    }
-
-    diagnostics.set_turbine_steps(checked_uint32(turbine_steps, "diagnostics.turbine_steps"));
-    diagnostics.set_pump_steps(checked_uint32(pump_steps, "diagnostics.pump_steps"));
-    diagnostics.set_spill_steps(checked_uint32(spill_steps, "diagnostics.spill_steps"));
-    diagnostics.set_battery_charge_steps(checked_uint32(battery_charge_steps,
+    diagnostics.set_horizon_steps(checked_uint32(runner_diagnostics.horizon_steps,
+                                                 "diagnostics.horizon_steps"));
+    diagnostics.set_reservoir_grid_points(checked_uint32(runner_diagnostics.reservoir_grid_points,
+                                                         "diagnostics.reservoir_grid_points"));
+    diagnostics.set_battery_grid_points(checked_uint32(runner_diagnostics.battery_grid_points,
+                                                       "diagnostics.battery_grid_points"));
+    diagnostics.set_action_count(checked_uint32(runner_diagnostics.action_count,
+                                                "diagnostics.action_count"));
+    diagnostics.set_solve_seconds(runner_diagnostics.solve_seconds);
+    diagnostics.set_simulation_seconds(runner_diagnostics.simulation_seconds);
+    diagnostics.set_turbine_steps(checked_uint32(runner_diagnostics.turbine_steps,
+                                                "diagnostics.turbine_steps"));
+    diagnostics.set_pump_steps(checked_uint32(runner_diagnostics.pump_steps,
+                                             "diagnostics.pump_steps"));
+    diagnostics.set_spill_steps(checked_uint32(runner_diagnostics.spill_steps,
+                                              "diagnostics.spill_steps"));
+    diagnostics.set_battery_charge_steps(checked_uint32(runner_diagnostics.battery_charge_steps,
                                                         "diagnostics.battery_charge_steps"));
-    diagnostics.set_battery_discharge_steps(checked_uint32(battery_discharge_steps,
+    diagnostics.set_battery_discharge_steps(checked_uint32(runner_diagnostics.battery_discharge_steps,
                                                            "diagnostics.battery_discharge_steps"));
-    diagnostics.set_wait_steps(checked_uint32(wait_steps, "diagnostics.wait_steps"));
+    diagnostics.set_wait_steps(checked_uint32(runner_diagnostics.wait_steps,
+                                             "diagnostics.wait_steps"));
 }
 
 }  // namespace

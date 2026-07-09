@@ -103,3 +103,40 @@ Terminal targets are soft preferences. They add a negative quadratic terminal va
 ```
 
 Use wide terminal bounds and zero target penalties when no final-state preference is intended. Use narrow terminal bounds for hard final-state requirements. Use positive target penalties when deviations from a preferred final state should be discouraged but not forbidden.
+
+## Optimization diagnostics
+
+`OptimizationRunner` returns diagnostics together with the dispatch trajectory and cumulative profit. These diagnostics are deterministic metadata except for wall-clock timings.
+
+The structural fields are:
+
+```text
+horizon_steps
+reservoir_grid_points
+battery_grid_points
+action_count
+```
+
+`horizon_steps` is the number of decision steps in the scenario. `reservoir_grid_points` and `battery_grid_points` are the state-grid dimensions used by the Bellman solver. `action_count` is the Cartesian product of the turbine, spill, pump, battery-charge, and battery-discharge action axes.
+
+The timing fields are:
+
+```text
+solve_seconds
+simulation_seconds
+```
+
+They are measured inside `OptimizationRunner` around the Bellman solve and the forward simulation. They are intended for local diagnostics and smoke checks, not for strict numerical regression tests. Regression tests should only require timing fields to be finite and nonnegative.
+
+The activity-count fields are computed from the forward-simulated dispatch trajectory:
+
+```text
+turbine_steps
+pump_steps
+spill_steps
+battery_charge_steps
+battery_discharge_steps
+wait_steps
+```
+
+Each non-wait counter is incremented when the corresponding action component is positive in a dispatch row. `wait_steps` is incremented only when turbine, pump, spill, battery charge, and battery discharge actions are all zero. Tests recompute these counters from dispatch rows and compare them with runner and service diagnostics.

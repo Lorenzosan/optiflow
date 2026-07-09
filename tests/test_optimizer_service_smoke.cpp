@@ -5,6 +5,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include <cmath>
+#include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -100,11 +101,50 @@ void test_valid_optimize_request_returns_dispatch() {
 
     require(status.ok(), "Optimize service call failed: " + status.error_message());
     require(response.dispatch_size() == 2, "dispatch row count should match horizon");
-    require(response.diagnostics().horizon_steps() == 2, "diagnostic horizon should match horizon");
     require(response.has_final_state(), "response should include final state");
     require(std::isfinite(response.cumulative_profit()), "cumulative profit should be finite");
     require(std::isfinite(response.final_state().reservoir_volume()), "final reservoir should be finite");
     require(std::isfinite(response.final_state().battery_soc()), "final battery state should be finite");
+
+    std::size_t turbine_steps = 0;
+    std::size_t pump_steps = 0;
+    std::size_t spill_steps = 0;
+    std::size_t battery_charge_steps = 0;
+    std::size_t battery_discharge_steps = 0;
+    std::size_t wait_steps = 0;
+
+    for (const optimizer_v1::DispatchRow& row : response.dispatch()) {
+        const bool turbines = row.turbine_flow() > 0.0;
+        const bool pumps = row.pump_flow() > 0.0;
+        const bool spills = row.spill_flow() > 0.0;
+        const bool charges = row.battery_charge_power() > 0.0;
+        const bool discharges = row.battery_discharge_power() > 0.0;
+
+        turbine_steps += turbines ? 1U : 0U;
+        pump_steps += pumps ? 1U : 0U;
+        spill_steps += spills ? 1U : 0U;
+        battery_charge_steps += charges ? 1U : 0U;
+        battery_discharge_steps += discharges ? 1U : 0U;
+        wait_steps += (!turbines && !pumps && !spills && !charges && !discharges) ? 1U : 0U;
+    }
+
+    const optimizer_v1::OptimizationDiagnostics& diagnostics = response.diagnostics();
+    require(diagnostics.horizon_steps() == response.dispatch_size(),
+            "diagnostic horizon should match dispatch size");
+    require(diagnostics.reservoir_grid_points() == 11, "diagnostic reservoir grid points");
+    require(diagnostics.battery_grid_points() == 5, "diagnostic battery grid points");
+    require(diagnostics.action_count() == 24, "diagnostic action count");
+    require(std::isfinite(diagnostics.solve_seconds()) && diagnostics.solve_seconds() >= 0.0,
+            "diagnostic solve time should be finite and nonnegative");
+    require(std::isfinite(diagnostics.simulation_seconds()) && diagnostics.simulation_seconds() >= 0.0,
+            "diagnostic simulation time should be finite and nonnegative");
+    require(diagnostics.turbine_steps() == turbine_steps, "diagnostic turbine steps");
+    require(diagnostics.pump_steps() == pump_steps, "diagnostic pump steps");
+    require(diagnostics.spill_steps() == spill_steps, "diagnostic spill steps");
+    require(diagnostics.battery_charge_steps() == battery_charge_steps, "diagnostic battery charge steps");
+    require(diagnostics.battery_discharge_steps() == battery_discharge_steps,
+            "diagnostic battery discharge steps");
+    require(diagnostics.wait_steps() == wait_steps, "diagnostic wait steps");
 }
 
 void test_invalid_request_returns_invalid_argument() {

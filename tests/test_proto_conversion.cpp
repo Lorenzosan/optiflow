@@ -9,6 +9,7 @@ namespace {
 
 namespace core = optiflow::core;
 namespace optimizer_v1 = optiflow::optimizer::v1;
+namespace runner = optiflow::runner;
 namespace service = optiflow::service;
 
 constexpr double tolerance = 1.0e-9;
@@ -183,6 +184,45 @@ void test_disabled_battery_converts_to_single_point_battery_state() {
     require(bundle.solver_parameters.battery_discharge_steps == 1, "disabled battery discharge points");
 }
 
+
+void test_fill_optimize_response_copies_runner_diagnostics() {
+    runner::OptimizationResult result{};
+    result.cumulative_profit = 42.5;
+    result.diagnostics.horizon_steps = 7;
+    result.diagnostics.reservoir_grid_points = 13;
+    result.diagnostics.battery_grid_points = 3;
+    result.diagnostics.action_count = 17;
+    result.diagnostics.solve_seconds = 0.125;
+    result.diagnostics.simulation_seconds = 0.03125;
+    result.diagnostics.turbine_steps = 2;
+    result.diagnostics.pump_steps = 1;
+    result.diagnostics.spill_steps = 3;
+    result.diagnostics.battery_charge_steps = 4;
+    result.diagnostics.battery_discharge_steps = 5;
+    result.diagnostics.wait_steps = 6;
+
+    optimizer_v1::OptimizeResponse response;
+    service::fillOptimizeResponse(result, response);
+
+    require_near(response.cumulative_profit(), 42.5, "response cumulative profit");
+    require(response.dispatch_size() == 0, "empty result should produce no dispatch rows");
+    require(!response.has_final_state(), "empty result should not produce a final state");
+
+    const optimizer_v1::OptimizationDiagnostics& diagnostics = response.diagnostics();
+    require(diagnostics.horizon_steps() == 7, "diagnostic horizon copy");
+    require(diagnostics.reservoir_grid_points() == 13, "diagnostic reservoir grid copy");
+    require(diagnostics.battery_grid_points() == 3, "diagnostic battery grid copy");
+    require(diagnostics.action_count() == 17, "diagnostic action count copy");
+    require_near(diagnostics.solve_seconds(), 0.125, "diagnostic solve seconds copy");
+    require_near(diagnostics.simulation_seconds(), 0.03125, "diagnostic simulation seconds copy");
+    require(diagnostics.turbine_steps() == 2, "diagnostic turbine steps copy");
+    require(diagnostics.pump_steps() == 1, "diagnostic pump steps copy");
+    require(diagnostics.spill_steps() == 3, "diagnostic spill steps copy");
+    require(diagnostics.battery_charge_steps() == 4, "diagnostic battery charge steps copy");
+    require(diagnostics.battery_discharge_steps() == 5, "diagnostic battery discharge steps copy");
+    require(diagnostics.wait_steps() == 6, "diagnostic wait steps copy");
+}
+
 }  // namespace
 
 int main() {
@@ -191,5 +231,6 @@ int main() {
     test_price_inflow_length_mismatch_is_rejected();
     test_price_inflow_index_mismatch_is_rejected();
     test_disabled_battery_converts_to_single_point_battery_state();
+    test_fill_optimize_response_copies_runner_diagnostics();
     return 0;
 }

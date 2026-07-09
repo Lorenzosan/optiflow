@@ -21,6 +21,7 @@ OptiFlow is a C++20 interview project for deterministic dispatch optimization of
 * Protobuf conversion layer between `OptimizeRequest` and `ScenarioBundle`.
 * Local gRPC optimizer service.
 * gRPC service smoke test.
+* Runner-level optimization diagnostics shared by CLI and gRPC boundaries.
 
 ## Build
 
@@ -41,6 +42,8 @@ ctest --test-dir build --output-on-failure
 ```
 
 The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit.
+
+The optimizer runner also reports diagnostics to API callers. These diagnostics include horizon length, state-grid dimensions, action-grid size, Bellman solve time, forward-simulation time, and counts of simulated turbine, pump, spill, battery charge, battery discharge, and wait steps. The CLI currently keeps the CSV output trajectory-only; service clients receive diagnostics through `OptimizeResponse.diagnostics`.
 
 ## Model conventions
 
@@ -80,6 +83,8 @@ OptimizerService.Optimize(OptimizeRequest) -> OptimizeResponse
 ```
 
 The service maps typed protobuf requests to the internal optimization runner. CSV parsing remains a CLI concern.
+
+`OptimizeResponse.diagnostics` is copied from `OptimizationRunner`; the protobuf conversion layer does not recompute solver metadata. The gRPC smoke tests check that structural diagnostics and dispatch-derived activity counters survive the service boundary.
 
 ## Generate documentation
 
@@ -149,6 +154,7 @@ terminal_battery_target_penalty,0
 
 1. Add a small local gRPC client for manual `OptimizeRequest` calls.
 2. Add a documented example request builder for the gRPC API.
-3. Add service-level diagnostics to the CLI and gRPC response if not already complete.
-4. Add persistence schema and API service only after the local optimizer service interface is stable.
-5. Add Docker Compose and frontend last.
+3. Add CLI diagnostic printing without changing the dispatch CSV schema.
+4. Add protobuf/CSV optimization parity tests.
+5. Add persistence schema and API service only after the local optimizer service interface is stable.
+6. Add Docker Compose and frontend last.

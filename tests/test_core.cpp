@@ -590,16 +590,18 @@ void test_csv_reader_rejects_missing_terminal_key() {
     std::filesystem::remove(inflows_path);
 }
 
-void test_optimization_runner_produces_dispatch() {
+void test_optimization_runner_produces_dispatch_and_diagnostics() {
+    const core::SolverParameters parameters = solver_parameters();
+    const core::ModelParameters model = model_parameters();
     const core::Scenario scenario("runner_test",
                                   core::State(50.0, 10.0),
                                   std::vector<core::Exogenous>{
                                       core::Exogenous(100.0, 0.0),
                                       core::Exogenous(100.0, 0.0)},
-                                  model_parameters(),
+                                  model,
                                   open_terminal_parameters());
 
-    const core::ScenarioBundle bundle(scenario, solver_parameters());
+    const core::ScenarioBundle bundle(scenario, parameters);
 
     const optiflow::runner::OptimizationRunner runner;
     const optiflow::runner::OptimizationResult result = runner.run(bundle);
@@ -610,8 +612,53 @@ void test_optimization_runner_produces_dispatch() {
     require_near(result.cumulative_profit,
                  result.dispatch.back().cumulative_profit,
                  "runner cumulative profit");
+
+    const numerics::StateGrid state_grid = numerics::StateGrid::from_parameters(model, parameters);
+    const numerics::ActionGrid action_grid = numerics::ActionGrid::from_parameters(model, parameters);
+
+    std::size_t turbine_steps = 0;
+    std::size_t pump_steps = 0;
+    std::size_t spill_steps = 0;
+    std::size_t battery_charge_steps = 0;
+    std::size_t battery_discharge_steps = 0;
+    std::size_t wait_steps = 0;
+
+    for (const core::DispatchStep& step : result.dispatch) {
+        const bool turbines = step.action.turbine_flow > 0.0;
+        const bool pumps = step.action.pump_flow > 0.0;
+        const bool spills = step.action.spill_flow > 0.0;
+        const bool charges = step.action.battery_charge_power > 0.0;
+        const bool discharges = step.action.battery_discharge_power > 0.0;
+
+        turbine_steps += turbines ? 1U : 0U;
+        pump_steps += pumps ? 1U : 0U;
+        spill_steps += spills ? 1U : 0U;
+        battery_charge_steps += charges ? 1U : 0U;
+        battery_discharge_steps += discharges ? 1U : 0U;
+        wait_steps += (!turbines && !pumps && !spills && !charges && !discharges) ? 1U : 0U;
+    }
+
+    const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
+    require(diagnostics.horizon_steps == result.dispatch.size(), "diagnostic horizon matches dispatch");
+    require(diagnostics.horizon_steps == scenario.horizon_size(), "diagnostic horizon matches scenario");
+    require(diagnostics.reservoir_grid_points == state_grid.reservoir_size(),
+            "diagnostic reservoir grid points");
+    require(diagnostics.battery_grid_points == state_grid.battery_size(),
+            "diagnostic battery grid points");
+    require(diagnostics.action_count == action_grid.size(), "diagnostic action count");
+    require(std::isfinite(diagnostics.solve_seconds) && diagnostics.solve_seconds >= 0.0,
+            "diagnostic solve time");
+    require(std::isfinite(diagnostics.simulation_seconds) && diagnostics.simulation_seconds >= 0.0,
+            "diagnostic simulation time");
+    require(diagnostics.turbine_steps == turbine_steps, "diagnostic turbine steps");
+    require(diagnostics.pump_steps == pump_steps, "diagnostic pump steps");
+    require(diagnostics.spill_steps == spill_steps, "diagnostic spill steps");
+    require(diagnostics.battery_charge_steps == battery_charge_steps, "diagnostic battery charge steps");
+    require(diagnostics.battery_discharge_steps == battery_discharge_steps,
+            "diagnostic battery discharge steps");
+    require(diagnostics.wait_steps == wait_steps, "diagnostic wait steps");
 }
-  
+
 }  // namespace
 
 int main() {
@@ -632,6 +679,6 @@ int main() {
     test_csv_reader_rejects_mismatched_price_and_inflow_indices();
     test_csv_reader_reports_series_file_and_line_for_invalid_numeric_value();
     test_csv_reader_rejects_missing_terminal_key();
-    test_optimization_runner_produces_dispatch();
+    test_optimization_runner_produces_dispatch_and_diagnostics();
     return 0;
 }
