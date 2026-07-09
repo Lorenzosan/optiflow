@@ -94,21 +94,21 @@ message ModelParameters {
 
   // Duration of one optimization time step in hours.
   optional double time_step_hours = 15;
+
+  // Simplified conversion factor from water flow to electrical power.
+  optional double water_to_power_factor = 16;
 }
 
 // Economic model parameters.
 message EconomicParameters {
-  // Turbine operating cost applied to generated energy.
-  optional double turbine_operating_cost_per_mwh = 1;
-
-  // Pump operating cost applied to consumed pumping energy.
-  optional double pump_operating_cost_per_mwh = 2;
+  // Operating cost applied to gross handled energy/throughput.
+  optional double operating_cost_per_mwh = 1;
 
   // Battery degradation cost applied to battery throughput.
-  optional double battery_degradation_cost_per_mwh = 3;
+  optional double battery_degradation_cost_per_mwh = 2;
 
-  // Penalty applied to spilled water volume.
-  optional double spill_penalty_per_volume = 4;
+  // Penalty assigned to infeasible state transitions.
+  optional double infeasibility_penalty = 3;
 }
 
 // Discretization parameters for state and action grids.
@@ -133,6 +133,9 @@ message GridParameters {
 
   // Number of battery-discharge action grid points.
   optional uint32 battery_discharge_points = 7;
+
+  // Bellman discount factor.
+  optional double discount_factor = 8;
 }
 
 // Terminal-state configuration.

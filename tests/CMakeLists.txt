@@ -22,3 +22,18 @@ target_link_libraries(optiflow_simple_behaviour_tests
 target_compile_features(optiflow_simple_behaviour_tests PRIVATE cxx_std_20)
 
 add_test(NAME optiflow_simple_behaviour_tests COMMAND optiflow_simple_behaviour_tests)
+
+
+if(OPTIFLOW_BUILD_GRPC)
+    add_executable(optiflow_proto_conversion_tests
+        test_proto_conversion.cpp)
+
+    target_link_libraries(optiflow_proto_conversion_tests
+        PRIVATE
+            optiflow::optimizer_service
+            optiflow_project_warnings)
+
+    target_compile_features(optiflow_proto_conversion_tests PRIVATE cxx_std_20)
+
+    add_test(NAME optiflow_proto_conversion_tests COMMAND optiflow_proto_conversion_tests)
+endif()

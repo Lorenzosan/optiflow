@@ -32,6 +32,7 @@ add_subdirectory(libs/optimization)
 
 if(OPTIFLOW_BUILD_GRPC)
     add_subdirectory(libs/optimizer_proto)
+    add_subdirectory(libs/optimizer_service)
 endif()
 
 add_subdirectory(apps/solve_cli)
