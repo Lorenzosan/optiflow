@@ -6,6 +6,7 @@ project(OptiFlow
     LANGUAGES CXX)
 
 option(OPTIFLOW_BUILD_TESTS "Build OptiFlow tests" ON)
+option(OPTIFLOW_BUILD_GRPC "Build protobuf/gRPC boundary targets" OFF)
 option(OPTIFLOW_ENABLE_WARNINGS "Enable compiler warnings" ON)
 
 add_library(optiflow_project_warnings INTERFACE)
@@ -28,6 +29,11 @@ if(OPTIFLOW_ENABLE_WARNINGS)
 endif()
 
 add_subdirectory(libs/optimization)
+
+if(OPTIFLOW_BUILD_GRPC)
+    add_subdirectory(libs/optimizer_proto)
+endif()
+
 add_subdirectory(apps/solve_cli)
 
 if(OPTIFLOW_BUILD_TESTS)

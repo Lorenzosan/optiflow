@@ -1,21 +1,48 @@
-grid = 5;
-TerminalSettings terminal = 6;
+syntax = "proto3";
 
-// Electricity price time series. Must be non-empty.
-repeated PricePoint prices = 7;
+package optiflow.optimizer.v1;
 
-// Natural inflow time series. Must be non-empty and match prices by horizon
-// length and time_index values.
-repeated InflowPoint inflows = 8;
+// Public optimizer API for deterministic storage dispatch optimization.
+//
+// The API is intentionally structured around typed scenario data rather than
+// CSV files. CSV parsing remains a CLI concern. The service boundary receives
+// a complete optimization request and returns a dispatch trajectory plus
+// aggregate diagnostics.
+service OptimizerService {
+  // Runs Bellman optimization followed by forward simulation.
+  rpc Optimize(OptimizeRequest) returns (OptimizeResponse);
+}
+
+// Complete optimization request.
+//
+// Required scalar configuration fields use proto3 optional presence so the
+// service can reject omitted values explicitly. The optimization core has no
+// implicit physical, economic, grid, or terminal defaults.
+message OptimizeRequest {
+  // Human-readable scenario name used for logs and diagnostics.
+  string scenario_name = 1;
+
+  InitialState initial_state = 2;
+  ModelParameters model = 3;
+  EconomicParameters economics = 4;
+  GridParameters grid = 5;
+  TerminalSettings terminal = 6;
+
+  // Electricity price time series. Must be non-empty.
+  repeated PricePoint prices = 7;
+
+  // Natural inflow time series. Must be non-empty and match prices by horizon
+  // length and time_index values.
+  repeated InflowPoint inflows = 8;
 }
 
 // Initial physical state at the start of the optimization horizon.
 message InitialState {
-// Initial upper-reservoir volume.
-optional double reservoir_volume = 1;
+  // Initial upper-reservoir volume.
+  optional double reservoir_volume = 1;
 
-// Initial battery state of charge. Required only when the battery is enabled.
-optional double battery_soc = 2;
+  // Initial battery state of charge. Required only when the battery is enabled.
+  optional double battery_soc = 2;
 }
 
 // Physical model parameters.
@@ -23,94 +50,89 @@ optional double battery_soc = 2;
 // The current model uses simplified interview-demo units. Volumes, flows, and
 // powers must follow the conventions documented in docs/model.md.
 message ModelParameters {
-// Lower physical reservoir bound.
-optional double reservoir_min_volume = 1;
+  // Lower physical reservoir bound.
+  optional double reservoir_min_volume = 1;
 
-// Upper physical reservoir bound.
-optional double reservoir_max_volume = 2;
+  // Upper physical reservoir bound.
+  optional double reservoir_max_volume = 2;
 
-// Maximum turbine water-flow decision.
-optional double turbine_max_flow = 3;
+  // Maximum turbine water-flow decision.
+  optional double turbine_max_flow = 3;
 
-// Maximum pump water-flow decision.
-optional double pump_max_flow = 4;
+  // Maximum pump water-flow decision.
+  optional double pump_max_flow = 4;
 
-// Maximum spill water-flow decision.
-optional double spill_max_flow = 5;
+  // Maximum spill water-flow decision.
+  optional double spill_max_flow = 5;
 
-// Turbine conversion efficiency. Must be in the physically valid range
-// enforced by the service/core validation.
-optional double turbine_efficiency = 6;
+  // Turbine conversion efficiency.
+  optional double turbine_efficiency = 6;
 
-// Pump conversion efficiency. Must be in the physically valid range enforced
-// by the service/core validation.
-optional double pump_efficiency = 7;
+  // Pump conversion efficiency.
+  optional double pump_efficiency = 7;
 
-// Whether the battery state and battery actions are active.
-optional bool battery_enabled = 8;
+  // Whether the battery state and battery actions are active.
+  optional bool battery_enabled = 8;
 
-// Lower battery state-of-charge bound. Required when battery_enabled is true.
-optional double battery_min_soc = 9;
+  // Lower battery state-of-charge bound. Required when battery_enabled is true.
+  optional double battery_min_soc = 9;
 
-// Upper battery state-of-charge bound. Required when battery_enabled is true.
-optional double battery_max_soc = 10;
+  // Upper battery state-of-charge bound. Required when battery_enabled is true.
+  optional double battery_max_soc = 10;
 
-// Maximum battery charging power. Required when battery_enabled is true.
-optional double battery_charge_max_power = 11;
+  // Maximum battery charging power. Required when battery_enabled is true.
+  optional double battery_charge_max_power = 11;
 
-// Maximum battery discharging power. Required when battery_enabled is true.
-optional double battery_discharge_max_power = 12;
+  // Maximum battery discharging power. Required when battery_enabled is true.
+  optional double battery_discharge_max_power = 12;
 
-// Battery charging efficiency. Required when battery_enabled is true.
-optional double battery_charge_efficiency = 13;
+  // Battery charging efficiency. Required when battery_enabled is true.
+  optional double battery_charge_efficiency = 13;
 
-// Battery discharging efficiency. Required when battery_enabled is true.
-optional double battery_discharge_efficiency = 14;
+  // Battery discharging efficiency. Required when battery_enabled is true.
+  optional double battery_discharge_efficiency = 14;
 
-// Duration of one optimization time step in hours.
-optional double time_step_hours = 15;
+  // Duration of one optimization time step in hours.
+  optional double time_step_hours = 15;
 }
 
 // Economic model parameters.
 message EconomicParameters {
-// Turbine operating cost applied to generated energy.
-optional double turbine_operating_cost_per_mwh = 1;
+  // Turbine operating cost applied to generated energy.
+  optional double turbine_operating_cost_per_mwh = 1;
 
-// Pump operating cost applied to consumed pumping energy.
-optional double pump_operating_cost_per_mwh = 2;
+  // Pump operating cost applied to consumed pumping energy.
+  optional double pump_operating_cost_per_mwh = 2;
 
-// Battery degradation cost applied to battery throughput.
-optional double battery_degradation_cost_per_mwh = 3;
+  // Battery degradation cost applied to battery throughput.
+  optional double battery_degradation_cost_per_mwh = 3;
 
-// Penalty applied to spilled water volume.
-optional double spill_penalty_per_volume = 4;
+  // Penalty applied to spilled water volume.
+  optional double spill_penalty_per_volume = 4;
 }
 
 // Discretization parameters for state and action grids.
 message GridParameters {
-// Number of reservoir-volume grid points.
-optional uint32 reservoir_points = 1;
+  // Number of reservoir-volume grid points.
+  optional uint32 reservoir_points = 1;
 
-// Number of battery state-of-charge grid points. Required when the battery
-// is enabled.
-optional uint32 battery_points = 2;
+  // Number of battery state-of-charge grid points.
+  optional uint32 battery_points = 2;
 
-// Number of turbine-flow action grid points.
-optional uint32 turbine_flow_points = 3;
+  // Number of turbine-flow action grid points.
+  optional uint32 turbine_flow_points = 3;
 
-// Number of pump-flow action grid points.
-optional uint32 pump_flow_points = 4;
+  // Number of pump-flow action grid points.
+  optional uint32 pump_flow_points = 4;
 
-// Number of spill-flow action grid points.
-optional uint32 spill_flow_points = 5;
+  // Number of spill-flow action grid points.
+  optional uint32 spill_flow_points = 5;
 
-// Number of battery-charge action grid points. Required when the battery is
-// enabled.
-optional uint32 battery_charge_points = 6;
+  // Number of battery-charge action grid points.
+  optional uint32 battery_charge_points = 6;
 
-// Number of battery-discharge action grid points. Required when the battery
-// is enabled.
-optional uint32 battery_discharge_points = 7;
+  // Number of battery-discharge action grid points.
+  optional uint32 battery_discharge_points = 7;
 }
 
 // Terminal-state configuration.
@@ -118,143 +140,141 @@ optional uint32 battery_discharge_points = 7;
 // Hard terminal bounds are enforced in the Bellman terminal condition. Soft
 // terminal targets add quadratic terminal penalties.
 message TerminalSettings {
-// Whether to enforce hard terminal reservoir bounds.
-optional bool use_hard_reservoir_bounds = 1;
+  // Whether to enforce hard terminal reservoir bounds.
+  optional bool use_hard_reservoir_bounds = 1;
 
-// Minimum acceptable terminal reservoir volume when hard bounds are enabled.
-optional double terminal_reservoir_min = 2;
+  // Minimum acceptable terminal reservoir volume when hard bounds are enabled.
+  optional double terminal_reservoir_min = 2;
 
-// Maximum acceptable terminal reservoir volume when hard bounds are enabled.
-optional double terminal_reservoir_max = 3;
+  // Maximum acceptable terminal reservoir volume when hard bounds are enabled.
+  optional double terminal_reservoir_max = 3;
 
-// Whether to apply a soft quadratic terminal reservoir target penalty.
-optional bool use_soft_reservoir_target = 4;
+  // Whether to apply a soft quadratic terminal reservoir target penalty.
+  optional bool use_soft_reservoir_target = 4;
 
-// Target terminal reservoir volume for the soft penalty.
-optional double terminal_reservoir_target = 5;
+  // Target terminal reservoir volume for the soft penalty.
+  optional double terminal_reservoir_target = 5;
 
-// Quadratic penalty coefficient for terminal reservoir target deviation.
-optional double terminal_reservoir_penalty = 6;
+  // Quadratic penalty coefficient for terminal reservoir target deviation.
+  optional double terminal_reservoir_penalty = 6;
 
-// Whether to enforce hard terminal battery bounds.
-optional bool use_hard_battery_bounds = 7;
+  // Whether to enforce hard terminal battery bounds.
+  optional bool use_hard_battery_bounds = 7;
 
-// Minimum acceptable terminal battery state of charge when hard bounds are
-// enabled.
-optional double terminal_battery_min = 8;
+  // Minimum acceptable terminal battery state of charge when hard bounds are enabled.
+  optional double terminal_battery_min = 8;
 
-// Maximum acceptable terminal battery state of charge when hard bounds are
-// enabled.
-optional double terminal_battery_max = 9;
+  // Maximum acceptable terminal battery state of charge when hard bounds are enabled.
+  optional double terminal_battery_max = 9;
 
-// Whether to apply a soft quadratic terminal battery target penalty.
-optional bool use_soft_battery_target = 10;
+  // Whether to apply a soft quadratic terminal battery target penalty.
+  optional bool use_soft_battery_target = 10;
 
-// Target terminal battery state of charge for the soft penalty.
-optional double terminal_battery_target = 11;
+  // Target terminal battery state of charge for the soft penalty.
+  optional double terminal_battery_target = 11;
 
-// Quadratic penalty coefficient for terminal battery target deviation.
-optional double terminal_battery_penalty = 12;
+  // Quadratic penalty coefficient for terminal battery target deviation.
+  optional double terminal_battery_penalty = 12;
 }
 
 // Electricity price for one time step.
 message PricePoint {
-// Zero-based time-step index.
-uint32 time_index = 1;
+  // Zero-based time-step index.
+  uint32 time_index = 1;
 
-// Market price used to value net power during this time step.
-double price = 2;
+  // Market price used to value net power during this time step.
+  double price = 2;
 }
 
 // Natural inflow for one time step.
 message InflowPoint {
-// Zero-based time-step index.
-uint32 time_index = 1;
+  // Zero-based time-step index.
+  uint32 time_index = 1;
 
-// Natural inflow into the upper reservoir during this time step.
-double natural_inflow = 2;
+  // Natural inflow into the upper reservoir during this time step.
+  double natural_inflow = 2;
 }
 
 // Successful optimization response.
 message OptimizeResponse {
-// Forward-simulated dispatch trajectory.
-repeated DispatchRow dispatch = 1;
+  // Forward-simulated dispatch trajectory.
+  repeated DispatchRow dispatch = 1;
 
-// Total objective value accumulated over the simulated horizon.
-double cumulative_profit = 2;
+  // Total objective value accumulated over the simulated horizon.
+  double cumulative_profit = 2;
 
-// Final physical state after the last dispatch step.
-FinalState final_state = 3;
+  // Final physical state after the last dispatch step.
+  FinalState final_state = 3;
 
-// Solver and dispatch diagnostics.
-OptimizationDiagnostics diagnostics = 4;
+  // Solver and dispatch diagnostics.
+  OptimizationDiagnostics diagnostics = 4;
 }
 
 // One simulated dispatch row.
 message DispatchRow {
-// Zero-based time-step index.
-uint32 time_index = 1;
+  // Zero-based time-step index.
+  uint32 time_index = 1;
 
-// Electricity price used at this step.
-double price = 2;
+  // Electricity price used at this step.
+  double price = 2;
 
-// Natural inflow used at this step.
-double natural_inflow = 3;
+  // Natural inflow used at this step.
+  double natural_inflow = 3;
 
-// Reservoir volume at the start of the step.
-double reservoir_volume = 4;
+  // Reservoir volume at the start of the step.
+  double reservoir_volume = 4;
 
-// Battery state of charge at the start of the step.
-double battery_soc = 5;
+  // Battery state of charge at the start of the step.
+  double battery_soc = 5;
 
-// Turbine flow action.
-double turbine_flow = 6;
+  // Turbine flow action.
+  double turbine_flow = 6;
 
-// Pump flow action.
-double pump_flow = 7;
+  // Pump flow action.
+  double pump_flow = 7;
 
-// Spill flow action.
-double spill_flow = 8;
+  // Spill flow action.
+  double spill_flow = 8;
 
-// Battery charging power action.
-double battery_charge_power = 9;
+  // Battery charging power action.
+  double battery_charge_power = 9;
 
-// Battery discharging power action.
-double battery_discharge_power = 10;
+  // Battery discharging power action.
+  double battery_discharge_power = 10;
 
-// Net power exported to the market. Positive means generation/export;
-// negative means consumption/import.
-double net_power = 11;
+  // Net power exported to the market. Positive means generation/export;
+  // negative means consumption/import.
+  double net_power = 11;
 
-// Single-step reward after revenue, operating costs, degradation costs, and
-// penalties.
-double reward = 12;
+  // Single-step reward after revenue, operating costs, degradation costs, and
+  // penalties.
+  double reward = 12;
 
-// Cumulative reward through this step.
-double cumulative_profit = 13;
+  // Cumulative reward through this step.
+  double cumulative_profit = 13;
 }
 
 // Final state after forward simulation.
 message FinalState {
-double reservoir_volume = 1;
-double battery_soc = 2;
+  double reservoir_volume = 1;
+  double battery_soc = 2;
 }
 
 // Diagnostics produced by the optimizer runner.
 message OptimizationDiagnostics {
-uint32 horizon_steps = 1;
+  uint32 horizon_steps = 1;
 
-uint32 reservoir_grid_points = 2;
-uint32 battery_grid_points = 3;
-uint32 action_count = 4;
+  uint32 reservoir_grid_points = 2;
+  uint32 battery_grid_points = 3;
+  uint32 action_count = 4;
 
-double solve_seconds = 5;
-double simulation_seconds = 6;
+  double solve_seconds = 5;
+  double simulation_seconds = 6;
 
-uint32 turbine_steps = 7;
-uint32 pump_steps = 8;
-uint32 spill_steps = 9;
-uint32 battery_charge_steps = 10;
-uint32 battery_discharge_steps = 11;
-uint32 wait_steps = 12;
+  uint32 turbine_steps = 7;
+  uint32 pump_steps = 8;
+  uint32 spill_steps = 9;
+  uint32 battery_charge_steps = 10;
+  uint32 battery_discharge_steps = 11;
+  uint32 wait_steps = 12;
 }

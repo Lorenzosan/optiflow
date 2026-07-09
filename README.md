@@ -2,7 +2,7 @@
 
 OptiFlow is a C++20 interview project for deterministic dispatch optimization of a pumped-storage asset with an optional battery.
 
-This starting point intentionally contains only the optimization library, a CSV-driven CLI, examples, Doxygen configuration, and minimal tests. It does not include gRPC, REST, PostgreSQL, NGINX, Docker, or a frontend yet.
+This starting point intentionally contains the optimization library, a CSV-driven CLI, examples, Doxygen configuration, minimal tests, and an optional protobuf/gRPC contract target. It does not include a running gRPC service, REST, PostgreSQL, NGINX, Docker, or a frontend yet.
 
 ## What is implemented
 
@@ -18,6 +18,7 @@ This starting point intentionally contains only the optimization library, a CSV-
 - Nearest-policy forward simulation for grid-aligned verification.
 - CSV dispatch output.
 - Doxygen comments on public interfaces.
+- Optional protobuf/gRPC optimizer contract generation.
 
 ## Build
 
@@ -42,6 +43,17 @@ The output file contains the dispatch trajectory with state, action, net power, 
 ## Model conventions
 
 The model units and sign conventions are documented in [`docs/model.md`](docs/model.md).
+
+## Build protobuf/gRPC contract
+
+The protobuf/gRPC boundary is optional and is disabled by default so the optimizer core can still build without gRPC installed. Enable it explicitly when protobuf and gRPC are available:
+
+```bash
+cmake -S . -B build-grpc -DCMAKE_BUILD_TYPE=Release -DOPTIFLOW_BUILD_GRPC=ON
+cmake --build build-grpc -j --target optiflow_optimizer_proto
+```
+
+Generated protobuf and gRPC C++ files are written under the build directory and should not be committed.
 
 ## Generate documentation
 
@@ -109,7 +121,8 @@ terminal_battery_target_penalty,0
 
 ## Suggested next commits
 
-1. Add JSON input after CSV is stable.
-2. Add gRPC optimizer service.
-3. Add persistence schema and API service.
-4. Add Docker Compose and frontend last.
+1. Add protobuf conversion between `OptimizeRequest` and `ScenarioBundle`.
+2. Add a local gRPC optimizer service.
+3. Add a service smoke test.
+4. Add persistence schema and API service only after the local service works.
+5. Add Docker Compose and frontend last.
