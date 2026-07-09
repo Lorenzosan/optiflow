@@ -1,8 +1,15 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from backend.app.database import SessionLocal, create_schema, get_db
+from backend.app.models import Scenario
+from backend.app.seed import seed_scenarios
 
 
 class ScenarioFiles(BaseModel):
@@ -12,6 +19,7 @@ class ScenarioFiles(BaseModel):
 
 
 class ScenarioResponse(BaseModel):
+    id: int
     name: str
     description: str
     files: ScenarioFiles
@@ -24,36 +32,6 @@ class HealthResponse(BaseModel):
 
 
 REPOSITORY_ROOT_ENV = "OPTIFLOW_REPO_ROOT"
-
-SCENARIOS: tuple[tuple[str, str, ScenarioFiles], ...] = (
-    (
-        "synthetic_year",
-        "Yearly pumped-storage and battery case with economically usable battery cycling.",
-        ScenarioFiles(
-            scenario="examples/yearly/scenario.csv",
-            prices="examples/yearly/prices.csv",
-            inflows="examples/yearly/inflows.csv",
-        ),
-    ),
-    (
-        "synthetic_year_no_battery",
-        "Yearly case where the battery is physically unavailable.",
-        ScenarioFiles(
-            scenario="examples/yearly/scenario_no_battery.csv",
-            prices="examples/yearly/prices.csv",
-            inflows="examples/yearly/inflows.csv",
-        ),
-    ),
-    (
-        "synthetic_year_high_battery_degradation",
-        "Yearly case where the battery is available but economically unattractive to cycle.",
-        ScenarioFiles(
-            scenario="examples/yearly/scenario_high_battery_degradation.csv",
-            prices="examples/yearly/prices.csv",
-            inflows="examples/yearly/inflows.csv",
-        ),
-    ),
-)
 
 
 def repository_root() -> Path:
@@ -70,10 +48,19 @@ def files_available(root: Path, files: ScenarioFiles) -> bool:
     )
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    create_schema()
+    with SessionLocal() as db:
+        seed_scenarios(db)
+    yield
+
+
 app = FastAPI(
     title="OptiFlow API",
     description="Thin HTTP API for OptiFlow scenario discovery and future optimization runs.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -83,14 +70,23 @@ def health() -> HealthResponse:
 
 
 @app.get("/scenarios", response_model=list[ScenarioResponse])
-def list_scenarios() -> list[ScenarioResponse]:
+def list_scenarios(db: Session = Depends(get_db)) -> list[ScenarioResponse]:
     root = repository_root()
-    return [
-        ScenarioResponse(
-            name=name,
-            description=description,
-            files=files,
-            available=files_available(root, files),
+    scenarios = db.query(Scenario).order_by(Scenario.id).all()
+    responses: list[ScenarioResponse] = []
+    for scenario in scenarios:
+        files = ScenarioFiles(
+            scenario=scenario.scenario_path,
+            prices=scenario.prices_path,
+            inflows=scenario.inflows_path,
         )
-        for name, description, files in SCENARIOS
-    ]
+        responses.append(
+            ScenarioResponse(
+                id=scenario.id,
+                name=scenario.name,
+                description=scenario.description,
+                files=files,
+                available=files_available(root, files),
+            )
+        )
+    return responses

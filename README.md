@@ -48,7 +48,7 @@ The C++ oracle tests are deliberately small and deterministic. They are meant to
 
 ## Backend demo
 
-The first backend slice is a thin FastAPI service under `backend/`. It is intentionally an orchestration layer, not a replacement for the C++ optimizer core. The initial endpoints are:
+The backend slice is a thin FastAPI service under `backend/`. It is intentionally an orchestration layer, not a replacement for the C++ optimizer core. The current endpoints are:
 
 * `GET /health` for container and reverse-proxy health checks.
 * `GET /scenarios` for discovering the bundled yearly scenarios.
@@ -66,7 +66,7 @@ curl http://localhost:8000/health
 curl http://localhost:8000/scenarios
 ```
 
-The backend image copies the example CSV inputs and verifies their presence in `/scenarios`. ORM persistence, PostgreSQL, optimization run execution, NGINX load balancing, and the frontend are intentionally left for follow-up commits.
+The Docker path starts PostgreSQL and stores scenario metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup and verifies that the referenced CSV files are present in `/scenarios`. Optimization run execution, NGINX load balancing, and the frontend are intentionally left for follow-up commits.
 
 ## Run the sample
 

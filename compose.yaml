@@ -7,8 +7,31 @@ services:
       - "8000:8000"
     environment:
       OPTIFLOW_REPO_ROOT: /app
+      OPTIFLOW_DATABASE_URL: postgresql+psycopg://optiflow:optiflow@postgres:5432/optiflow
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 10s
       timeout: 3s
       retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: optiflow
+      POSTGRES_USER: optiflow
+      POSTGRES_PASSWORD: optiflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - optiflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U optiflow -d optiflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  optiflow-postgres-data:
