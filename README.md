@@ -4,19 +4,23 @@ OptiFlow is a C++20 interview project for deterministic dispatch optimization of
 
 ## What is implemented
 
-- Explicit scenario loading from separate CSV files.
-- No default model or solver parameters.
-- 2D state grid: reservoir volume x battery state of charge.
-- Uniform action grid generated from explicit limits and explicit step counts.
-- Pumped-storage and battery transition model.
-- Deterministic Bellman dynamic-programming solver.
-- Bilinear interpolation of the continuation value.
-- Terminal-state hard bounds and soft target penalties.
-- Value-function-based forward simulation.
-- Nearest-policy forward simulation for grid-aligned verification.
-- CSV dispatch output.
-- Doxygen comments on public interfaces.
-- Optional protobuf/gRPC optimizer contract generation.
+* Explicit scenario loading from separate CSV files.
+* No default model or solver parameters.
+* 2D state grid: reservoir volume x battery state of charge.
+* Uniform action grid generated from explicit limits and explicit step counts.
+* Pumped-storage and battery transition model.
+* Deterministic Bellman dynamic-programming solver.
+* Bilinear interpolation of the continuation value.
+* Terminal-state hard bounds and soft target penalties.
+* Value-function-based forward simulation.
+* Nearest-policy forward simulation for grid-aligned verification.
+* CSV dispatch output.
+* Doxygen comments on public interfaces.
+* Optimization runner facade used by the CLI.
+* Optional protobuf/gRPC optimizer contract generation.
+* Protobuf conversion layer between `OptimizeRequest` and `ScenarioBundle`.
+* Local gRPC optimizer service.
+* gRPC service smoke test.
 
 ## Build
 
@@ -42,16 +46,40 @@ The output file contains the dispatch trajectory with state, action, net power, 
 
 The model units and sign conventions are documented in [`docs/model.md`](docs/model.md).
 
-## Build protobuf/gRPC contract
+## Build protobuf/gRPC targets
 
-The protobuf/gRPC boundary is optional and is disabled by default so the optimizer core can still build without gRPC installed. Enable it explicitly when protobuf and gRPC are available:
+The protobuf/gRPC boundary is optional and is disabled by default so the optimizer core can still build without protobuf or gRPC installed. Enable it explicitly when protobuf and gRPC are available:
 
 ```bash
 cmake -S . -B build-grpc -DCMAKE_BUILD_TYPE=Release -DOPTIFLOW_BUILD_GRPC=ON
-cmake --build build-grpc -j --target optiflow_optimizer_proto
+cmake --build build-grpc -j
+ctest --test-dir build-grpc --output-on-failure
 ```
 
 Generated protobuf and gRPC C++ files are written under the build directory and should not be committed.
+
+To build only the generated protobuf/gRPC target:
+
+```bash
+cmake --build build-grpc -j --target optiflow_optimizer_proto
+```
+
+## Run the local gRPC service
+
+After building with `OPTIFLOW_BUILD_GRPC=ON`, run:
+
+```bash
+./build-grpc/apps/optimizer_service/optiflow_optimizer_service_server \
+  --address 127.0.0.1:50051
+```
+
+The local service exposes:
+
+```text
+OptimizerService.Optimize(OptimizeRequest) -> OptimizeResponse
+```
+
+The service maps typed protobuf requests to the internal optimization runner. CSV parsing remains a CLI concern.
 
 ## Generate documentation
 
@@ -119,8 +147,8 @@ terminal_battery_target_penalty,0
 
 ## Suggested next commits
 
-1. Add protobuf conversion between `OptimizeRequest` and `ScenarioBundle`.
-2. Add a local gRPC optimizer service.
-3. Add a service smoke test.
-4. Add persistence schema and API service only after the local service works.
+1. Add a small local gRPC client for manual `OptimizeRequest` calls.
+2. Add a documented example request builder for the gRPC API.
+3. Add service-level diagnostics to the CLI and gRPC response if not already complete.
+4. Add persistence schema and API service only after the local optimizer service interface is stable.
 5. Add Docker Compose and frontend last.
