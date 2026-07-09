@@ -109,6 +109,29 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
     }
 }
 
+void print_summary(std::ostream& output,
+                   const optiflow::core::ScenarioBundle& bundle,
+                   const optiflow::runner::OptimizationResult& result,
+                   const std::filesystem::path& dispatch_path) {
+    const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
+
+    output << "Scenario: " << bundle.scenario.name() << '\n';
+    output << "Time steps: " << diagnostics.horizon_steps << '\n';
+    output << "Reservoir grid points: " << diagnostics.reservoir_grid_points << '\n';
+    output << "Battery grid points: " << diagnostics.battery_grid_points << '\n';
+    output << "Action count: " << diagnostics.action_count << '\n';
+    output << "Solve seconds: " << diagnostics.solve_seconds << '\n';
+    output << "Simulation seconds: " << diagnostics.simulation_seconds << '\n';
+    output << "Turbine steps: " << diagnostics.turbine_steps << '\n';
+    output << "Pump steps: " << diagnostics.pump_steps << '\n';
+    output << "Spill steps: " << diagnostics.spill_steps << '\n';
+    output << "Battery charge steps: " << diagnostics.battery_charge_steps << '\n';
+    output << "Battery discharge steps: " << diagnostics.battery_discharge_steps << '\n';
+    output << "Wait steps: " << diagnostics.wait_steps << '\n';
+    output << "Cumulative profit: " << result.cumulative_profit << '\n';
+    output << "Dispatch written to: " << dispatch_path << '\n';
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -123,11 +146,7 @@ int main(int argc, char** argv) {
         const optiflow::runner::OptimizationResult result = runner.run(bundle);
 
         write_dispatch_csv(options.output_path, result.dispatch);
-
-        std::cout << "Scenario: " << bundle.scenario.name() << '\n';
-        std::cout << "Time steps: " << bundle.scenario.horizon_size() << '\n';
-        std::cout << "Cumulative profit: " << result.cumulative_profit << '\n';
-        std::cout << "Dispatch written to: " << options.output_path << '\n';
+        print_summary(std::cout, bundle, result, options.output_path);
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
