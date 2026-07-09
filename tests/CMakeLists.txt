@@ -24,6 +24,19 @@ target_compile_features(optiflow_simple_behaviour_tests PRIVATE cxx_std_20)
 add_test(NAME optiflow_simple_behaviour_tests COMMAND optiflow_simple_behaviour_tests)
 
 
+add_executable(optiflow_optimizer_oracle_tests
+    test_optimizer_oracles.cpp)
+
+target_link_libraries(optiflow_optimizer_oracle_tests
+    PRIVATE
+        optiflow_optimization
+        optiflow_project_warnings)
+
+target_compile_features(optiflow_optimizer_oracle_tests PRIVATE cxx_std_20)
+
+add_test(NAME optiflow_optimizer_oracle_tests COMMAND optiflow_optimizer_oracle_tests)
+
+
 add_test(NAME optiflow_solve_cli_example
     COMMAND ${CMAKE_COMMAND}
         -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
