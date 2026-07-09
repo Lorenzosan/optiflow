@@ -28,6 +28,22 @@ cmake --build build -j
 ctest --test-dir build --output-on-failure
 ```
 
+## Tests
+
+The normal quality gate is the clean Release build plus CTest command shown above. It intentionally exercises only the local optimizer, CLI, CSV tools, and Python analysis scripts. There is no active gRPC/protobuf test gate.
+
+The CTest suite is split by responsibility:
+
+* `optiflow_tests` covers the core model and infrastructure: transition/reward accounting, invalid actions, bounds checks, state-grid lookup, value-function interpolation, terminal targets, CSV parsing failures, and `OptimizationRunner` diagnostics.
+* `optiflow_simple_behaviour_tests` covers short hand-checkable dispatch behavior: wait at zero price, turbine at high price, pumping or charging when terminal inventory requires it, and failure reporting when terminal bounds are unreachable.
+* `optiflow_optimizer_oracle_tests` covers deterministic economic oracles: turbine before a lower future price, preserve water before a higher future price, pump at negative price when feasible, use a low-degradation battery for arbitrage, avoid high-degradation battery cycling, and preserve reservoir inventory under a hard terminal constraint.
+* `optiflow_solve_cli_example` checks that the CLI can solve the small CSV example and write a trajectory-only dispatch CSV while printing diagnostics to stdout.
+* `optiflow_solve_cli_yearly_example` checks the yearly synthetic scenario end to end, including terminal inventory bands and diagnostic counters.
+* `optiflow_yearly_dispatch_summary` checks the summary tool against a generated yearly dispatch and verifies recomputed economic and energy-flow fields.
+* `optiflow_yearly_scenario_comparison` checks the comparison tool across the base, no-battery, and high-degradation yearly scenarios. It verifies that the physically unavailable battery case and the economically unattractive battery case are distinct inputs but produce the expected equal-profit comparison in the synthetic setup.
+
+The C++ oracle tests are deliberately small and deterministic. They are meant to catch optimizer regressions before larger yearly examples or future service adapters are considered.
+
 ## Run the sample
 
 ```bash
@@ -91,10 +107,11 @@ python3 tools/compare_scenarios.py \
   --output-dir build/yearly-comparison \
   --scenario examples/yearly/scenario.csv \
   --scenario examples/yearly/scenario_no_battery.csv \
+  --scenario examples/yearly/scenario_high_battery_degradation.csv \
   --summary-output build/yearly-comparison.csv
 ```
 
-The included `scenario_no_battery.csv` uses the same yearly prices and inflows but sets the battery state range and battery power limits to zero. It is intended to isolate the marginal value of the battery under the synthetic yearly assumptions.
+The included `scenario_no_battery.csv` uses the same yearly prices and inflows but sets the battery state range and battery power limits to zero. The included `scenario_high_battery_degradation.csv` keeps the battery physically available but assigns a high throughput cost, making battery cycling economically unattractive. The pair is intended to separate physical battery availability from economic battery use under the synthetic yearly assumptions.
 
 The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit. The CSV schema is trajectory-only and does not include run metadata.
 
@@ -198,9 +215,7 @@ terminal_battery_target_penalty,0
 
 ## Suggested next commits
 
-1. Add additional deterministic scenarios: no battery, high inflow, low inflow, and negative-price periods.
-2. Add small oracle tests for Bellman-solver decisions on hand-checkable horizons.
-3. Add scenario-comparison reporting so multiple CSV scenarios can be compared consistently.
-4. Reintroduce a service adapter only after the serialization/toolchain path is pinned and tested end to end.
-
-The yearly comparison examples include `examples/yearly/scenario_no_battery.csv`, where the battery is physically disabled, and `examples/yearly/scenario_high_battery_degradation.csv`, where the battery remains available but throughput is made expensive. Together they separate physical battery availability from economic battery use under the synthetic yearly assumptions.
+1. Add more input-validation regression tests for malformed or inconsistent scenario files.
+2. Add deterministic sensitivity tests for terminal penalties, grid resolution, and action-grid resolution.
+3. Add a small benchmark or timing smoke test for yearly-scale solves, keeping it separate from correctness assertions.
+4. Reintroduce a service adapter only after the optimizer core remains stable and the serialization/toolchain path is pinned and tested end to end.
