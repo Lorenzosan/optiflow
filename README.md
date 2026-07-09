@@ -69,6 +69,18 @@ python3 tools/validate_dispatch.py \
 
 The validator checks row counts, time indexing, state continuity, action-grid membership, physical bounds, mutual-exclusion constraints, transition equations, net power, reward, terminal hard bounds, and diagnostic activity counters. It does not prove that the one-year policy is globally optimal; that is covered by Bellman-solver tests on smaller scenarios where expected behavior is easier to assert.
 
+The yearly dispatch can also be summarized into economic and energy-flow components:
+
+```bash
+python3 tools/summarize_dispatch.py \
+  --scenario examples/yearly/scenario.csv \
+  --prices examples/yearly/prices.csv \
+  --inflows examples/yearly/inflows.csv \
+  --dispatch build/yearly_dispatch.csv
+```
+
+The summary reports export revenue, import cost, net market cashflow, operating cost, battery degradation cost, recomputed reward, energy imports and exports, weighted average operating prices, action counts, and final inventory relative to the configured terminal targets. It is an explanation tool, not a substitute for validation.
+
 The output file contains the dispatch trajectory with state, action, net power, reward, and cumulative profit. The CSV schema is trajectory-only and does not include run metadata.
 
 The CLI prints a diagnostic summary to stdout after writing the dispatch CSV:
@@ -171,8 +183,7 @@ terminal_battery_target_penalty,0
 
 ## Suggested next commits
 
-1. Add a yearly dispatch summary tool for revenue, costs, energy imports/exports, and final inventory.
-2. Add additional deterministic scenarios: no battery, high inflow, low inflow, and negative-price periods.
-3. Add small oracle tests for Bellman-solver decisions on hand-checkable horizons.
-4. Add scenario-comparison reporting so multiple CSV scenarios can be compared consistently.
-5. Reintroduce a service adapter only after the serialization/toolchain path is pinned and tested end to end.
+1. Add additional deterministic scenarios: no battery, high inflow, low inflow, and negative-price periods.
+2. Add small oracle tests for Bellman-solver decisions on hand-checkable horizons.
+3. Add scenario-comparison reporting so multiple CSV scenarios can be compared consistently.
+4. Reintroduce a service adapter only after the serialization/toolchain path is pinned and tested end to end.

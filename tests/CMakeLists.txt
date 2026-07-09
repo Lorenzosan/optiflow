@@ -31,9 +31,22 @@ add_test(NAME optiflow_solve_cli_example
         -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli
         -P ${CMAKE_CURRENT_SOURCE_DIR}/check_solve_cli_output.cmake)
 
+find_package(Python3 COMPONENTS Interpreter)
+
 add_test(NAME optiflow_solve_cli_yearly_example
     COMMAND ${CMAKE_COMMAND}
         -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
         -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
         -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli-yearly
         -P ${CMAKE_CURRENT_SOURCE_DIR}/check_yearly_example.cmake)
+
+
+if(Python3_Interpreter_FOUND)
+    add_test(NAME optiflow_yearly_dispatch_summary
+        COMMAND ${CMAKE_COMMAND}
+            -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+            -DOPTIFLOW_PYTHON=${Python3_EXECUTABLE}
+            -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+            -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/yearly-summary
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/check_yearly_summary.cmake)
+endif()

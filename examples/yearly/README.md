@@ -1,37 +1,115 @@
 # Synthetic yearly example
 
-This directory contains a deterministic 8760-hour CSV scenario for manual long-horizon runs.
+This directory contains a deterministic one-year OptiFlow example for long-horizon smoke testing.
 
-The files are synthetic and are not calibrated to a real market or hydrology data set. They are intended to exercise CSV loading, dynamic-programming solve size diagnostics, and long dispatch CSV generation with a still-small discretization.
+The files are:
 
-Files:
+- `scenario.csv`: model, grid, terminal, and solver parameters.
+- `prices.csv`: hourly synthetic market prices.
+- `inflows.csv`: hourly synthetic natural inflows.
 
-```text
-scenario.csv   Scalar model, terminal, and solver parameters.
-prices.csv     Hourly synthetic electricity prices for one non-leap year.
-inflows.csv    Hourly synthetic natural inflows for one non-leap year.
-```
+The example contains 8760 hourly rows, corresponding to one non-leap year. The data is synthetic and intentionally simple. It is not calibrated to a real market or asset.
 
-The scenario uses 9 reservoir grid points, 5 battery grid points, and 72 generated actions. This keeps the example suitable for local smoke testing while still covering a one-year horizon.
+## Purpose
 
+This example is intended to check that the optimizer can solve a longer horizon and that the resulting dispatch remains physically and economically consistent.
 
-Run and validate the example from the repository root:
+It is useful for:
 
-```bash
-./build/apps/solve_cli/optiflow_solve \
-  --scenario examples/yearly/scenario.csv \
-  --prices examples/yearly/prices.csv \
-  --inflows examples/yearly/inflows.csv \
-  --output build/yearly_dispatch.csv > build/yearly_stdout.txt
+- testing long-horizon CLI execution;
+- validating dispatch state transitions;
+- checking cumulative-profit accounting;
+- inspecting yearly energy and cost decomposition;
+- demonstrating deterministic optimizer diagnostics.
 
-python3 tools/validate_dispatch.py \
-  --scenario examples/yearly/scenario.csv \
-  --prices examples/yearly/prices.csv \
-  --inflows examples/yearly/inflows.csv \
-  --dispatch build/yearly_dispatch.csv \
-  --stdout build/yearly_stdout.txt
-```
+It should not be interpreted as a forecast or benchmark for a real pumped-storage plant.
 
-The validation helper checks that the generated trajectory is internally consistent with the configured model, action grid, and exogenous inputs. It is a consistency check, not a calibration claim.
+## Terminal inventory
 
-The yearly scenario uses a terminal inventory band with target penalties, rather than exact cyclic equality, because the forward simulation evolves continuous states while the dynamic program is solved on a grid.
+The yearly scenario uses a terminal inventory band with target penalties, rather than exact cyclic equality.
+
+The target terminal state is:
+
+- reservoir volume: `250`
+- battery SOC: `50`
+
+The hard terminal band is wider:
+
+- reservoir volume: `187.5` to `312.5`
+- battery SOC: `25` to `75`
+
+This avoids infeasibility caused by exact terminal equality in a model where the dynamic program is solved on a grid but the forward simulation evolves continuous states.
+
+The terminal penalties encourage the optimizer to finish near the target inventory without requiring exact equality.
+
+## Run the yearly example
+
+From the repository root:
+
+    ./build/apps/solve_cli/optiflow_solve \
+      --scenario examples/yearly/scenario.csv \
+      --prices examples/yearly/prices.csv \
+      --inflows examples/yearly/inflows.csv \
+      --output build/yearly_dispatch.csv
+
+The expected output has 8760 dispatch rows plus one CSV header row:
+
+    wc -l build/yearly_dispatch.csv
+
+Expected:
+
+    8761 build/yearly_dispatch.csv
+
+## Validate the dispatch
+
+After running the optimizer, validate the generated dispatch:
+
+    python3 tools/validate_dispatch.py \
+      --scenario examples/yearly/scenario.csv \
+      --prices examples/yearly/prices.csv \
+      --inflows examples/yearly/inflows.csv \
+      --dispatch build/yearly_dispatch.csv
+
+If stdout diagnostics were captured, validate them too:
+
+    ./build/apps/solve_cli/optiflow_solve \
+      --scenario examples/yearly/scenario.csv \
+      --prices examples/yearly/prices.csv \
+      --inflows examples/yearly/inflows.csv \
+      --output build/yearly_dispatch.csv > build/yearly_stdout.txt
+
+    python3 tools/validate_dispatch.py \
+      --scenario examples/yearly/scenario.csv \
+      --prices examples/yearly/prices.csv \
+      --inflows examples/yearly/inflows.csv \
+      --dispatch build/yearly_dispatch.csv \
+      --stdout build/yearly_stdout.txt
+
+The validator checks row counts, time-index alignment, state continuity, physical bounds, action-grid membership, transition equations, reward accounting, cumulative profit, terminal bounds, and optional stdout diagnostic counters.
+
+## Summarize the dispatch economics
+
+Use the summary tool to decompose the yearly result:
+
+    python3 tools/summarize_dispatch.py \
+      --scenario examples/yearly/scenario.csv \
+      --prices examples/yearly/prices.csv \
+      --inflows examples/yearly/inflows.csv \
+      --dispatch build/yearly_dispatch.csv
+
+The summary reports:
+
+- export revenue;
+- import cost;
+- net market cashflow;
+- operating cost;
+- battery degradation cost;
+- recomputed reward;
+- reported cumulative profit;
+- export and import energy;
+- weighted average operating prices;
+- action counts;
+- initial and final inventory;
+- terminal target deviations.
+
+This is the preferred way to explain why the yearly cumulative profit has a given magnitude.
