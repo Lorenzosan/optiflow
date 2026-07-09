@@ -1,9 +1,5 @@
 #include "optiflow/core/CsvScenarioReader.h"
-#include "optiflow/model/PumpedStorageModel.h"
-#include "optiflow/numerics/ActionGrid.h"
-#include "optiflow/numerics/StateGrid.h"
-#include "optiflow/solver/BellmanSolver.h"
-#include "optiflow/solver/ForwardSimulator.h"
+#include "optiflow/runner/OptimizationRunner.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -123,34 +119,14 @@ int main(int argc, char** argv) {
                                                     options.prices_path,
                                                     options.inflows_path);
 
-        const optiflow::numerics::StateGrid state_grid =
-            optiflow::numerics::StateGrid::from_parameters(bundle.scenario.model_parameters(),
-                                                           bundle.solver_parameters);
-        const optiflow::numerics::ActionGrid action_grid =
-            optiflow::numerics::ActionGrid::from_parameters(bundle.scenario.model_parameters(),
-                                                            bundle.solver_parameters);
-        const optiflow::model::PumpedStorageModel model(bundle.scenario.model_parameters());
+        const optiflow::runner::OptimizationRunner runner;
+        const optiflow::runner::OptimizationResult result = runner.run(bundle);
 
-        const optiflow::solver::BellmanSolver solver(state_grid,
-                                                     action_grid,
-                                                     model,
-                                                     bundle.solver_parameters);
-        const optiflow::solver::BellmanResult result = solver.solve(bundle.scenario);
+        write_dispatch_csv(options.output_path, result.dispatch);
 
-        const optiflow::solver::ForwardSimulator simulator(state_grid,
-                                                           action_grid,
-                                                           model,
-                                                           bundle.solver_parameters);
-        const std::vector<optiflow::core::DispatchStep> trajectory =
-            simulator.simulate_from_value_function(bundle.scenario, result.value_function);
-
-        write_dispatch_csv(options.output_path, trajectory);
-
-        const double cumulative_profit = trajectory.empty() ? 0.0 : trajectory.back().cumulative_profit;
         std::cout << "Scenario: " << bundle.scenario.name() << '\n';
         std::cout << "Time steps: " << bundle.scenario.horizon_size() << '\n';
-        std::cout << "Actions: " << action_grid.size() << '\n';
-        std::cout << "Cumulative profit: " << cumulative_profit << '\n';
+        std::cout << "Cumulative profit: " << result.cumulative_profit << '\n';
         std::cout << "Dispatch written to: " << options.output_path << '\n';
         return 0;
     } catch (const std::exception& error) {
