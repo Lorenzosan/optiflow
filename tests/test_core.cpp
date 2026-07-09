@@ -8,6 +8,7 @@
 #include "optiflow/numerics/ValueFunction.h"
 #include "optiflow/solver/BellmanSolver.h"
 #include "optiflow/solver/ForwardSimulator.h"
+#include "optiflow/runner/OptimizationRunner.h"
 
 #include <cmath>
 #include <exception>
@@ -540,6 +541,28 @@ void test_csv_reader_rejects_missing_terminal_key() {
     std::filesystem::remove(inflows_path);
 }
 
+void test_optimization_runner_produces_dispatch() {
+    const core::Scenario scenario("runner_test",
+                                  core::State(50.0, 10.0),
+                                  std::vector<core::Exogenous>{
+                                      core::Exogenous(100.0, 0.0),
+                                      core::Exogenous(100.0, 0.0)},
+                                  model_parameters(),
+                                  open_terminal_parameters());
+
+    const core::ScenarioBundle bundle(scenario, solver_parameters());
+
+    const optiflow::runner::OptimizationRunner runner;
+    const optiflow::runner::OptimizationResult result = runner.run(bundle);
+
+    require(result.dispatch.size() == scenario.horizon_size(),
+            "runner should produce one dispatch row per time step");
+
+    require_near(result.cumulative_profit,
+                 result.dispatch.back().cumulative_profit,
+                 "runner cumulative profit");
+}
+  
 }  // namespace
 
 int main() {
@@ -559,5 +582,6 @@ int main() {
     test_csv_reader_rejects_duplicate_scenario_key();
     test_csv_reader_rejects_mismatched_price_and_inflow_indices();
     test_csv_reader_rejects_missing_terminal_key();
+    test_optimization_runner_produces_dispatch();
     return 0;
 }

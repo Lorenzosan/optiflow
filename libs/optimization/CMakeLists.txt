@@ -10,7 +10,8 @@ add_library(optiflow_optimization STATIC
     src/Policy.cpp
     src/PumpedStorageModel.cpp
     src/StateGrid.cpp
-    src/ValueFunction.cpp)
+    src/ValueFunction.cpp
+    src/OptimizationRunner.cpp)
 
 target_include_directories(optiflow_optimization
     PUBLIC
