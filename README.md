@@ -17,11 +17,7 @@ OptiFlow is a C++20 interview project for deterministic dispatch optimization of
 * CSV dispatch output.
 * Doxygen comments on public interfaces.
 * Optimization runner facade used by the CLI.
-* Optional protobuf/gRPC optimizer contract generation.
-* Protobuf conversion layer between `OptimizeRequest` and `ScenarioBundle`.
-* Local gRPC optimizer service.
-* gRPC service smoke test.
-* Runner-level optimization diagnostics shared by CLI and gRPC boundaries.
+* Runner-level optimization diagnostics shared by CLI and future service adapters.
 * CLI diagnostic summary printed to stdout while keeping dispatch CSV trajectory-only.
 
 ## Build
@@ -95,48 +91,17 @@ Cumulative profit: <value>
 Dispatch written to: build/dispatch.csv
 ```
 
-The optimizer runner reports the same diagnostics to API callers. Service clients receive diagnostics through `OptimizeResponse.diagnostics`.
+The optimizer runner owns these diagnostics so future service adapters can expose the same metadata without recomputing it.
 
 ## Model conventions
 
 The model units and sign conventions are documented in [`docs/model.md`](docs/model.md).
 
-## Build protobuf/gRPC targets
+## Service boundary
 
-The protobuf/gRPC boundary is optional and is disabled by default so the optimizer core can still build without protobuf or gRPC installed. Enable it explicitly when protobuf and gRPC are available:
+The optimizer core is intentionally transport-independent. The current repository keeps the production path local and deterministic: CSV inputs are parsed by the CLI, and both tests and tools exercise the `OptimizationRunner` facade directly.
 
-```bash
-cmake -S . -B build-grpc -DCMAKE_BUILD_TYPE=Release -DOPTIFLOW_BUILD_GRPC=ON
-cmake --build build-grpc -j
-ctest --test-dir build-grpc --output-on-failure
-```
-
-Generated protobuf and gRPC C++ files are written under the build directory and should not be committed.
-
-To build only the generated protobuf/gRPC target:
-
-```bash
-cmake --build build-grpc -j --target optiflow_optimizer_proto
-```
-
-## Run the local gRPC service
-
-After building with `OPTIFLOW_BUILD_GRPC=ON`, run:
-
-```bash
-./build-grpc/apps/optimizer_service/optiflow_optimizer_service_server \
-  --address 127.0.0.1:50051
-```
-
-The local service exposes:
-
-```text
-OptimizerService.Optimize(OptimizeRequest) -> OptimizeResponse
-```
-
-The service maps typed protobuf requests to the internal optimization runner. CSV parsing remains a CLI concern.
-
-`OptimizeResponse.diagnostics` is copied from `OptimizationRunner`; the protobuf conversion layer does not recompute solver metadata. The gRPC smoke tests check that structural diagnostics and dispatch-derived activity counters survive the service boundary.
+The previous protobuf/gRPC adapter has been removed from the active build while the project focuses on optimizer behavior, diagnostics, yearly simulation, and validation. A service adapter can be reintroduced later once the protobuf/gRPC toolchain is pinned and covered by a live serialization/integration test.
 
 ## Generate documentation
 
@@ -206,9 +171,8 @@ terminal_battery_target_penalty,0
 
 ## Suggested next commits
 
-1. Add a small local gRPC client for manual `OptimizeRequest` calls.
-2. Add a documented example request builder for the gRPC API.
-3. Add protobuf/CSV optimization parity tests.
-4. Document reproducible protobuf/gRPC build setup.
-5. Add persistence schema and API service only after the local optimizer service interface is stable.
-6. Add Docker Compose and frontend last.
+1. Add a yearly dispatch summary tool for revenue, costs, energy imports/exports, and final inventory.
+2. Add additional deterministic scenarios: no battery, high inflow, low inflow, and negative-price periods.
+3. Add small oracle tests for Bellman-solver decisions on hand-checkable horizons.
+4. Add scenario-comparison reporting so multiple CSV scenarios can be compared consistently.
+5. Reintroduce a service adapter only after the serialization/toolchain path is pinned and tested end to end.

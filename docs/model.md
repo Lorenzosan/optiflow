@@ -106,7 +106,7 @@ Use wide terminal bounds and zero target penalties when no final-state preferenc
 
 ## Optimization diagnostics
 
-`OptimizationRunner` returns diagnostics together with the dispatch trajectory and cumulative profit. The CLI prints these diagnostics to stdout after writing the dispatch CSV; the protobuf/gRPC boundary copies them into `OptimizeResponse.diagnostics`. The dispatch CSV remains trajectory-only and does not include run metadata. These diagnostics are deterministic metadata except for wall-clock timings.
+`OptimizationRunner` returns diagnostics together with the dispatch trajectory and cumulative profit. The CLI prints these diagnostics to stdout after writing the dispatch CSV. The dispatch CSV remains trajectory-only and does not include run metadata. Future service adapters should expose the same runner diagnostics instead of recomputing solver metadata. These diagnostics are deterministic metadata except for wall-clock timings.
 
 The structural fields are:
 
@@ -139,6 +139,6 @@ battery_discharge_steps
 wait_steps
 ```
 
-Each non-wait counter is incremented when the corresponding action component is positive in a dispatch row. `wait_steps` is incremented only when turbine, pump, spill, battery charge, and battery discharge actions are all zero. Tests recompute these counters from dispatch rows and compare them with runner and service diagnostics. The CLI integration tests check that the short sample run prints the diagnostic labels and preserves the dispatch CSV header. A separate yearly-example test solves the 8760-step synthetic scenario and verifies that the generated dispatch file has one header plus 8760 trajectory rows.
+Each non-wait counter is incremented when the corresponding action component is positive in a dispatch row. `wait_steps` is incremented only when turbine, pump, spill, battery charge, and battery discharge actions are all zero. Tests recompute these counters from dispatch rows and compare them with runner diagnostics. The CLI integration tests check that the short sample run prints the diagnostic labels and preserves the dispatch CSV header. A separate yearly-example test solves the 8760-step synthetic scenario and verifies that the generated dispatch file has one header plus 8760 trajectory rows.
 
 The optional `tools/validate_dispatch.py` helper validates a generated dispatch CSV against the scenario, price, and inflow inputs. It checks row counts, consecutive time indices, state continuity, action-grid membership, state bounds, mutual-exclusion constraints, transition equations, net power, reward, cumulative profit, terminal hard bounds, and optional CLI diagnostic counters. The helper uses tolerances because the CLI writes floating-point values with stream-default precision. It is a trajectory consistency check; it does not replace small oracle tests for Bellman optimality.
