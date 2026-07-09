@@ -33,3 +33,5 @@ python3 tools/validate_dispatch.py \
 ```
 
 The validation helper checks that the generated trajectory is internally consistent with the configured model, action grid, and exogenous inputs. It is a consistency check, not a calibration claim.
+
+The yearly scenario uses a terminal inventory band with target penalties, rather than exact cyclic equality, because the forward simulation evolves continuous states while the dynamic program is solved on a grid.
