@@ -18,11 +18,11 @@ The state grid is a uniform two-dimensional grid over reservoir volume and batte
 
 ## Action variables
 
-`turbine_flow` is the water volume released through the turbine during one time step.
+`turbine_flow` is the average water flow released through the turbine during one time step, measured in reservoir-volume units per hour. Over one step it changes reservoir volume by `turbine_flow * time_step_hours`.
 
-`pump_flow` is the water volume pumped into the upper reservoir during one time step.
+`pump_flow` is the average water flow pumped into the upper reservoir during one time step, measured in reservoir-volume units per hour. Over one step it changes reservoir volume by `pump_flow * time_step_hours`.
 
-`spill_flow` is the water volume released without producing electricity during one time step.
+`spill_flow` is the average water flow released without producing electricity during one time step, measured in reservoir-volume units per hour. Over one step it changes reservoir volume by `spill_flow * time_step_hours`.
 
 `battery_charge_power` is charging power in MW. Over one step it changes battery energy by `battery_charge_power * time_step_hours * battery_charge_efficiency`.
 
@@ -34,7 +34,27 @@ The transition model rejects simultaneous turbine and pump operation, and simult
 
 `price` is the electricity price, measured in currency per MWh. Negative prices are allowed.
 
-`natural_inflow` is the natural water inflow into the upper reservoir during one time step, measured in the same abstract volume unit as `reservoir_volume`. It must be nonnegative.
+`natural_inflow` is the average natural water inflow into the upper reservoir during one time step, measured in reservoir-volume units per hour. Over one step it changes reservoir volume by `natural_inflow * time_step_hours`. It must be nonnegative.
+
+## State transition
+
+Reservoir volume is updated as:
+
+```text
+next_reservoir_volume = reservoir_volume
+  + natural_inflow * time_step_hours
+  + pump_flow * time_step_hours
+  - turbine_flow * time_step_hours
+  - spill_flow * time_step_hours
+```
+
+Battery state of charge is updated as:
+
+```text
+next_battery_soc = battery_soc
+  + battery_charge_power * battery_charge_efficiency * time_step_hours
+  - battery_discharge_power / battery_discharge_efficiency * time_step_hours
+```
 
 ## Power and reward
 
@@ -60,7 +80,9 @@ The one-step reward is market revenue minus operating and degradation costs:
 
 ```text
 price * net_power * time_step_hours
-  - operating_cost_per_mwh * abs(net_power) * time_step_hours
+  - operating_cost_per_mwh
+      * (turbine_power + pump_power + battery_charge_power + battery_discharge_power)
+      * time_step_hours
   - battery_degradation_cost_per_mwh
       * (battery_charge_power + battery_discharge_power) * time_step_hours
 ```

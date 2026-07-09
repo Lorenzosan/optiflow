@@ -472,6 +472,55 @@ void test_csv_reader_rejects_mismatched_price_and_inflow_indices() {
     std::filesystem::remove(inflows_path);
 }
 
+
+void test_csv_reader_reports_series_file_and_line_for_invalid_numeric_value() {
+    const std::filesystem::path directory = std::filesystem::temp_directory_path();
+    const std::filesystem::path scenario_path = directory / "optiflow_test_error_context_scenario.csv";
+    const std::filesystem::path prices_path = directory / "optiflow_test_error_context_prices.csv";
+    const std::filesystem::path inflows_path = directory / "optiflow_test_error_context_inflows.csv";
+
+    {
+        std::ofstream prices(prices_path);
+        prices << "time_index,price\n";
+        prices << "0,not_a_number\n";
+    }
+    {
+        std::ofstream inflows(inflows_path);
+        inflows << "time_index,natural_inflow\n";
+        inflows << "0,0\n";
+    }
+    {
+        std::ofstream scenario(scenario_path);
+        scenario << "key,value\n";
+        scenario << "scenario_name,unused\n";
+    }
+
+    try {
+        const core::ScenarioBundle bundle = core::CsvScenarioReader::read(scenario_path,
+                                                                          prices_path,
+                                                                          inflows_path);
+        static_cast<void>(bundle);
+    } catch (const std::invalid_argument& error) {
+        const std::string message(error.what());
+        require(message.find("invalid numeric value for price") != std::string::npos,
+                "series error should mention invalid price value");
+        require(message.find(prices_path.string()) != std::string::npos,
+                "series error should mention prices file path");
+        require(message.find(":2") != std::string::npos,
+                "series error should mention line number");
+
+        std::filesystem::remove(scenario_path);
+        std::filesystem::remove(prices_path);
+        std::filesystem::remove(inflows_path);
+        return;
+    }
+
+    std::filesystem::remove(scenario_path);
+    std::filesystem::remove(prices_path);
+    std::filesystem::remove(inflows_path);
+    throw std::runtime_error("expected invalid numeric value exception was not thrown");
+}
+
 void test_csv_reader_rejects_missing_terminal_key() {
     const std::filesystem::path directory = std::filesystem::temp_directory_path();
     const std::filesystem::path scenario_path = directory / "optiflow_test_core_scenario.csv";
@@ -581,6 +630,7 @@ int main() {
     test_nearest_policy_matches_value_function_simulation_on_grid_aligned_case();
     test_csv_reader_rejects_duplicate_scenario_key();
     test_csv_reader_rejects_mismatched_price_and_inflow_indices();
+    test_csv_reader_reports_series_file_and_line_for_invalid_numeric_value();
     test_csv_reader_rejects_missing_terminal_key();
     test_optimization_runner_produces_dispatch();
     return 0;
