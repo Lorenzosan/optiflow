@@ -12,6 +12,9 @@ compile_commands.json
 CTestTestfile.cmake
 Testing/
 
+# Pycache
+tools/__pycache__/
+
 # Binaries and libraries
 *.o
 *.obj
