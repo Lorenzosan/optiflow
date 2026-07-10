@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="OptiFlow optimization run console">
+  <title>OptiFlow Console</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">Pumped-storage optimization</p>
+      <h1>OptiFlow Console</h1>
+    </div>
+    <p class="header-note">Deterministic C++ solver · FastAPI orchestration</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel launch-panel" aria-labelledby="launch-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">New optimization</p>
+          <h2 id="launch-title">Launch a scenario</h2>
+        </div>
+      </div>
+
+      <form id="run-form" class="launch-form">
+        <label for="scenario-select">Scenario</label>
+        <div class="control-row">
+          <select id="scenario-select" name="scenario_id" required disabled>
+            <option value="">Loading scenarios…</option>
+          </select>
+          <button id="run-button" type="submit" disabled>Run optimization</button>
+        </div>
+        <p id="scenario-description" class="supporting-text">Scenario data is loaded from the API.</p>
+        <p class="supporting-text">The request stays open while the synchronous solver runs.</p>
+      </form>
+
+      <div id="operation-message" class="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel history-panel" aria-labelledby="history-title">
+      <div class="section-heading history-heading">
+        <div>
+          <p class="eyebrow">Persistent records</p>
+          <h2 id="history-title">Run history</h2>
+        </div>
+        <button id="refresh-button" class="secondary-button" type="button">Refresh</button>
+      </div>
+
+      <div class="filters" aria-label="Run history filters">
+        <div>
+          <label for="filter-scenario">Scenario</label>
+          <select id="filter-scenario">
+            <option value="">All scenarios</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-status">Status</label>
+          <select id="filter-status">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="running">Running</option>
+            <option value="succeeded">Succeeded</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Run</th>
+              <th scope="col">Scenario</th>
+              <th scope="col">Started</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="numeric">Profit</th>
+              <th scope="col" class="numeric">Runtime</th>
+              <th scope="col">Artifact</th>
+            </tr>
+          </thead>
+          <tbody id="runs-body">
+            <tr>
+              <td colspan="7" class="empty-cell">Loading run history…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button id="previous-button" class="secondary-button" type="button" disabled>Previous</button>
+        <span id="page-summary">0 runs</span>
+        <button id="next-button" class="secondary-button" type="button" disabled>Next</button>
+      </div>
+    </section>
+
+    <section class="panel details-panel" aria-labelledby="details-title">
+      <div id="details-empty">
+        <p class="eyebrow">Selected run</p>
+        <h2 id="details-title">Run details</h2>
+        <p class="supporting-text">Select a run to inspect its persisted result.</p>
+      </div>
+
+      <div id="details-content" hidden>
+        <div class="section-heading details-heading">
+          <div>
+            <p class="eyebrow">Selected run</p>
+            <h2 id="run-title">Run details</h2>
+          </div>
+          <span id="run-status" class="status-chip">Unknown</span>
+        </div>
+
+        <dl class="metadata-grid">
+          <div>
+            <dt>Started</dt>
+            <dd id="run-started">—</dd>
+          </div>
+          <div>
+            <dt>Completed</dt>
+            <dd id="run-completed">—</dd>
+          </div>
+        </dl>
+
+        <p id="run-error" class="error-box" hidden></p>
+
+        <div id="summary-grid" class="summary-grid" aria-label="Optimization summary"></div>
+
+        <a id="download-link" class="download-link" href="#" hidden>Download dispatch CSV</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>OptiFlow keeps optimizer logic in C++ and exposes only orchestration and persisted results through HTTP.</p>
+  </footer>
+</body>
+</html>

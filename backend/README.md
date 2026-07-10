@@ -1,8 +1,8 @@
 # OptiFlow backend
 
-This is a thin FastAPI service for local demo and interview discussion around HTTP APIs, web servers, Docker, ORM-backed persistence, and future run tracking.
+This is a thin FastAPI service for local demo and interview discussion around HTTP APIs, Docker, ORM-backed persistence, and optimization run tracking.
 
-The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, persisted run summaries, and guarded dispatch CSV download. NGINX and frontend integration are intentionally left for later commits.
+The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, persisted run summaries, and guarded dispatch CSV download. The static frontend under `frontend/` reaches these endpoints through an NGINX `/api/` reverse proxy.
 
 `GET /runs` returns `{items, total, limit, offset}` with newest-first ordering, bounded `limit`/`offset` pagination, and optional `scenario_id` and `status` filters.
 
@@ -40,10 +40,10 @@ curl -OJ http://localhost:8000/runs/1/dispatch.csv
 From the repository root:
 
 ```bash
-docker compose up --build api
+docker compose up --build
 ```
 
-This builds the C++ solver inside the API image, then starts both the API and PostgreSQL. The API waits for PostgreSQL to pass its health check, applies Alembic migrations, and seeds the three included yearly scenarios.
+This builds the C++ solver and static frontend, then starts NGINX, the API, and PostgreSQL. The API applies Alembic migrations and seeds the three included yearly scenarios before NGINX is marked ready.
 
 Then check:
 
@@ -102,5 +102,5 @@ After either transition, `python -m alembic upgrade head` initializes or upgrade
 
 ## Intended next steps
 
-1. Add NGINX as a reverse proxy/load balancer in Docker Compose.
-2. Add a minimal frontend consuming the HTTP API.
+1. Add dispatch visualization only after the tabular workflow remains stable.
+2. Consider asynchronous execution only when multi-user or long-running deployment requirements justify it.

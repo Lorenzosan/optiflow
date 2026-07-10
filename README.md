@@ -20,6 +20,7 @@ OptiFlow is a C++20 interview project for deterministic dispatch optimization of
 * Runner-level optimization diagnostics shared by CLI and future service adapters.
 * CLI diagnostic summary printed to stdout while keeping dispatch CSV trajectory-only.
 * Optional machine-readable summary JSON for service adapters.
+* Build-free web console served by NGINX with a same-origin API proxy.
 
 ## Build
 
@@ -47,9 +48,9 @@ The CTest suite is split by responsibility:
 
 The C++ oracle tests are deliberately small and deterministic. They are meant to catch optimizer regressions before larger yearly examples or future service adapters are considered.
 
-## Backend demo
+## Web demo
 
-The backend slice is a thin FastAPI service under `backend/`. It is intentionally an orchestration layer, not a replacement for the C++ optimizer core. The current endpoints are:
+The full demo pairs the thin FastAPI orchestration backend with a build-free browser frontend served by NGINX. The optimizer remains in C++, and the frontend consumes only the HTTP API. The current endpoints are:
 
 * `GET /health` for container and reverse-proxy health checks.
 * `GET /scenarios` for discovering the bundled yearly scenarios.
@@ -60,26 +61,28 @@ The backend slice is a thin FastAPI service under `backend/`. It is intentionall
 
 `GET /runs` returns `{items, total, limit, offset}` and accepts optional `scenario_id` and `status` filters. Results are ordered by newest start time, then run ID.
 
-Run it locally through Docker from the repository root:
+Run the full stack locally from the repository root:
 
 ```bash
-docker compose up --build api
+docker compose up --build
 ```
 
-Then check:
+Open `http://localhost:8080`. The API remains directly available on `http://localhost:8000` for backend debugging.
+
+The same API is available through the NGINX proxy:
 
 ```bash
-curl http://localhost:8000/health
-curl http://localhost:8000/scenarios
-curl -X POST http://localhost:8000/runs \
+curl http://localhost:8080/api/health
+curl http://localhost:8080/api/scenarios
+curl -X POST http://localhost:8080/api/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
-curl 'http://localhost:8000/runs?limit=20&offset=0'
-curl http://localhost:8000/runs/1
-curl -OJ http://localhost:8000/runs/1/dispatch.csv
+curl 'http://localhost:8080/api/runs?limit=20&offset=0'
+curl http://localhost:8080/api/runs/1
+curl -OJ http://localhost:8080/api/runs/1/dispatch.csv
 ```
 
-The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, applies Alembic migrations, and stores scenario, run, and summary metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`. NGINX load balancing and the frontend are intentionally left for follow-up commits.
+The Docker path builds the C++ CLI and static NGINX image, starts PostgreSQL, applies Alembic migrations, and stores scenario, run, and summary metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`.
 
 ## Run the sample
 
