@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -23,7 +25,7 @@ class Scenario(Base):
         nullable=False,
     )
 
-    runs: Mapped[list["OptimizationRun"]] = relationship(
+    runs: Mapped[list[OptimizationRun]] = relationship(
         back_populates="scenario",
         cascade="all, delete-orphan",
     )
@@ -63,3 +65,32 @@ class OptimizationRun(Base):
     )
 
     scenario: Mapped[Scenario] = relationship(back_populates="runs")
+    summary: Mapped[RunSummary | None] = relationship(
+        back_populates="run",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+
+class RunSummary(Base):
+    __tablename__ = "run_summaries"
+
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("optimization_runs.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    cumulative_profit: Mapped[float] = mapped_column(Float, nullable=False)
+    export_energy_mwh: Mapped[float] = mapped_column(Float, nullable=False)
+    import_energy_mwh: Mapped[float] = mapped_column(Float, nullable=False)
+    final_reservoir_volume: Mapped[float] = mapped_column(Float, nullable=False)
+    final_battery_soc: Mapped[float] = mapped_column(Float, nullable=False)
+    solve_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    simulation_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    turbine_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    pump_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    spill_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    battery_charge_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    battery_discharge_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+    wait_steps: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    run: Mapped[OptimizationRun] = relationship(back_populates="summary")

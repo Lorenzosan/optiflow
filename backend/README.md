@@ -2,7 +2,7 @@
 
 This is a thin FastAPI service for local demo and interview discussion around HTTP APIs, web servers, Docker, ORM-backed persistence, and future run tracking.
 
-The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, and guarded dispatch CSV download. NGINX and frontend integration are intentionally left for later commits.
+The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, persisted run summaries, and guarded dispatch CSV download. NGINX and frontend integration are intentionally left for later commits.
 
 ## Local Python run
 
@@ -58,10 +58,11 @@ The Docker image copies the example CSV inputs into `/app/examples`, builds `/ap
 
 ## Database model
 
-The first ORM slice intentionally stores only durable control-plane data:
+The ORM stores durable control-plane data and compact run results:
 
 * `Scenario`: scenario name, description, and paths to scenario, price, and inflow CSV files.
 * `OptimizationRun`: run-tracking table with scenario foreign key, status, timestamps, output dispatch path, and error message.
+* `RunSummary`: one-to-one summary with profit, energy, terminal inventory, timing, and action counters for succeeded runs.
 
 The dispatch trajectory stays as a CSV artifact. It is not expanded into relational rows in this phase. Database schema changes are versioned under `backend/alembic/`; application startup no longer calls `create_all`.
 
@@ -76,10 +77,11 @@ rm -f optiflow_api.db
 docker compose down -v
 ```
 
-To preserve an existing database that still matches the current ORM schema, adopt it without replaying the initial migration:
+To preserve a pre-Alembic database containing the original `scenarios` and `optimization_runs` tables, mark only the initial schema as applied, then run later migrations normally:
 
 ```bash
-python -m alembic stamp head
+python -m alembic stamp 20260710_0001
+python -m alembic upgrade head
 python -m alembic check
 ```
 
@@ -87,7 +89,8 @@ For the Docker PostgreSQL database, build the new image and run the same adoptio
 
 ```bash
 docker compose build api
-docker compose run --rm api python -m alembic stamp head
+docker compose run --rm api python -m alembic stamp 20260710_0001
+docker compose run --rm api python -m alembic upgrade head
 docker compose run --rm api python -m alembic check
 ```
 
@@ -95,6 +98,6 @@ After either transition, `python -m alembic upgrade head` initializes or upgrade
 
 ## Intended next steps
 
-1. Harden synchronous run failure handling, then add persisted run summaries.
+1. Add `GET /runs` with bounded pagination and stable ordering.
 2. Add NGINX as a reverse proxy/load balancer in Docker Compose.
 3. Add a minimal frontend consuming the HTTP API.

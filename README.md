@@ -19,6 +19,7 @@ OptiFlow is a C++20 interview project for deterministic dispatch optimization of
 * Optimization runner facade used by the CLI.
 * Runner-level optimization diagnostics shared by CLI and future service adapters.
 * CLI diagnostic summary printed to stdout while keeping dispatch CSV trajectory-only.
+* Optional machine-readable summary JSON for service adapters.
 
 ## Build
 
@@ -53,7 +54,7 @@ The backend slice is a thin FastAPI service under `backend/`. It is intentionall
 * `GET /health` for container and reverse-proxy health checks.
 * `GET /scenarios` for discovering the bundled yearly scenarios.
 * `POST /runs` for synchronously launching an optimization through the C++ CLI.
-* `GET /runs/{run_id}` for retrieving persisted run status and dispatch artifact path.
+* `GET /runs/{run_id}` for retrieving persisted run status, summary metrics, and dispatch artifact path.
 * `GET /runs/{run_id}/dispatch.csv` for downloading a succeeded run's guarded CSV artifact.
 
 Run it locally through Docker from the repository root:
@@ -74,7 +75,7 @@ curl http://localhost:8000/runs/1
 curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
 
-The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, applies Alembic migrations, and stores scenario and run metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`. NGINX load balancing and the frontend are intentionally left for follow-up commits.
+The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, applies Alembic migrations, and stores scenario, run, and summary metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`. NGINX load balancing and the frontend are intentionally left for follow-up commits.
 
 ## Run the sample
 
@@ -83,7 +84,8 @@ The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, appl
   --scenario examples/scenario.csv \
   --prices examples/prices.csv \
   --inflows examples/inflows.csv \
-  --output build/dispatch.csv
+  --output build/dispatch.csv \
+  --summary-output build/summary.json
 ```
 
 The repository also includes a deterministic one-year synthetic example with 8760 hourly time steps:
@@ -157,6 +159,10 @@ Battery grid points: 11
 Action count: 216
 Solve seconds: <wall-clock seconds>
 Simulation seconds: <wall-clock seconds>
+Export energy MWh: <value>
+Import energy MWh: <value>
+Final reservoir volume: <value>
+Final battery SOC: <value>
 Turbine steps: <count>
 Pump steps: <count>
 Spill steps: <count>
@@ -167,7 +173,7 @@ Cumulative profit: <value>
 Dispatch written to: build/dispatch.csv
 ```
 
-The optimizer runner owns these diagnostics so future service adapters can expose the same metadata without recomputing it.
+The optimizer runner owns these diagnostics. The optional `--summary-output` file contains the service-facing subset as numeric JSON, allowing the FastAPI adapter to persist the values without parsing human-readable stdout or recomputing optimizer results.
 
 ## Model conventions
 

@@ -10,11 +10,29 @@ from sqlalchemy.pool import StaticPool
 from backend.app.database import get_db
 from backend.app.main import app
 from backend.app.models import Base, OptimizationRun, Scenario
-from backend.app.runner import SolverResult
+from backend.app.runner import RunSummaryData, SolverResult
 
 
 TestSessionFactory = sessionmaker[Session]
 ApiFixture = tuple[TestClient, TestSessionFactory, Scenario, Path, Path]
+
+
+def sample_summary() -> RunSummaryData:
+    return RunSummaryData(
+        cumulative_profit=1234.5,
+        export_energy_mwh=456.0,
+        import_energy_mwh=78.0,
+        final_reservoir_volume=52.5,
+        final_battery_soc=4.0,
+        solve_seconds=1.25,
+        simulation_seconds=0.15,
+        turbine_steps=10,
+        pump_steps=3,
+        spill_steps=1,
+        battery_charge_steps=4,
+        battery_discharge_steps=5,
+        wait_steps=2,
+    )
 
 
 @pytest.fixture
@@ -139,6 +157,7 @@ def test_create_run_persists_success(
             status="succeeded",
             output_dispatch_path=f"build/api-runs/run_{run_id:06d}_dispatch.csv",
             error_message=None,
+            summary=sample_summary(),
         )
 
     monkeypatch.setattr("backend.app.main.run_solver", fake_run_solver)
@@ -151,12 +170,31 @@ def test_create_run_persists_success(
     assert payload["scenario_name"] == scenario.name
     assert payload["status"] == "succeeded"
     assert payload["output_dispatch_path"] == f"build/api-runs/run_{payload['id']:06d}_dispatch.csv"
+    assert payload["summary"] == {
+        "cumulative_profit": 1234.5,
+        "export_energy_mwh": 456.0,
+        "import_energy_mwh": 78.0,
+        "final_reservoir_volume": 52.5,
+        "final_battery_soc": 4.0,
+        "solve_seconds": 1.25,
+        "simulation_seconds": 0.15,
+        "turbine_steps": 10,
+        "pump_steps": 3,
+        "spill_steps": 1,
+        "battery_charge_steps": 4,
+        "battery_discharge_steps": 5,
+        "wait_steps": 2,
+    }
 
     with testing_session() as db:
         persisted = db.get(OptimizationRun, payload["id"])
         assert persisted is not None
         assert persisted.status == "succeeded"
         assert persisted.completed_at is not None
+        assert persisted.summary is not None
+        assert persisted.summary.cumulative_profit == 1234.5
+        assert persisted.summary.final_reservoir_volume == 52.5
+        assert persisted.summary.wait_steps == 2
 
 
 @pytest.mark.parametrize("path", ["/runs/999", "/runs/999/dispatch.csv"])

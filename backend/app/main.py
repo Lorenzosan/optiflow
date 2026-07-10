@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.database import SessionLocal, get_db
-from backend.app.models import OptimizationRun, Scenario
-from backend.app.runner import resolve_dispatch_path, run_solver
+from backend.app.models import OptimizationRun, RunSummary, Scenario
+from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
 from backend.app.seed import seed_scenarios
 
 
@@ -42,6 +42,22 @@ class RunCreate(BaseModel):
     scenario_id: int = Field(description="Database id of the scenario to solve.")
 
 
+class RunSummaryResponse(BaseModel):
+    cumulative_profit: float
+    export_energy_mwh: float
+    import_energy_mwh: float
+    final_reservoir_volume: float
+    final_battery_soc: float
+    solve_seconds: float
+    simulation_seconds: float
+    turbine_steps: int
+    pump_steps: int
+    spill_steps: int
+    battery_charge_steps: int
+    battery_discharge_steps: int
+    wait_steps: int
+
+
 class RunResponse(BaseModel):
     id: int
     scenario_id: int
@@ -51,6 +67,7 @@ class RunResponse(BaseModel):
     completed_at: datetime | None
     output_dispatch_path: str | None
     error_message: str | None
+    summary: RunSummaryResponse | None
 
 
 REPOSITORY_ROOT_ENV = "OPTIFLOW_REPO_ROOT"
@@ -113,6 +130,44 @@ def list_scenarios(db: Session = Depends(get_db)) -> list[ScenarioResponse]:
     return responses
 
 
+def summary_response(summary: RunSummary | None) -> RunSummaryResponse | None:
+    if summary is None:
+        return None
+    return RunSummaryResponse(
+        cumulative_profit=summary.cumulative_profit,
+        export_energy_mwh=summary.export_energy_mwh,
+        import_energy_mwh=summary.import_energy_mwh,
+        final_reservoir_volume=summary.final_reservoir_volume,
+        final_battery_soc=summary.final_battery_soc,
+        solve_seconds=summary.solve_seconds,
+        simulation_seconds=summary.simulation_seconds,
+        turbine_steps=summary.turbine_steps,
+        pump_steps=summary.pump_steps,
+        spill_steps=summary.spill_steps,
+        battery_charge_steps=summary.battery_charge_steps,
+        battery_discharge_steps=summary.battery_discharge_steps,
+        wait_steps=summary.wait_steps,
+    )
+
+
+def attach_summary(run: OptimizationRun, summary: RunSummaryData) -> None:
+    run.summary = RunSummary(
+        cumulative_profit=summary.cumulative_profit,
+        export_energy_mwh=summary.export_energy_mwh,
+        import_energy_mwh=summary.import_energy_mwh,
+        final_reservoir_volume=summary.final_reservoir_volume,
+        final_battery_soc=summary.final_battery_soc,
+        solve_seconds=summary.solve_seconds,
+        simulation_seconds=summary.simulation_seconds,
+        turbine_steps=summary.turbine_steps,
+        pump_steps=summary.pump_steps,
+        spill_steps=summary.spill_steps,
+        battery_charge_steps=summary.battery_charge_steps,
+        battery_discharge_steps=summary.battery_discharge_steps,
+        wait_steps=summary.wait_steps,
+    )
+
+
 def run_response(run: OptimizationRun) -> RunResponse:
     return RunResponse(
         id=run.id,
@@ -123,6 +178,7 @@ def run_response(run: OptimizationRun) -> RunResponse:
         completed_at=run.completed_at,
         output_dispatch_path=run.output_dispatch_path,
         error_message=run.error_message,
+        summary=summary_response(run.summary),
     )
 
 
@@ -143,6 +199,10 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
 
     try:
         result = run_solver(repository_root(), scenario, run.id)
+        if result.status == "succeeded" and result.summary is None:
+            raise RuntimeError("successful solver result did not include a run summary")
+        if result.status != "succeeded" and result.summary is not None:
+            raise RuntimeError("failed solver result included a run summary")
     except Exception:
         logger.exception("Unexpected error while executing optimization run %s", run.id)
         run.status = "failed"
@@ -162,6 +222,8 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
     run.completed_at = datetime.utcnow()
     run.output_dispatch_path = result.output_dispatch_path
     run.error_message = result.error_message
+    if result.summary is not None:
+        attach_summary(run, result.summary)
     db.commit()
     db.refresh(run)
 

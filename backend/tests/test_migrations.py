@@ -36,6 +36,7 @@ def test_initial_migration_upgrades_and_downgrades_sqlite(tmp_path: Path) -> Non
     assert set(inspector.get_table_names()) == {
         "alembic_version",
         "optimization_runs",
+        "run_summaries",
         "scenarios",
     }
     assert {column["name"] for column in inspector.get_columns("scenarios")} == {
@@ -56,6 +57,22 @@ def test_initial_migration_upgrades_and_downgrades_sqlite(tmp_path: Path) -> Non
         "output_dispatch_path",
         "error_message",
     }
+    assert {column["name"] for column in inspector.get_columns("run_summaries")} == {
+        "run_id",
+        "cumulative_profit",
+        "export_energy_mwh",
+        "import_energy_mwh",
+        "final_reservoir_volume",
+        "final_battery_soc",
+        "solve_seconds",
+        "simulation_seconds",
+        "turbine_steps",
+        "pump_steps",
+        "spill_steps",
+        "battery_charge_steps",
+        "battery_discharge_steps",
+        "wait_steps",
+    }
     engine.dispose()
 
     run_alembic(database_url, "downgrade", "base")
@@ -65,21 +82,25 @@ def test_initial_migration_upgrades_and_downgrades_sqlite(tmp_path: Path) -> Non
     engine.dispose()
 
 
-def test_existing_orm_schema_can_be_adopted(tmp_path: Path) -> None:
+def test_pre_alembic_schema_can_be_adopted_and_upgraded(tmp_path: Path) -> None:
     database_path = tmp_path / "existing-schema.db"
     database_url = f"sqlite:///{database_path}"
 
     engine = create_engine(database_url)
-    Base.metadata.create_all(engine)
+    Base.metadata.tables["scenarios"].create(engine)
+    Base.metadata.tables["optimization_runs"].create(engine)
     engine.dispose()
 
-    run_alembic(database_url, "stamp", "head")
+    run_alembic(database_url, "stamp", "20260710_0001")
+    run_alembic(database_url, "upgrade", "head")
     run_alembic(database_url, "check")
 
     engine = create_engine(database_url)
+    inspector = inspect(engine)
+    assert "run_summaries" in inspector.get_table_names()
     with engine.connect() as connection:
         revision = connection.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert revision == "20260710_0001"
+    assert revision == "20260710_0002"
     engine.dispose()
