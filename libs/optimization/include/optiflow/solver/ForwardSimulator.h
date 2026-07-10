@@ -11,43 +11,20 @@
 
 namespace optiflow::solver {
 
-/**
- * @brief Forward simulator for applying optimized dispatch decisions.
- */
 class ForwardSimulator {
 public:
-    /**
-     * @brief Construct a forward simulator.
-     *
-     * @param state_grid State grid used by the value function.
-     * @param action_grid Action grid used by the solver.
-     * @param model Transition and reward model.
-     * @param solver_parameters Numerical solver parameters.
-     */
     ForwardSimulator(numerics::StateGrid state_grid,
                      numerics::ActionGrid action_grid,
                      model::PumpedStorageModel model,
                      core::SolverParameters solver_parameters);
 
-    /**
-     * @brief Simulate dispatch by recomputing the Bellman action from the value function at each physical state.
-     *
-     * @param scenario Input scenario.
-     * @param value_function Solved value-function table.
-     * @return Dispatch trajectory.
-     */
-    std::vector<core::DispatchStep> simulate_from_value_function(const core::Scenario& scenario,
-                                                    const numerics::ValueFunction& value_function) const;
+    std::vector<core::DispatchStep> simulate_from_value_function(
+        const core::Scenario& scenario,
+        const numerics::ValueFunction& value_function) const;
 
-    /**
-     * @brief Simulate dispatch using nearest-grid policy lookup.
-     *
-     * @param scenario Input scenario.
-     * @param policy Solved policy table.
-     * @return Dispatch trajectory.
-     */
-    std::vector<core::DispatchStep> simulate_nearest_policy(const core::Scenario& scenario,
-                                                            const numerics::Policy& policy) const;
+    std::vector<core::DispatchStep> simulate_nearest_policy(
+        const core::Scenario& scenario,
+        const numerics::Policy& policy) const;
 
 private:
     numerics::StateGrid state_grid_;

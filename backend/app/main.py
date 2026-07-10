@@ -72,14 +72,11 @@ class RunSummaryResponse(BaseModel):
     export_energy_mwh: float
     import_energy_mwh: float
     final_reservoir_volume: float
-    final_battery_soc: float
     solve_seconds: float
     simulation_seconds: float
     turbine_steps: int
     pump_steps: int
     spill_steps: int
-    battery_charge_steps: int
-    battery_discharge_steps: int
     wait_steps: int
 
 
@@ -169,7 +166,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="OptiFlow API",
-    description="Thin HTTP API for OptiFlow scenario discovery and future optimization runs.",
+    description="HTTP orchestration for the OptiFlow pumped-storage optimizer.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -214,10 +211,7 @@ async def create_scenario(
     except ScenarioUploadError as error:
         raise HTTPException(
             status_code=422,
-            detail={
-                "message": "Scenario validation failed",
-                "error": str(error),
-            },
+            detail={"message": "Scenario validation failed", "error": str(error)},
         ) from error
     except ScenarioValidatorError as error:
         logger.exception("Scenario validation infrastructure failed")
@@ -275,14 +269,11 @@ def summary_response(summary: RunSummary | None) -> RunSummaryResponse | None:
         export_energy_mwh=summary.export_energy_mwh,
         import_energy_mwh=summary.import_energy_mwh,
         final_reservoir_volume=summary.final_reservoir_volume,
-        final_battery_soc=summary.final_battery_soc,
         solve_seconds=summary.solve_seconds,
         simulation_seconds=summary.simulation_seconds,
         turbine_steps=summary.turbine_steps,
         pump_steps=summary.pump_steps,
         spill_steps=summary.spill_steps,
-        battery_charge_steps=summary.battery_charge_steps,
-        battery_discharge_steps=summary.battery_discharge_steps,
         wait_steps=summary.wait_steps,
     )
 
@@ -293,14 +284,11 @@ def attach_summary(run: OptimizationRun, summary: RunSummaryData) -> None:
         export_energy_mwh=summary.export_energy_mwh,
         import_energy_mwh=summary.import_energy_mwh,
         final_reservoir_volume=summary.final_reservoir_volume,
-        final_battery_soc=summary.final_battery_soc,
         solve_seconds=summary.solve_seconds,
         simulation_seconds=summary.simulation_seconds,
         turbine_steps=summary.turbine_steps,
         pump_steps=summary.pump_steps,
         spill_steps=summary.spill_steps,
-        battery_charge_steps=summary.battery_charge_steps,
-        battery_discharge_steps=summary.battery_discharge_steps,
         wait_steps=summary.wait_steps,
     )
 
@@ -349,10 +337,7 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "message": "Optimization run failed unexpectedly",
-                "run_id": run.id,
-            },
+            detail={"message": "Optimization run failed unexpectedly", "run_id": run.id},
         )
 
     run.status = result.status
@@ -363,7 +348,6 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
         attach_summary(run, result.summary)
     db.commit()
     db.refresh(run)
-
     return run_response(run)
 
 

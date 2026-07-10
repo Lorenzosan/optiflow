@@ -1,15 +1,13 @@
 #include "optiflow/numerics/Policy.h"
 
 #include <stdexcept>
-#include <utility>
 
 namespace optiflow::numerics {
 
 Policy::Policy(std::size_t horizon_size, const StateGrid& state_grid)
     : horizon_size_(horizon_size),
       reservoir_size_(state_grid.reservoir_size()),
-      battery_size_(state_grid.battery_size()),
-      actions_(horizon_size * state_grid.reservoir_size() * state_grid.battery_size()) {
+      actions_(horizon_size * state_grid.reservoir_size()) {
     if (horizon_size_ == 0) {
         throw std::invalid_argument("policy horizon must be positive");
     }
@@ -31,19 +29,16 @@ bool Policy::has_action(std::size_t time_index, StateIndex state_index) const {
     return actions_.at(offset(time_index, state_index)).has_value();
 }
 
-std::size_t Policy::horizon_size() const {
-    return horizon_size_;
-}
+std::size_t Policy::horizon_size() const { return horizon_size_; }
 
 std::size_t Policy::offset(std::size_t time_index, StateIndex state_index) const {
     if (time_index >= horizon_size_) {
         throw std::out_of_range("policy time index is out of range");
     }
-    if (state_index.reservoir_index >= reservoir_size_ || state_index.battery_index >= battery_size_) {
+    if (state_index.reservoir_index >= reservoir_size_) {
         throw std::out_of_range("policy state index is out of range");
     }
-    return (time_index * reservoir_size_ + state_index.reservoir_index) * battery_size_ +
-           state_index.battery_index;
+    return time_index * reservoir_size_ + state_index.reservoir_index;
 }
 
 }  // namespace optiflow::numerics

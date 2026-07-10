@@ -6,22 +6,22 @@ from backend.app.models import Scenario
 SEEDED_SCENARIOS: tuple[dict[str, str], ...] = (
     {
         "name": "synthetic_year",
-        "description": "Yearly pumped-storage and battery case with economically usable battery cycling.",
+        "description": "Yearly pumped-storage case with pumping, generation, spill, and terminal inventory requirements.",
         "scenario_path": "examples/yearly/scenario.csv",
         "prices_path": "examples/yearly/prices.csv",
         "inflows_path": "examples/yearly/inflows.csv",
     },
     {
-        "name": "synthetic_year_no_battery",
-        "description": "Yearly case where the battery is physically unavailable.",
-        "scenario_path": "examples/yearly/scenario_no_battery.csv",
+        "name": "synthetic_year_no_pumping",
+        "description": "Yearly sensitivity where the station cannot pump water back into the upper reservoir.",
+        "scenario_path": "examples/yearly/scenario_no_pumping.csv",
         "prices_path": "examples/yearly/prices.csv",
         "inflows_path": "examples/yearly/inflows.csv",
     },
     {
-        "name": "synthetic_year_high_battery_degradation",
-        "description": "Yearly case where the battery is available but economically unattractive to cycle.",
-        "scenario_path": "examples/yearly/scenario_high_battery_degradation.csv",
+        "name": "synthetic_year_high_operating_cost",
+        "description": "Yearly sensitivity where hydraulic throughput has a high operating cost.",
+        "scenario_path": "examples/yearly/scenario_high_operating_cost.csv",
         "prices_path": "examples/yearly/prices.csv",
         "inflows_path": "examples/yearly/inflows.csv",
     },
@@ -30,18 +30,12 @@ SEEDED_SCENARIOS: tuple[dict[str, str], ...] = (
 
 def seed_scenarios(db: Session) -> None:
     for scenario_data in SEEDED_SCENARIOS:
-        scenario = (
-            db.query(Scenario)
-            .filter(Scenario.name == scenario_data["name"])
-            .one_or_none()
-        )
+        scenario = db.query(Scenario).filter(Scenario.name == scenario_data["name"]).one_or_none()
         if scenario is None:
             db.add(Scenario(**scenario_data))
             continue
-
         scenario.description = scenario_data["description"]
         scenario.scenario_path = scenario_data["scenario_path"]
         scenario.prices_path = scenario_data["prices_path"]
         scenario.inflows_path = scenario_data["inflows_path"]
-
     db.commit()

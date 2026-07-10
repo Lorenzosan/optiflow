@@ -25,13 +25,11 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_from_value_function(
     const numerics::ValueFunction& value_function) const {
     std::vector<core::DispatchStep> trajectory;
     trajectory.reserve(scenario.horizon_size());
-
     core::State state = scenario.initial_state();
     double cumulative_profit = 0.0;
 
     for (std::size_t time_index = 0; time_index < scenario.horizon_size(); ++time_index) {
         const core::Exogenous& exogenous = scenario.exogenous_series().at(time_index);
-
         double best_value = -std::numeric_limits<double>::infinity();
         const core::Action* best_action = nullptr;
         core::Outcome best_outcome(state, 0.0, 0.0, 0.0, 0.0, false, "no feasible action");
@@ -41,14 +39,13 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_from_value_function(
             if (!outcome.feasible) {
                 continue;
             }
-            const double continuation = numerics::Interpolator::bilinear(value_function,
-                                                                          state_grid_,
-                                                                          time_index + 1,
-                                                                          outcome.next_state);
+            const double continuation = numerics::Interpolator::linear(
+                value_function, state_grid_, time_index + 1, outcome.next_state);
             if (!std::isfinite(continuation)) {
                 continue;
             }
-            const double candidate = outcome.reward + solver_parameters_.discount_factor * continuation;
+            const double candidate = outcome.reward +
+                                     solver_parameters_.discount_factor * continuation;
             if (candidate > best_value) {
                 best_value = candidate;
                 best_action = &action;
@@ -71,7 +68,6 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_from_value_function(
                                 cumulative_profit);
         state = best_outcome.next_state;
     }
-
     return trajectory;
 }
 
@@ -80,19 +76,16 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_nearest_policy(
     const numerics::Policy& policy) const {
     std::vector<core::DispatchStep> trajectory;
     trajectory.reserve(scenario.horizon_size());
-
     core::State state = scenario.initial_state();
     double cumulative_profit = 0.0;
 
     for (std::size_t time_index = 0; time_index < scenario.horizon_size(); ++time_index) {
-        const numerics::StateIndex state_index = state_grid_.nearest_index(state);
-        const core::Action& action = policy.get(time_index, state_index);
+        const core::Action& action = policy.get(time_index, state_grid_.nearest_index(state));
         const core::Exogenous& exogenous = scenario.exogenous_series().at(time_index);
         const core::Outcome outcome = model_.apply(state, action, exogenous);
         if (!outcome.feasible) {
             throw std::runtime_error("nearest-policy simulation selected an infeasible action");
         }
-
         cumulative_profit += outcome.reward;
         trajectory.emplace_back(time_index,
                                 state,
@@ -104,7 +97,6 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_nearest_policy(
                                 cumulative_profit);
         state = outcome.next_state;
     }
-
     return trajectory;
 }
 

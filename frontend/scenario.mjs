@@ -7,51 +7,39 @@ function field(key, label, defaultValue, options = {}) {
 
 export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
-    title: "Time, storage bounds, and initial state",
+    title: "Time, reservoir bounds, and initial inventory",
     fields: Object.freeze([
       field("time_step_hours", "Time step [h]", 1, { min: 0, exclusiveMin: true }),
       field("reservoir_min_volume", "Reservoir minimum [volume units]", 0),
       field("reservoir_max_volume", "Reservoir maximum [volume units]", 500),
       field("initial_reservoir_volume", "Initial reservoir [volume units]", 250),
-      field("battery_min_soc", "Battery minimum SOC [MWh]", 0),
-      field("battery_max_soc", "Battery maximum SOC [MWh]", 100),
-      field("initial_battery_soc", "Initial battery SOC [MWh]", 50),
     ]),
   }),
   Object.freeze({
-    title: "Actions and conversion",
+    title: "Hydraulic actions and conversion",
     fields: Object.freeze([
       field("turbine_max_flow", "Maximum turbine flow [volume units/h]", 40, { min: 0 }),
       field("pump_max_flow", "Maximum pump flow [volume units/h]", 30, { min: 0 }),
       field("spill_max_flow", "Maximum spill flow [volume units/h]", 50, { min: 0 }),
-      field("battery_max_charge_power", "Maximum battery charge power [MW]", 25, { min: 0 }),
-      field("battery_max_discharge_power", "Maximum battery discharge power [MW]", 25, { min: 0 }),
       field("turbine_efficiency", "Turbine efficiency [fraction]", 0.9, { min: 0, max: 1, exclusiveMin: true }),
       field("pump_efficiency", "Pump efficiency [fraction]", 0.85, { min: 0, max: 1, exclusiveMin: true }),
-      field("battery_charge_efficiency", "Battery charge efficiency [fraction]", 1, { min: 0, max: 1, exclusiveMin: true }),
-      field("battery_discharge_efficiency", "Battery discharge efficiency [fraction]", 1, { min: 0, max: 1, exclusiveMin: true }),
       field("water_to_power_factor", "Water-to-power factor [MW per volume unit/h]", 0.4, { min: 0, exclusiveMin: true }),
     ]),
   }),
   Object.freeze({
     title: "Economic parameters",
     fields: Object.freeze([
-      field("battery_degradation_cost_per_mwh", "Battery degradation cost [currency/MWh]", 3, { min: 0 }),
       field("operating_cost_per_mwh", "Operating cost [currency/MWh]", 1, { min: 0 }),
       field("infeasibility_penalty", "Infeasibility penalty [currency]", 1000000, { min: 0 }),
     ]),
   }),
   Object.freeze({
-    title: "Terminal constraints and targets",
+    title: "Terminal reservoir constraints and target",
     fields: Object.freeze([
       field("terminal_reservoir_min_volume", "Terminal reservoir minimum [volume units]", 187.5),
       field("terminal_reservoir_max_volume", "Terminal reservoir maximum [volume units]", 312.5),
       field("terminal_target_reservoir_volume", "Terminal reservoir target [volume units]", 250),
       field("terminal_reservoir_target_penalty", "Reservoir target penalty [currency/volume unit²]", 20, { min: 0 }),
-      field("terminal_battery_min_soc", "Terminal battery minimum SOC [MWh]", 25),
-      field("terminal_battery_max_soc", "Terminal battery maximum SOC [MWh]", 75),
-      field("terminal_target_battery_soc", "Terminal battery target SOC [MWh]", 50),
-      field("terminal_battery_target_penalty", "Battery target penalty [currency/MWh²]", 20, { min: 0 }),
     ]),
   }),
   Object.freeze({
@@ -59,12 +47,9 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
     note: "Higher grid and action counts can increase solve time and memory use sharply.",
     fields: Object.freeze([
       field("reservoir_volume_grid_points", "Reservoir grid points [count]", 9, { integer: true, min: 1 }),
-      field("battery_soc_grid_points", "Battery SOC grid points [count]", 5, { integer: true, min: 1 }),
       field("turbine_flow_steps", "Turbine flow steps [count]", 3, { integer: true, min: 1 }),
       field("spill_flow_steps", "Spill flow steps [count]", 2, { integer: true, min: 1 }),
       field("pump_flow_steps", "Pump flow steps [count]", 3, { integer: true, min: 1 }),
-      field("battery_charge_steps", "Battery charge steps [count]", 2, { integer: true, min: 1 }),
-      field("battery_discharge_steps", "Battery discharge steps [count]", 2, { integer: true, min: 1 }),
       field("discount_factor", "Discount factor [fraction]", 1, { min: 0, max: 1 }),
     ]),
   }),
@@ -93,22 +78,20 @@ function normalizeScenarioName(name) {
   return normalized;
 }
 
-function parseFieldValue(fieldDefinition, rawValue) {
+function parseFieldValue(definition, rawValue) {
   const text = String(rawValue ?? "").trim();
-  requireCondition(text.length > 0, `${fieldDefinition.label} is required.`);
+  requireCondition(text.length > 0, `${definition.label} is required.`);
   const value = Number(text);
-  requireCondition(Number.isFinite(value), `${fieldDefinition.label} must be a finite number.`);
-  if (fieldDefinition.integer) {
-    requireCondition(Number.isSafeInteger(value), `${fieldDefinition.label} must be an integer.`);
+  requireCondition(Number.isFinite(value), `${definition.label} must be a finite number.`);
+  if (definition.integer) {
+    requireCondition(Number.isSafeInteger(value), `${definition.label} must be an integer.`);
   }
-  if (fieldDefinition.min !== undefined) {
-    const valid = fieldDefinition.exclusiveMin
-      ? value > fieldDefinition.min
-      : value >= fieldDefinition.min;
-    requireCondition(valid, `${fieldDefinition.label} is below its allowed minimum.`);
+  if (definition.min !== undefined) {
+    const valid = definition.exclusiveMin ? value > definition.min : value >= definition.min;
+    requireCondition(valid, `${definition.label} is below its allowed minimum.`);
   }
-  if (fieldDefinition.max !== undefined) {
-    requireCondition(value <= fieldDefinition.max, `${fieldDefinition.label} exceeds its allowed maximum.`);
+  if (definition.max !== undefined) {
+    requireCondition(value <= definition.max, `${definition.label} exceeds its allowed maximum.`);
   }
   return { text, value };
 }
@@ -119,20 +102,10 @@ function validateBounds(values) {
     "Reservoir minimum volume cannot exceed its maximum.",
   );
   requireCondition(
-    values.battery_min_soc <= values.battery_max_soc,
-    "Battery minimum SOC cannot exceed its maximum.",
-  );
-  requireCondition(
     values.initial_reservoir_volume >= values.reservoir_min_volume
       && values.initial_reservoir_volume <= values.reservoir_max_volume,
     "Initial reservoir volume must be inside the reservoir bounds.",
   );
-  requireCondition(
-    values.initial_battery_soc >= values.battery_min_soc
-      && values.initial_battery_soc <= values.battery_max_soc,
-    "Initial battery SOC must be inside the battery bounds.",
-  );
-
   requireCondition(
     values.terminal_reservoir_min_volume >= values.reservoir_min_volume
       && values.terminal_reservoir_max_volume <= values.reservoir_max_volume
@@ -140,32 +113,14 @@ function validateBounds(values) {
     "Terminal reservoir bounds must be ordered and inside the model bounds.",
   );
   requireCondition(
-    values.terminal_battery_min_soc >= values.battery_min_soc
-      && values.terminal_battery_max_soc <= values.battery_max_soc
-      && values.terminal_battery_min_soc <= values.terminal_battery_max_soc,
-    "Terminal battery bounds must be ordered and inside the model bounds.",
-  );
-  requireCondition(
     values.terminal_target_reservoir_volume >= values.terminal_reservoir_min_volume
       && values.terminal_target_reservoir_volume <= values.terminal_reservoir_max_volume,
     "Terminal reservoir target must be inside the terminal bounds.",
   );
-  requireCondition(
-    values.terminal_target_battery_soc >= values.terminal_battery_min_soc
-      && values.terminal_target_battery_soc <= values.terminal_battery_max_soc,
-    "Terminal battery target must be inside the terminal bounds.",
-  );
-
   if (values.reservoir_min_volume < values.reservoir_max_volume) {
     requireCondition(
       values.reservoir_volume_grid_points >= 2,
       "Reservoir grid points must be at least two for a nonzero reservoir range.",
-    );
-  }
-  if (values.battery_min_soc < values.battery_max_soc) {
-    requireCondition(
-      values.battery_soc_grid_points >= 2,
-      "Battery grid points must be at least two for a nonzero battery range.",
     );
   }
 }
@@ -212,17 +167,15 @@ export function buildScenarioCsv(name, values) {
   const normalizedName = normalizeScenarioName(name);
   const parsedValues = {};
   const lines = ["key,value", `scenario_name,${normalizedName}`];
-
-  for (const fieldDefinition of ALL_FIELDS) {
-    const parsed = parseFieldValue(fieldDefinition, values[fieldDefinition.key]);
-    parsedValues[fieldDefinition.key] = parsed.value;
-    lines.push(`${fieldDefinition.key},${parsed.text}`);
+  for (const definition of ALL_FIELDS) {
+    const parsed = parseFieldValue(definition, values[definition.key]);
+    parsedValues[definition.key] = parsed.value;
+    lines.push(`${definition.key},${parsed.text}`);
   }
-
   validateBounds(parsedValues);
   const reporting = parseReportingValues(values);
-  for (const fieldDefinition of SCENARIO_REPORTING_FIELDS) {
-    lines.push(`${fieldDefinition.key},${reporting[fieldDefinition.key]}`);
+  for (const definition of SCENARIO_REPORTING_FIELDS) {
+    lines.push(`${definition.key},${reporting[definition.key]}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -233,7 +186,6 @@ export function validateSeriesCsv(text, valueColumn) {
     "Unsupported series column.",
   );
   requireCondition(!String(text).includes("\uFFFD"), `${valueColumn} CSV is not valid UTF-8.`);
-
   const lines = String(text).split(/\r?\n/);
   const header = (lines.shift() ?? "").split(",").map((item) => item.trim());
   requireCondition(
@@ -244,9 +196,7 @@ export function validateSeriesCsv(text, valueColumn) {
   let expectedIndex = 0;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const line = lines[lineIndex].trim();
-    if (!line) {
-      continue;
-    }
+    if (!line) continue;
     const columns = line.split(",").map((item) => item.trim());
     requireCondition(columns.length === 2, `Row ${lineIndex + 2} must contain two columns.`);
     requireCondition(/^\d+$/.test(columns[0]), `Row ${lineIndex + 2} has an invalid time_index.`);
@@ -262,7 +212,6 @@ export function validateSeriesCsv(text, valueColumn) {
     }
     expectedIndex += 1;
   }
-
   requireCondition(expectedIndex > 0, `${valueColumn} CSV must contain at least one data row.`);
   return Object.freeze({ rowCount: expectedIndex });
 }

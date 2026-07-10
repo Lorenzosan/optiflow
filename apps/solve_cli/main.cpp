@@ -20,19 +20,6 @@ struct CliOptions {
     std::filesystem::path output_path;
     std::filesystem::path summary_output_path;
     bool validate_only;
-
-    CliOptions(std::filesystem::path scenario_path_arg,
-               std::filesystem::path prices_path_arg,
-               std::filesystem::path inflows_path_arg,
-               std::filesystem::path output_path_arg,
-               std::filesystem::path summary_output_path_arg,
-               bool validate_only_arg)
-        : scenario_path(std::move(scenario_path_arg)),
-          prices_path(std::move(prices_path_arg)),
-          inflows_path(std::move(inflows_path_arg)),
-          output_path(std::move(output_path_arg)),
-          summary_output_path(std::move(summary_output_path_arg)),
-          validate_only(validate_only_arg) {}
 };
 
 void print_usage(const char* program_name) {
@@ -49,87 +36,69 @@ void print_usage(const char* program_name) {
 }
 
 CliOptions parse_args(int argc, char** argv) {
-    std::string scenario_path;
-    std::string prices_path;
-    std::string inflows_path;
-    std::string output_path;
-    std::string summary_output_path;
-    bool validate_only = false;
-
-    for (int i = 1; i < argc; ++i) {
-        const std::string arg = argv[i];
-        if (arg == "--scenario" && i + 1 < argc) {
-            scenario_path = argv[++i];
-        } else if (arg == "--prices" && i + 1 < argc) {
-            prices_path = argv[++i];
-        } else if (arg == "--inflows" && i + 1 < argc) {
-            inflows_path = argv[++i];
-        } else if (arg == "--output" && i + 1 < argc) {
-            output_path = argv[++i];
-        } else if (arg == "--summary-output" && i + 1 < argc) {
-            summary_output_path = argv[++i];
-        } else if (arg == "--validate-only") {
-            validate_only = true;
-        } else if (arg == "--help" || arg == "-h") {
+    CliOptions options{};
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument = argv[index];
+        if (argument == "--scenario" && index + 1 < argc) {
+            options.scenario_path = argv[++index];
+        } else if (argument == "--prices" && index + 1 < argc) {
+            options.prices_path = argv[++index];
+        } else if (argument == "--inflows" && index + 1 < argc) {
+            options.inflows_path = argv[++index];
+        } else if (argument == "--output" && index + 1 < argc) {
+            options.output_path = argv[++index];
+        } else if (argument == "--summary-output" && index + 1 < argc) {
+            options.summary_output_path = argv[++index];
+        } else if (argument == "--validate-only") {
+            options.validate_only = true;
+        } else if (argument == "--help" || argument == "-h") {
             print_usage(argv[0]);
             std::exit(0);
         } else {
-            throw std::invalid_argument("unknown or incomplete argument: " + arg);
+            throw std::invalid_argument("unknown or incomplete argument: " + argument);
         }
     }
 
-    if (scenario_path.empty()) {
+    if (options.scenario_path.empty()) {
         throw std::invalid_argument("--scenario is required");
     }
-    if (prices_path.empty()) {
+    if (options.prices_path.empty()) {
         throw std::invalid_argument("--prices is required");
     }
-    if (inflows_path.empty()) {
+    if (options.inflows_path.empty()) {
         throw std::invalid_argument("--inflows is required");
     }
-    if (!validate_only && output_path.empty()) {
+    if (!options.validate_only && options.output_path.empty()) {
         throw std::invalid_argument("--output is required unless --validate-only is used");
     }
-    if (validate_only && !output_path.empty()) {
+    if (options.validate_only && !options.output_path.empty()) {
         throw std::invalid_argument("--output cannot be used with --validate-only");
     }
-    if (validate_only && !summary_output_path.empty()) {
+    if (options.validate_only && !options.summary_output_path.empty()) {
         throw std::invalid_argument("--summary-output cannot be used with --validate-only");
     }
-
-    return CliOptions(
-        scenario_path,
-        prices_path,
-        inflows_path,
-        output_path,
-        summary_output_path,
-        validate_only);
+    return options;
 }
 
 void write_dispatch_csv(const std::filesystem::path& output_path,
-                         const std::vector<optiflow::core::DispatchStep>& trajectory) {
+                        const std::vector<optiflow::core::DispatchStep>& trajectory) {
     std::ofstream output(output_path);
     if (!output) {
         throw std::runtime_error("cannot open output file: " + output_path.string());
     }
 
-    output << "time_index,price,natural_inflow,reservoir_volume,battery_soc,"
-           << "turbine_flow,spill_flow,pump_flow,battery_charge_power,battery_discharge_power,"
-           << "next_reservoir_volume,next_battery_soc,net_power,reward,cumulative_profit\n";
-
+    output << "time_index,price,natural_inflow,reservoir_volume,"
+           << "turbine_flow,spill_flow,pump_flow,next_reservoir_volume,"
+           << "net_power,reward,cumulative_profit\n";
     for (const optiflow::core::DispatchStep& step : trajectory) {
         output << step.time_index << ','
                << step.exogenous.electricity_price << ','
                << step.exogenous.natural_inflow << ','
                << step.state.reservoir_volume << ','
-               << step.state.battery_soc << ','
                << step.action.turbine_flow << ','
                << step.action.spill_flow << ','
                << step.action.pump_flow << ','
-               << step.action.battery_charge_power << ','
-               << step.action.battery_discharge_power << ','
                << step.next_state.reservoir_volume << ','
-               << step.next_state.battery_soc << ','
                << step.net_power << ','
                << step.reward << ','
                << step.cumulative_profit << '\n';
@@ -137,12 +106,11 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
 }
 
 void write_summary_json(const std::filesystem::path& output_path,
-                         const optiflow::runner::OptimizationResult& result) {
+                        const optiflow::runner::OptimizationResult& result) {
     std::ofstream output(output_path);
     if (!output) {
         throw std::runtime_error("cannot open summary output file: " + output_path.string());
     }
-
     const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
     output << std::setprecision(17)
            << "{\n"
@@ -150,14 +118,11 @@ void write_summary_json(const std::filesystem::path& output_path,
            << "  \"export_energy_mwh\": " << diagnostics.export_energy_mwh << ",\n"
            << "  \"import_energy_mwh\": " << diagnostics.import_energy_mwh << ",\n"
            << "  \"final_reservoir_volume\": " << diagnostics.final_reservoir_volume << ",\n"
-           << "  \"final_battery_soc\": " << diagnostics.final_battery_soc << ",\n"
            << "  \"solve_seconds\": " << diagnostics.solve_seconds << ",\n"
            << "  \"simulation_seconds\": " << diagnostics.simulation_seconds << ",\n"
            << "  \"turbine_steps\": " << diagnostics.turbine_steps << ",\n"
            << "  \"pump_steps\": " << diagnostics.pump_steps << ",\n"
            << "  \"spill_steps\": " << diagnostics.spill_steps << ",\n"
-           << "  \"battery_charge_steps\": " << diagnostics.battery_charge_steps << ",\n"
-           << "  \"battery_discharge_steps\": " << diagnostics.battery_discharge_steps << ",\n"
            << "  \"wait_steps\": " << diagnostics.wait_steps << "\n"
            << "}\n";
 }
@@ -167,23 +132,18 @@ void print_summary(std::ostream& output,
                    const optiflow::runner::OptimizationResult& result,
                    const std::filesystem::path& dispatch_path) {
     const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
-
     output << "Scenario: " << bundle.scenario.name() << '\n';
     output << "Time steps: " << diagnostics.horizon_steps << '\n';
     output << "Reservoir grid points: " << diagnostics.reservoir_grid_points << '\n';
-    output << "Battery grid points: " << diagnostics.battery_grid_points << '\n';
     output << "Action count: " << diagnostics.action_count << '\n';
     output << "Solve seconds: " << diagnostics.solve_seconds << '\n';
     output << "Simulation seconds: " << diagnostics.simulation_seconds << '\n';
     output << "Export energy MWh: " << diagnostics.export_energy_mwh << '\n';
     output << "Import energy MWh: " << diagnostics.import_energy_mwh << '\n';
     output << "Final reservoir volume: " << diagnostics.final_reservoir_volume << '\n';
-    output << "Final battery SOC: " << diagnostics.final_battery_soc << '\n';
     output << "Turbine steps: " << diagnostics.turbine_steps << '\n';
     output << "Pump steps: " << diagnostics.pump_steps << '\n';
     output << "Spill steps: " << diagnostics.spill_steps << '\n';
-    output << "Battery charge steps: " << diagnostics.battery_charge_steps << '\n';
-    output << "Battery discharge steps: " << diagnostics.battery_discharge_steps << '\n';
     output << "Wait steps: " << diagnostics.wait_steps << '\n';
     output << "Cumulative profit: " << result.cumulative_profit << '\n';
     output << "Dispatch written to: " << dispatch_path << '\n';
@@ -198,15 +158,13 @@ int main(int argc, char** argv) {
             optiflow::core::CsvScenarioReader::read(options.scenario_path,
                                                     options.prices_path,
                                                     options.inflows_path);
-
         if (options.validate_only) {
             std::cout << "Scenario valid: " << bundle.scenario.name() << '\n';
             return 0;
         }
 
-        const optiflow::runner::OptimizationRunner runner;
-        const optiflow::runner::OptimizationResult result = runner.run(bundle);
-
+        const optiflow::runner::OptimizationResult result =
+            optiflow::runner::OptimizationRunner().run(bundle);
         write_dispatch_csv(options.output_path, result.dispatch);
         if (!options.summary_output_path.empty()) {
             write_summary_json(options.summary_output_path, result);

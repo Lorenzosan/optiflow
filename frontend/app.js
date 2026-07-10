@@ -595,14 +595,11 @@ function renderSummary(summary) {
     ["Export energy [MWh]", formatNumber(summary.export_energy_mwh)],
     ["Import energy [MWh]", formatNumber(summary.import_energy_mwh)],
     ["Final reservoir [volume units]", formatNumber(summary.final_reservoir_volume)],
-    ["Final battery SOC [MWh]", formatNumber(summary.final_battery_soc)],
     ["Solve time [s]", formatNumber(summary.solve_seconds, 3)],
     ["Simulation time [s]", formatNumber(summary.simulation_seconds, 3)],
     ["Turbine steps [count]", formatNumber(summary.turbine_steps, 0)],
     ["Pump steps [count]", formatNumber(summary.pump_steps, 0)],
     ["Spill steps [count]", formatNumber(summary.spill_steps, 0)],
-    ["Battery charge steps [count]", formatNumber(summary.battery_charge_steps, 0)],
-    ["Battery discharge steps [count]", formatNumber(summary.battery_discharge_steps, 0)],
     ["Wait steps [count]", formatNumber(summary.wait_steps, 0)],
   ];
 

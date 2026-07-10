@@ -32,23 +32,18 @@ set(required_output_patterns
     "Scenario: sample_day"
     "Time steps: 12"
     "Reservoir grid points: 21"
-    "Battery grid points: 11"
-    "Action count: 216"
+    "Action count: 24"
     "Solve seconds: [0-9]"
     "Simulation seconds: [0-9]"
     "Export energy MWh: [0-9]"
     "Import energy MWh: [0-9]"
     "Final reservoir volume: [0-9]"
-    "Final battery SOC: [0-9]"
     "Turbine steps: [0-9]"
     "Pump steps: [0-9]"
     "Spill steps: [0-9]"
-    "Battery charge steps: [0-9]"
-    "Battery discharge steps: [0-9]"
     "Wait steps: [0-9]"
     "Cumulative profit: "
     "Dispatch written to: ")
-
 foreach(pattern IN LISTS required_output_patterns)
     string(REGEX MATCH "${pattern}" match_result "${command_output}")
     if(match_result STREQUAL "")
@@ -59,9 +54,8 @@ endforeach()
 if(NOT EXISTS "${dispatch_csv}")
     message(FATAL_ERROR "Expected dispatch CSV was not created: ${dispatch_csv}")
 endif()
-
 file(READ "${dispatch_csv}" dispatch_contents)
-string(FIND "${dispatch_contents}" "time_index,price,natural_inflow,reservoir_volume,battery_soc" header_position)
+string(FIND "${dispatch_contents}" "time_index,price,natural_inflow,reservoir_volume,turbine_flow" header_position)
 if(header_position EQUAL -1)
     message(FATAL_ERROR "Dispatch CSV header is missing or was changed")
 endif()
@@ -69,18 +63,15 @@ endif()
 if(NOT EXISTS "${summary_json}")
     message(FATAL_ERROR "Expected summary JSON was not created: ${summary_json}")
 endif()
-
 file(READ "${summary_json}" summary_contents)
 set(required_summary_patterns
     "\"cumulative_profit\": [0-9.-]"
     "\"export_energy_mwh\": [0-9.-]"
     "\"import_energy_mwh\": [0-9.-]"
     "\"final_reservoir_volume\": [0-9.-]"
-    "\"final_battery_soc\": [0-9.-]"
     "\"solve_seconds\": [0-9.-]"
     "\"simulation_seconds\": [0-9.-]"
     "\"wait_steps\": [0-9]")
-
 foreach(pattern IN LISTS required_summary_patterns)
     string(REGEX MATCH "${pattern}" match_result "${summary_contents}")
     if(match_result STREQUAL "")

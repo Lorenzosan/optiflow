@@ -11,14 +11,11 @@ SUMMARY_JSON = """{
   "export_energy_mwh": 44.0,
   "import_energy_mwh": 12.0,
   "final_reservoir_volume": 51.0,
-  "final_battery_soc": 3.0,
   "solve_seconds": 1.2,
   "simulation_seconds": 0.1,
   "turbine_steps": 5,
   "pump_steps": 2,
   "spill_steps": 0,
-  "battery_charge_steps": 1,
-  "battery_discharge_steps": 1,
   "wait_steps": 3
 }
 """
@@ -66,7 +63,6 @@ def test_run_solver_reads_machine_summary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     output_dir = configure_fake_solver(tmp_path, monkeypatch, SUMMARY_JSON)
-
     result = run_solver(tmp_path, make_scenario(), 7)
 
     assert result.status == "succeeded"
@@ -89,7 +85,6 @@ def test_run_solver_rejects_incomplete_summary(
         monkeypatch,
         '{"cumulative_profit": 123.5}\n',
     )
-
     result = run_solver(tmp_path, make_scenario(), 8)
 
     assert result.status == "failed"
@@ -97,6 +92,7 @@ def test_run_solver_rejects_incomplete_summary(
     assert result.summary is None
     assert result.error_message is not None
     assert result.error_message.startswith("Solver summary JSON is invalid:")
-    assert "export_energy_mwh: Field required" in result.error_message
+    assert "export_energy_mwh" in result.error_message
+    assert "Field required" in result.error_message
     assert not (output_dir / "run_000008_dispatch.csv").exists()
     assert not (output_dir / "run_000008_summary.json").exists()

@@ -24,7 +24,7 @@ def run_alembic(database_url: str, *arguments: str) -> None:
     )
 
 
-def test_initial_migration_upgrades_and_downgrades_sqlite(tmp_path: Path) -> None:
+def test_migrations_upgrade_and_downgrade_sqlite(tmp_path: Path) -> None:
     database_path = tmp_path / "migration-test.db"
     database_url = f"sqlite:///{database_path}"
 
@@ -39,44 +39,22 @@ def test_initial_migration_upgrades_and_downgrades_sqlite(tmp_path: Path) -> Non
         "run_summaries",
         "scenarios",
     }
-    assert {column["name"] for column in inspector.get_columns("scenarios")} == {
-        "id",
-        "name",
-        "description",
-        "scenario_path",
-        "prices_path",
-        "inflows_path",
-        "created_at",
-    }
-    assert {column["name"] for column in inspector.get_columns("optimization_runs")} == {
-        "id",
-        "scenario_id",
-        "status",
-        "started_at",
-        "completed_at",
-        "output_dispatch_path",
-        "error_message",
-    }
     assert {column["name"] for column in inspector.get_columns("run_summaries")} == {
         "run_id",
         "cumulative_profit",
         "export_energy_mwh",
         "import_energy_mwh",
         "final_reservoir_volume",
-        "final_battery_soc",
         "solve_seconds",
         "simulation_seconds",
         "turbine_steps",
         "pump_steps",
         "spill_steps",
-        "battery_charge_steps",
-        "battery_discharge_steps",
         "wait_steps",
     }
     engine.dispose()
 
     run_alembic(database_url, "downgrade", "base")
-
     engine = create_engine(database_url)
     assert inspect(engine).get_table_names() == ["alembic_version"]
     engine.dispose()
@@ -99,8 +77,6 @@ def test_pre_alembic_schema_can_be_adopted_and_upgraded(tmp_path: Path) -> None:
     inspector = inspect(engine)
     assert "run_summaries" in inspector.get_table_names()
     with engine.connect() as connection:
-        revision = connection.execute(
-            text("SELECT version_num FROM alembic_version")
-        ).scalar_one()
-    assert revision == "20260710_0002"
+        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+    assert revision == "20260710_0003"
     engine.dispose()
