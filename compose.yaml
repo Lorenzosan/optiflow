@@ -8,6 +8,10 @@ services:
     environment:
       OPTIFLOW_REPO_ROOT: /app
       OPTIFLOW_DATABASE_URL: postgresql+psycopg://optiflow:optiflow@postgres:5432/optiflow
+      OPTIFLOW_SOLVE_BIN: /app/build/apps/solve_cli/optiflow_solve
+      OPTIFLOW_RUN_OUTPUT_DIR: /app/build/api-runs
+    volumes:
+      - optiflow-run-artifacts:/app/build/api-runs
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,3 +39,4 @@ services:
 
 volumes:
   optiflow-postgres-data:
+  optiflow-run-artifacts:

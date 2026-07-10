@@ -36,6 +36,7 @@ docs/latex/
 .DS_Store
 
 # Python
+optiflow_api.db
 __pycache__/
 *.py[cod]
 .pytest_cache/

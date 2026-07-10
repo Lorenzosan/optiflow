@@ -52,6 +52,8 @@ The backend slice is a thin FastAPI service under `backend/`. It is intentionall
 
 * `GET /health` for container and reverse-proxy health checks.
 * `GET /scenarios` for discovering the bundled yearly scenarios.
+* `POST /runs` for synchronously launching an optimization through the C++ CLI.
+* `GET /runs/{run_id}` for retrieving persisted run status and dispatch artifact path.
 
 Run it locally through Docker from the repository root:
 
@@ -64,9 +66,13 @@ Then check:
 ```bash
 curl http://localhost:8000/health
 curl http://localhost:8000/scenarios
+curl -X POST http://localhost:8000/runs \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_id":1}'
+curl http://localhost:8000/runs/1
 ```
 
-The Docker path starts PostgreSQL and stores scenario metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup and verifies that the referenced CSV files are present in `/scenarios`. Optimization run execution, NGINX load balancing, and the frontend are intentionally left for follow-up commits.
+The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, and stores scenario and run metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`. NGINX load balancing and the frontend are intentionally left for follow-up commits.
 
 ## Run the sample
 
