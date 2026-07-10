@@ -2,7 +2,7 @@
 
 This is a thin FastAPI service for local demo and interview discussion around HTTP APIs, Docker, ORM-backed persistence, and optimization run tracking.
 
-The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, persisted run summaries, and guarded dispatch CSV download. The static frontend under `frontend/` reaches these endpoints through an NGINX `/api/` reverse proxy.
+The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery and immutable custom-scenario uploads from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, persisted run summaries, and guarded dispatch CSV download. The static frontend under `frontend/` reaches these endpoints through an NGINX `/api/` reverse proxy.
 
 `GET /runs` returns `{items, total, limit, offset}` with newest-first ordering, bounded `limit`/`offset` pagination, and optional `scenario_id` and `status` filters.
 
@@ -27,6 +27,11 @@ Then check:
 ```bash
 curl http://localhost:8000/health
 curl http://localhost:8000/scenarios
+curl -X POST http://localhost:8000/scenarios \
+  -F 'description=Uploaded scenario' \
+  -F 'scenario=@examples/scenario.csv;type=text/csv' \
+  -F 'prices=@examples/prices.csv;type=text/csv' \
+  -F 'inflows=@examples/inflows.csv;type=text/csv'
 curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
@@ -50,6 +55,11 @@ Then check:
 ```bash
 curl http://localhost:8000/health
 curl http://localhost:8000/scenarios
+curl -X POST http://localhost:8000/scenarios \
+  -F 'description=Uploaded scenario' \
+  -F 'scenario=@examples/scenario.csv;type=text/csv' \
+  -F 'prices=@examples/prices.csv;type=text/csv' \
+  -F 'inflows=@examples/inflows.csv;type=text/csv'
 curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
@@ -58,7 +68,15 @@ curl http://localhost:8000/runs/1
 curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
 
-The Docker image copies the example CSV inputs into `/app/examples`, builds `/app/build/apps/solve_cli/optiflow_solve`, and sets `OPTIFLOW_REPO_ROOT=/app`, so `/scenarios` can verify that the referenced files are present inside the container. Optimization runs write dispatch artifacts under `/app/build/api-runs`, backed by a Docker volume.
+The Docker image copies the example CSV inputs into `/app/examples`, builds `/app/build/apps/solve_cli/optiflow_solve`, and sets `OPTIFLOW_REPO_ROOT=/app`. Uploaded inputs are stored under `/app/data/scenarios` in a dedicated Docker volume, while optimization runs write dispatch artifacts under `/app/build/api-runs` in a separate volume.
+
+## Custom scenario uploads
+
+`POST /scenarios` accepts multipart fields `description`, `scenario`, `prices`, and `inflows`. All three files must use a `.csv` filename. The scenario file is limited to 256 KiB; each time-series file is limited to 8 MiB. The API stores files under server-generated immutable directories and derives the database name from the validated `scenario_name` entry. Duplicate scenario names return HTTP 409.
+
+Before a database row is created, the API runs the C++ CLI with `--validate-only`. This applies the same CSV parsing, model bounds, terminal constraints, initial-state checks, and solver-grid validation used by real optimization runs. Invalid inputs return HTTP 422 and their staged files are removed.
+
+Uploaded scenario files are not edited in place. A future editor should clone an existing scenario and save a new name so earlier runs remain reproducible.
 
 ## Database model
 
@@ -74,7 +92,7 @@ The dispatch trajectory stays as a CSV artifact. It is not expanded into relatio
 
 Earlier backend commits created tables directly with SQLAlchemy and did not write an Alembic revision marker. Choose one transition path before starting this version.
 
-For disposable local data, reset the old databases. The Docker command also deletes the dispatch-artifact volume:
+For disposable local data, reset the old databases. The Docker command also deletes the dispatch-artifact and uploaded-scenario volumes:
 
 ```bash
 rm -f optiflow_api.db
@@ -102,5 +120,6 @@ After either transition, `python -m alembic upgrade head` initializes or upgrade
 
 ## Intended next steps
 
-1. Add dispatch visualization only after the tabular workflow remains stable.
-2. Consider asynchronous execution only when multi-user or long-running deployment requirements justify it.
+1. Add a lightweight custom-scenario form that generates `scenario.csv` and uploads price/inflow CSV files.
+2. Add dispatch visualization only after the tabular workflow remains stable.
+3. Consider asynchronous execution only when multi-user or long-running deployment requirements justify it.

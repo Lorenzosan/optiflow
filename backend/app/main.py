@@ -2,18 +2,25 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 import logging
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, RunSummary, Scenario
 from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
+from backend.app.scenario_uploads import (
+    ScenarioUploadError,
+    ScenarioValidatorError,
+    remove_scenario_directory,
+    store_validated_scenario,
+)
 from backend.app.seed import seed_scenarios
 
 
@@ -98,6 +105,21 @@ def files_available(root: Path, files: ScenarioFiles) -> bool:
     )
 
 
+def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
+    files = ScenarioFiles(
+        scenario=scenario.scenario_path,
+        prices=scenario.prices_path,
+        inflows=scenario.inflows_path,
+    )
+    return ScenarioResponse(
+        id=scenario.id,
+        name=scenario.name,
+        description=scenario.description,
+        files=files,
+        available=files_available(root, files),
+    )
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     with SessionLocal() as db:
@@ -122,23 +144,75 @@ def health() -> HealthResponse:
 def list_scenarios(db: Session = Depends(get_db)) -> list[ScenarioResponse]:
     root = repository_root()
     scenarios = db.query(Scenario).order_by(Scenario.id).all()
-    responses: list[ScenarioResponse] = []
-    for scenario in scenarios:
-        files = ScenarioFiles(
-            scenario=scenario.scenario_path,
-            prices=scenario.prices_path,
-            inflows=scenario.inflows_path,
+    return [scenario_response(root, scenario) for scenario in scenarios]
+
+
+@app.post(
+    "/scenarios",
+    response_model=ScenarioResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_scenario(
+    description: Annotated[str, Form(max_length=2000)],
+    scenario_file: Annotated[UploadFile, File(alias="scenario")],
+    prices_file: Annotated[UploadFile, File(alias="prices")],
+    inflows_file: Annotated[UploadFile, File(alias="inflows")],
+    db: Session = Depends(get_db),
+) -> ScenarioResponse:
+    normalized_description = description.strip()
+    if not normalized_description:
+        raise HTTPException(status_code=422, detail="Description must not be empty")
+
+    root = repository_root()
+    try:
+        stored = await store_validated_scenario(
+            root,
+            scenario_file,
+            prices_file,
+            inflows_file,
         )
-        responses.append(
-            ScenarioResponse(
-                id=scenario.id,
-                name=scenario.name,
-                description=scenario.description,
-                files=files,
-                available=files_available(root, files),
-            )
-        )
-    return responses
+    except ScenarioUploadError as error:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Scenario validation failed",
+                "error": str(error),
+            },
+        ) from error
+    except ScenarioValidatorError as error:
+        logger.exception("Scenario validation infrastructure failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Scenario validation service is unavailable",
+        ) from error
+
+    existing = db.query(Scenario).filter(Scenario.name == stored.name).one_or_none()
+    if existing is not None:
+        remove_scenario_directory(stored.directory)
+        raise HTTPException(status_code=409, detail="Scenario name already exists")
+
+    scenario = Scenario(
+        name=stored.name,
+        description=normalized_description,
+        scenario_path=stored.scenario_path,
+        prices_path=stored.prices_path,
+        inflows_path=stored.inflows_path,
+    )
+    db.add(scenario)
+    try:
+        db.commit()
+        db.refresh(scenario)
+    except IntegrityError as error:
+        db.rollback()
+        remove_scenario_directory(stored.directory)
+        raise HTTPException(status_code=409, detail="Scenario name already exists") from error
+    except Exception:
+        db.rollback()
+        remove_scenario_directory(stored.directory)
+        logger.exception("Failed to persist uploaded scenario %s", stored.name)
+        raise
+
+    return scenario_response(root, scenario)
 
 
 def summary_response(summary: RunSummary | None) -> RunSummaryResponse | None:

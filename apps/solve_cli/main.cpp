@@ -19,29 +19,33 @@ struct CliOptions {
     std::filesystem::path inflows_path;
     std::filesystem::path output_path;
     std::filesystem::path summary_output_path;
+    bool validate_only;
 
     CliOptions(std::filesystem::path scenario_path_arg,
                std::filesystem::path prices_path_arg,
                std::filesystem::path inflows_path_arg,
                std::filesystem::path output_path_arg,
-               std::filesystem::path summary_output_path_arg)
+               std::filesystem::path summary_output_path_arg,
+               bool validate_only_arg)
         : scenario_path(std::move(scenario_path_arg)),
           prices_path(std::move(prices_path_arg)),
           inflows_path(std::move(inflows_path_arg)),
           output_path(std::move(output_path_arg)),
-          summary_output_path(std::move(summary_output_path_arg)) {}
+          summary_output_path(std::move(summary_output_path_arg)),
+          validate_only(validate_only_arg) {}
 };
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name
               << " --scenario <scenario.csv> --prices <prices.csv> --inflows <inflows.csv> "
-              << "--output <dispatch.csv> [--summary-output <summary.json>]\n\n"
+              << "(--output <dispatch.csv> [--summary-output <summary.json>] | --validate-only)\n\n"
               << "Inputs:\n"
               << "  --scenario        CSV file with key,value rows for scenario, model, terminal, and solver parameters.\n"
               << "  --prices          CSV file with time_index,price rows.\n"
               << "  --inflows         CSV file with time_index,natural_inflow rows.\n"
-              << "  --output          Dispatch CSV output path.\n"
-              << "  --summary-output  Optional machine-readable run summary JSON path.\n";
+              << "  --output          Dispatch CSV output path. Required unless --validate-only is used.\n"
+              << "  --summary-output  Optional machine-readable run summary JSON path.\n"
+              << "  --validate-only   Parse and validate all inputs without solving or writing output files.\n";
 }
 
 CliOptions parse_args(int argc, char** argv) {
@@ -50,6 +54,7 @@ CliOptions parse_args(int argc, char** argv) {
     std::string inflows_path;
     std::string output_path;
     std::string summary_output_path;
+    bool validate_only = false;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -63,6 +68,8 @@ CliOptions parse_args(int argc, char** argv) {
             output_path = argv[++i];
         } else if (arg == "--summary-output" && i + 1 < argc) {
             summary_output_path = argv[++i];
+        } else if (arg == "--validate-only") {
+            validate_only = true;
         } else if (arg == "--help" || arg == "-h") {
             print_usage(argv[0]);
             std::exit(0);
@@ -80,16 +87,27 @@ CliOptions parse_args(int argc, char** argv) {
     if (inflows_path.empty()) {
         throw std::invalid_argument("--inflows is required");
     }
-    if (output_path.empty()) {
-        throw std::invalid_argument("--output is required");
+    if (!validate_only && output_path.empty()) {
+        throw std::invalid_argument("--output is required unless --validate-only is used");
+    }
+    if (validate_only && !output_path.empty()) {
+        throw std::invalid_argument("--output cannot be used with --validate-only");
+    }
+    if (validate_only && !summary_output_path.empty()) {
+        throw std::invalid_argument("--summary-output cannot be used with --validate-only");
     }
 
     return CliOptions(
-        scenario_path, prices_path, inflows_path, output_path, summary_output_path);
+        scenario_path,
+        prices_path,
+        inflows_path,
+        output_path,
+        summary_output_path,
+        validate_only);
 }
 
 void write_dispatch_csv(const std::filesystem::path& output_path,
-                        const std::vector<optiflow::core::DispatchStep>& trajectory) {
+                         const std::vector<optiflow::core::DispatchStep>& trajectory) {
     std::ofstream output(output_path);
     if (!output) {
         throw std::runtime_error("cannot open output file: " + output_path.string());
@@ -119,7 +137,7 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
 }
 
 void write_summary_json(const std::filesystem::path& output_path,
-                        const optiflow::runner::OptimizationResult& result) {
+                         const optiflow::runner::OptimizationResult& result) {
     std::ofstream output(output_path);
     if (!output) {
         throw std::runtime_error("cannot open summary output file: " + output_path.string());
@@ -180,6 +198,11 @@ int main(int argc, char** argv) {
             optiflow::core::CsvScenarioReader::read(options.scenario_path,
                                                     options.prices_path,
                                                     options.inflows_path);
+
+        if (options.validate_only) {
+            std::cout << "Scenario valid: " << bundle.scenario.name() << '\n';
+            return 0;
+        }
 
         const optiflow::runner::OptimizationRunner runner;
         const optiflow::runner::OptimizationResult result = runner.run(bundle);

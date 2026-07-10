@@ -25,6 +25,7 @@ tools/__pycache__/
 *.exe
 
 # Generated outputs
+data/
 dispatch.csv
 *.log
 

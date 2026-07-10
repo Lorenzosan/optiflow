@@ -12,6 +12,7 @@ from backend.app.database import get_db
 from backend.app.main import app
 from backend.app.models import Base, OptimizationRun, Scenario
 from backend.app.runner import RunSummaryData, SolverResult
+from backend.app.scenario_uploads import ScenarioUploadError
 
 
 TestSessionFactory = sessionmaker[Session]
@@ -73,6 +74,7 @@ def api(
     app.dependency_overrides[get_db] = override_get_db
     monkeypatch.setenv("OPTIFLOW_REPO_ROOT", str(root))
     monkeypatch.setenv("OPTIFLOW_RUN_OUTPUT_DIR", str(output_dir))
+    monkeypatch.setenv("OPTIFLOW_SCENARIO_STORAGE_DIR", str(root / "data" / "scenarios"))
 
     with testing_session() as db:
         scenario = db.get(Scenario, scenario_id)
@@ -109,6 +111,149 @@ def add_run(
         db.commit()
         db.refresh(run)
         return run.id
+
+
+def scenario_upload_files(
+    *,
+    name: str = "custom_case",
+    scenario_filename: str = "scenario.csv",
+) -> dict[str, tuple[str, bytes, str]]:
+    return {
+        "scenario": (
+            scenario_filename,
+            f"key,value\nscenario_name,{name}\n".encode(),
+            "text/csv",
+        ),
+        "prices": (
+            "prices.csv",
+            b"time_index,price\n0,10\n1,20\n",
+            "text/csv",
+        ),
+        "inflows": (
+            "inflows.csv",
+            b"time_index,natural_inflow\n0,0\n1,1\n",
+            "text/csv",
+        ),
+    }
+
+
+def test_create_scenario_validates_stores_and_persists_uploads(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, _, root, _ = api
+
+    def fake_validate(
+        selected_root: Path,
+        scenario_path: Path,
+        prices_path: Path,
+        inflows_path: Path,
+    ) -> None:
+        assert selected_root == root
+        assert scenario_path.read_text() == "key,value\nscenario_name,custom_case\n"
+        assert prices_path.read_text().startswith("time_index,price")
+        assert inflows_path.read_text().startswith("time_index,natural_inflow")
+
+    monkeypatch.setattr(
+        "backend.app.scenario_uploads.validate_scenario_inputs",
+        fake_validate,
+    )
+
+    response = client.post(
+        "/scenarios",
+        data={"description": "Custom uploaded scenario"},
+        files=scenario_upload_files(),
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["name"] == "custom_case"
+    assert payload["description"] == "Custom uploaded scenario"
+    assert payload["available"] is True
+    assert payload["files"]["scenario"].startswith("data/scenarios/")
+    assert payload["files"]["scenario"].endswith("/scenario.csv")
+
+    with testing_session() as db:
+        persisted = db.get(Scenario, payload["id"])
+        assert persisted is not None
+        assert persisted.name == "custom_case"
+        assert (root / persisted.scenario_path).read_text().endswith("scenario_name,custom_case\n")
+
+
+def test_create_scenario_rejects_duplicate_name_and_removes_second_upload(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, _, root, _ = api
+    monkeypatch.setattr(
+        "backend.app.scenario_uploads.validate_scenario_inputs",
+        lambda *_args: None,
+    )
+
+    first = client.post(
+        "/scenarios",
+        data={"description": "First"},
+        files=scenario_upload_files(),
+    )
+    second = client.post(
+        "/scenarios",
+        data={"description": "Second"},
+        files=scenario_upload_files(),
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 409
+    assert second.json() == {"detail": "Scenario name already exists"}
+    with testing_session() as db:
+        assert db.query(Scenario).filter(Scenario.name == "custom_case").count() == 1
+    storage_dir = root / "data" / "scenarios"
+    assert len([path for path in storage_dir.iterdir() if path.is_dir()]) == 1
+
+
+def test_create_scenario_rejects_invalid_inputs_without_persisting_files(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, _, root, _ = api
+
+    def reject_inputs(*_args: object) -> None:
+        raise ScenarioUploadError("terminal bounds are invalid")
+
+    monkeypatch.setattr(
+        "backend.app.scenario_uploads.validate_scenario_inputs",
+        reject_inputs,
+    )
+
+    response = client.post(
+        "/scenarios",
+        data={"description": "Invalid"},
+        files=scenario_upload_files(name="invalid_case"),
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": {
+            "message": "Scenario validation failed",
+            "error": "terminal bounds are invalid",
+        }
+    }
+    with testing_session() as db:
+        assert db.query(Scenario).filter(Scenario.name == "invalid_case").count() == 0
+    storage_dir = root / "data" / "scenarios"
+    assert not storage_dir.exists() or list(storage_dir.iterdir()) == []
+
+
+def test_create_scenario_rejects_non_csv_upload(api: ApiFixture) -> None:
+    client, _, _, _, _ = api
+
+    response = client.post(
+        "/scenarios",
+        data={"description": "Bad extension"},
+        files=scenario_upload_files(scenario_filename="scenario.txt"),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "scenario must be uploaded as a .csv file"
 
 
 def test_list_runs_returns_newest_first_with_bounded_pagination(api: ApiFixture) -> None:

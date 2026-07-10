@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 ENV OPTIFLOW_REPO_ROOT=/app
 ENV OPTIFLOW_SOLVE_BIN=/app/build/apps/solve_cli/optiflow_solve
 ENV OPTIFLOW_RUN_OUTPUT_DIR=/app/build/api-runs
+ENV OPTIFLOW_SCENARIO_STORAGE_DIR=/app/data/scenarios
 
 WORKDIR /app
 

@@ -53,7 +53,8 @@ The C++ oracle tests are deliberately small and deterministic. They are meant to
 The full demo pairs the thin FastAPI orchestration backend with a build-free browser frontend served by NGINX. The optimizer remains in C++, and the frontend consumes only the HTTP API. The current endpoints are:
 
 * `GET /health` for container and reverse-proxy health checks.
-* `GET /scenarios` for discovering the bundled yearly scenarios.
+* `GET /scenarios` for discovering bundled and uploaded scenarios.
+* `POST /scenarios` for validating and saving immutable scenario, price, and inflow CSV uploads.
 * `POST /runs` for synchronously launching an optimization through the C++ CLI.
 * `GET /runs` for retrieving newest-first persisted run history with bounded pagination and optional filters.
 * `GET /runs/{run_id}` for retrieving persisted run status, summary metrics, and dispatch artifact path.
@@ -74,6 +75,11 @@ The same API is available through the NGINX proxy:
 ```bash
 curl http://localhost:8080/api/health
 curl http://localhost:8080/api/scenarios
+curl -X POST http://localhost:8080/api/scenarios \
+  -F 'description=Uploaded scenario' \
+  -F 'scenario=@examples/scenario.csv;type=text/csv' \
+  -F 'prices=@examples/prices.csv;type=text/csv' \
+  -F 'inflows=@examples/inflows.csv;type=text/csv'
 curl -X POST http://localhost:8080/api/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
@@ -82,7 +88,17 @@ curl http://localhost:8080/api/runs/1
 curl -OJ http://localhost:8080/api/runs/1/dispatch.csv
 ```
 
-The Docker path builds the C++ CLI and static NGINX image, starts PostgreSQL, applies Alembic migrations, and stores scenario, run, and summary metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`.
+The Docker path builds the C++ CLI and static NGINX image, starts PostgreSQL, applies Alembic migrations, and stores scenario, run, and summary metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, keeps uploaded scenario inputs in a dedicated persistent volume, and writes run dispatch artifacts under `build/api-runs`. Uploaded scenarios are immutable so historical runs continue to reference the exact files that were validated.
+
+The CLI can validate input files without solving:
+
+```bash
+./build/apps/solve_cli/optiflow_solve \
+  --scenario examples/scenario.csv \
+  --prices examples/prices.csv \
+  --inflows examples/inflows.csv \
+  --validate-only
+```
 
 ## Run the sample
 

@@ -6,6 +6,7 @@ build/
 build-*/
 cmake-build-*/
 out/
+data/
 
 # Python local state
 __pycache__/
