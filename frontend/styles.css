@@ -30,7 +30,10 @@ body {
 }
 
 button,
-select {
+select,
+input,
+textarea,
+summary {
   font: inherit;
 }
 
@@ -41,6 +44,9 @@ a {
 
 button:focus-visible,
 select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
 a:focus-visible {
   outline: 3px solid rgba(12, 101, 116, 0.3);
   outline-offset: 2px;
@@ -112,11 +118,16 @@ footer {
 }
 
 .launch-panel,
+.scenario-editor-panel,
 .details-panel {
   padding: 1.4rem;
 }
 
 .launch-panel {
+  grid-column: 1 / -1;
+}
+
+.scenario-editor-panel {
   grid-column: 1 / -1;
 }
 
@@ -144,7 +155,8 @@ footer {
 }
 
 .launch-form label,
-.filters label {
+.filters label,
+.form-field label {
   display: block;
   margin-bottom: 0.4rem;
   color: var(--muted);
@@ -157,7 +169,9 @@ footer {
   gap: 0.75rem;
 }
 
-select {
+select,
+input,
+textarea {
   width: 100%;
   min-height: 2.8rem;
   border: 1px solid #b8c2cc;
@@ -165,6 +179,20 @@ select {
   background: #fff;
   color: inherit;
   padding: 0.65rem 2.2rem 0.65rem 0.75rem;
+}
+
+input,
+textarea {
+  padding-right: 0.75rem;
+}
+
+textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+input[type="file"] {
+  padding: 0.55rem;
 }
 
 .control-row select {
@@ -221,6 +249,117 @@ button:disabled {
 
 .message.error {
   color: var(--danger);
+}
+
+.message.success {
+  color: var(--success);
+}
+
+.editor-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editor-summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor-title {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.summary-action {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+details[open] .summary-action {
+  font-size: 0;
+}
+
+details[open] .summary-action::after {
+  content: "Close editor";
+  font-size: 0.85rem;
+}
+
+.scenario-editor-content {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.editor-intro {
+  max-width: 58rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-grid,
+.parameter-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-field-wide {
+  grid-column: span 1;
+}
+
+.form-field small,
+.group-note {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.parameter-groups {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.parameter-group {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.parameter-group legend {
+  padding: 0 0.35rem;
+  font-weight: 750;
+}
+
+.parameter-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.group-note {
+  margin: 0 0 0.8rem;
+}
+
+.series-group {
+  margin-top: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .filters {
@@ -434,6 +573,10 @@ footer p {
   .details-panel {
     position: static;
   }
+
+  .parameter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 620px) {
@@ -453,8 +596,20 @@ footer p {
 
   .filters,
   .metadata-grid,
-  .summary-grid {
+  .summary-grid,
+  .form-grid,
+  .parameter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .editor-summary,
+  .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
   }
 
   .history-heading {

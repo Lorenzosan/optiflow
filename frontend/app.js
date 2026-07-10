@@ -1,3 +1,11 @@
+import {
+  SCENARIO_FILE_LIMIT_BYTES,
+  SCENARIO_PARAMETER_GROUPS,
+  SERIES_FILE_LIMIT_BYTES,
+  buildScenarioCsv,
+  validateSeriesPair,
+} from "./scenario.mjs";
+
 const API_BASE = "/api";
 const PAGE_SIZE = 10;
 const ALLOWED_STATUSES = new Set(["pending", "running", "succeeded", "failed"]);
@@ -16,6 +24,16 @@ const elements = {
   scenarioDescription: document.querySelector("#scenario-description"),
   runButton: document.querySelector("#run-button"),
   operationMessage: document.querySelector("#operation-message"),
+  scenarioEditor: document.querySelector("#scenario-editor"),
+  scenarioForm: document.querySelector("#scenario-form"),
+  scenarioName: document.querySelector("#scenario-name"),
+  scenarioDescriptionInput: document.querySelector("#scenario-description-input"),
+  scenarioFields: document.querySelector("#scenario-fields"),
+  pricesFile: document.querySelector("#prices-file"),
+  inflowsFile: document.querySelector("#inflows-file"),
+  seriesPreview: document.querySelector("#series-preview"),
+  saveScenarioButton: document.querySelector("#save-scenario-button"),
+  scenarioSaveMessage: document.querySelector("#scenario-save-message"),
   refreshButton: document.querySelector("#refresh-button"),
   filterScenario: document.querySelector("#filter-scenario"),
   filterStatus: document.querySelector("#filter-status"),
@@ -70,9 +88,18 @@ function extractErrorMessage(payload) {
   if (payload && typeof payload.detail === "string") {
     return payload.detail;
   }
+  if (Array.isArray(payload?.detail)) {
+    return payload.detail
+      .map((item) => {
+        const location = Array.isArray(item.loc) ? item.loc.join(".") : "request";
+        return `${location}: ${item.msg ?? "invalid value"}`;
+      })
+      .join("; ");
+  }
   if (payload?.detail?.message) {
     const runSuffix = payload.detail.run_id ? ` (run ${payload.detail.run_id})` : "";
-    return `${payload.detail.message}${runSuffix}`;
+    const validationSuffix = payload.detail.error ? `: ${payload.detail.error}` : "";
+    return `${payload.detail.message}${runSuffix}${validationSuffix}`;
   }
   return "The API request failed.";
 }
@@ -80,6 +107,12 @@ function extractErrorMessage(payload) {
 function setOperationMessage(message, isError = false) {
   elements.operationMessage.textContent = message;
   elements.operationMessage.classList.toggle("error", isError);
+}
+
+function setScenarioMessage(message, isError = false) {
+  elements.scenarioSaveMessage.textContent = message;
+  elements.scenarioSaveMessage.classList.toggle("error", isError);
+  elements.scenarioSaveMessage.classList.toggle("success", Boolean(message) && !isError);
 }
 
 function formatDate(value) {
@@ -120,7 +153,10 @@ function createOption(value, label, disabled = false) {
   return option;
 }
 
-function renderScenarioControls() {
+function renderScenarioControls(preferredScenarioId = null) {
+  const selectedScenarioId = preferredScenarioId ?? (Number(elements.scenarioSelect.value) || null);
+  const filteredScenarioId = Number(elements.filterScenario.value) || null;
+
   elements.scenarioSelect.replaceChildren(createOption("", "Select a scenario"));
   elements.filterScenario.replaceChildren(createOption("", "All scenarios"));
 
@@ -130,6 +166,13 @@ function renderScenarioControls() {
       createOption(scenario.id, `${scenario.name}${suffix}`, !scenario.available),
     );
     elements.filterScenario.append(createOption(scenario.id, scenario.name));
+  }
+
+  if (selectedScenarioId && state.scenarios.some((item) => item.id === selectedScenarioId)) {
+    elements.scenarioSelect.value = String(selectedScenarioId);
+  }
+  if (filteredScenarioId && state.scenarios.some((item) => item.id === filteredScenarioId)) {
+    elements.filterScenario.value = String(filteredScenarioId);
   }
 
   elements.scenarioSelect.disabled = false;
@@ -142,19 +185,159 @@ function updateScenarioDescription() {
   const scenario = state.scenarios.find((item) => item.id === selectedId);
   elements.scenarioDescription.textContent = scenario
     ? scenario.description
-    : "Choose one of the seeded scenarios to run the optimizer.";
+    : "Choose a bundled or custom scenario to run the optimizer.";
   elements.runButton.disabled = !scenario || !scenario.available;
 }
 
-async function loadScenarios() {
+async function loadScenarios({ selectedScenarioId = null } = {}) {
   try {
     state.scenarios = await apiRequest("/scenarios");
-    renderScenarioControls();
+    renderScenarioControls(selectedScenarioId);
   } catch (error) {
     elements.scenarioSelect.replaceChildren(createOption("", "Scenarios unavailable"));
     elements.scenarioSelect.disabled = true;
     elements.runButton.disabled = true;
     setOperationMessage(error.message, true);
+  }
+}
+
+function createParameterInput(field) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "form-field parameter-field";
+
+  const label = document.createElement("label");
+  const inputId = `scenario-${field.key}`;
+  label.htmlFor = inputId;
+  label.textContent = field.label;
+
+  const input = document.createElement("input");
+  input.id = inputId;
+  input.name = field.key;
+  input.type = "number";
+  input.step = field.integer ? "1" : "any";
+  input.required = true;
+  input.value = String(field.defaultValue);
+  input.defaultValue = String(field.defaultValue);
+  if (field.min !== undefined) {
+    input.min = String(field.min);
+  }
+  if (field.max !== undefined) {
+    input.max = String(field.max);
+  }
+
+  wrapper.append(label, input);
+  if (field.help) {
+    const help = document.createElement("small");
+    help.textContent = field.help;
+    wrapper.append(help);
+  }
+  return wrapper;
+}
+
+function renderScenarioFields() {
+  const groups = SCENARIO_PARAMETER_GROUPS.map((group) => {
+    const fieldset = document.createElement("fieldset");
+    fieldset.className = "parameter-group";
+
+    const legend = document.createElement("legend");
+    legend.textContent = group.title;
+
+    const grid = document.createElement("div");
+    grid.className = "parameter-grid";
+    grid.append(...group.fields.map(createParameterInput));
+
+    if (group.note) {
+      const note = document.createElement("p");
+      note.className = "group-note";
+      note.textContent = group.note;
+      fieldset.append(legend, note, grid);
+    } else {
+      fieldset.append(legend, grid);
+    }
+    return fieldset;
+  });
+
+  elements.scenarioFields.replaceChildren(...groups);
+}
+
+function requireSeriesFile(input, label) {
+  const file = input.files?.[0];
+  if (!file) {
+    throw new Error(`${label} CSV is required.`);
+  }
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    throw new Error(`${label} must be a .csv file.`);
+  }
+  if (file.size > SERIES_FILE_LIMIT_BYTES) {
+    throw new Error(`${label} exceeds the 8 MiB upload limit.`);
+  }
+  return file;
+}
+
+async function validateSelectedSeries() {
+  const pricesFile = requireSeriesFile(elements.pricesFile, "Prices");
+  const inflowsFile = requireSeriesFile(elements.inflowsFile, "Inflows");
+  const [pricesText, inflowsText] = await Promise.all([
+    pricesFile.text(),
+    inflowsFile.text(),
+  ]);
+  const summary = validateSeriesPair(pricesText, inflowsText);
+  return { pricesFile, inflowsFile, summary };
+}
+
+async function updateSeriesPreview() {
+  if (!elements.pricesFile.files?.[0] || !elements.inflowsFile.files?.[0]) {
+    elements.seriesPreview.textContent = "Select both series files to validate their headers and horizon.";
+    elements.seriesPreview.classList.remove("error", "success");
+    return;
+  }
+
+  try {
+    const { summary } = await validateSelectedSeries();
+    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching time steps detected.`;
+    elements.seriesPreview.classList.remove("error");
+    elements.seriesPreview.classList.add("success");
+  } catch (error) {
+    elements.seriesPreview.textContent = error.message;
+    elements.seriesPreview.classList.add("error");
+    elements.seriesPreview.classList.remove("success");
+  }
+}
+
+async function createScenario(event) {
+  event.preventDefault();
+  setScenarioMessage("");
+  elements.saveScenarioButton.disabled = true;
+
+  try {
+    const values = Object.fromEntries(new FormData(elements.scenarioForm).entries());
+    const scenarioCsv = buildScenarioCsv(elements.scenarioName.value, values);
+    const scenarioFile = new File([scenarioCsv], "scenario.csv", { type: "text/csv" });
+    if (scenarioFile.size > SCENARIO_FILE_LIMIT_BYTES) {
+      throw new Error("Generated scenario CSV exceeds the 256 KiB upload limit.");
+    }
+
+    const { pricesFile, inflowsFile, summary } = await validateSelectedSeries();
+    const payload = new FormData();
+    payload.append("description", elements.scenarioDescriptionInput.value.trim());
+    payload.append("scenario", scenarioFile);
+    payload.append("prices", pricesFile, pricesFile.name);
+    payload.append("inflows", inflowsFile, inflowsFile.name);
+
+    const scenario = await apiRequest("/scenarios", {
+      method: "POST",
+      body: payload,
+    });
+
+    await loadScenarios({ selectedScenarioId: scenario.id });
+    setScenarioMessage(
+      `Saved ${scenario.name} with ${summary.rowCount.toLocaleString()} time steps. It is selected for optimization.`,
+    );
+    setOperationMessage(`Custom scenario ${scenario.name} is ready to run.`);
+  } catch (error) {
+    setScenarioMessage(error.message, true);
+  } finally {
+    elements.saveScenarioButton.disabled = false;
   }
 }
 
@@ -401,6 +584,15 @@ function resetAndLoadRuns() {
   loadRuns({ selectFirst: true });
 }
 
+renderScenarioFields();
+
+elements.scenarioForm.addEventListener("submit", createScenario);
+elements.scenarioForm.addEventListener("reset", () => {
+  setScenarioMessage("");
+  window.setTimeout(() => updateSeriesPreview(), 0);
+});
+elements.pricesFile.addEventListener("change", () => updateSeriesPreview());
+elements.inflowsFile.addEventListener("change", () => updateSeriesPreview());
 elements.runForm.addEventListener("submit", createRun);
 elements.scenarioSelect.addEventListener("change", updateScenarioDescription);
 elements.refreshButton.addEventListener("click", () => loadRuns());

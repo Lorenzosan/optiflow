@@ -41,6 +41,66 @@
       <div id="operation-message" class="message" role="status" aria-live="polite"></div>
     </section>
 
+    <section class="panel scenario-editor-panel" aria-labelledby="scenario-editor-title">
+      <details id="scenario-editor">
+        <summary class="editor-summary">
+          <span>
+            <span class="eyebrow">Managed inputs</span>
+            <span id="scenario-editor-title" class="editor-title">Create a custom scenario</span>
+          </span>
+          <span class="summary-action">Open editor</span>
+        </summary>
+
+        <div class="scenario-editor-content">
+          <p class="supporting-text editor-intro">
+            Start from the synthetic-year parameter template, upload price and inflow CSV files,
+            then save an immutable scenario. The C++ input reader performs the authoritative validation.
+          </p>
+
+          <form id="scenario-form">
+            <div class="form-grid scenario-basics">
+              <div class="form-field">
+                <label for="scenario-name">Scenario name</label>
+                <input id="scenario-name" name="scenario_name" type="text" maxlength="128" required>
+                <small>Must be unique. Commas and line breaks are not supported.</small>
+              </div>
+              <div class="form-field form-field-wide">
+                <label for="scenario-description-input">Description</label>
+                <textarea id="scenario-description-input" name="description" maxlength="2000" required></textarea>
+              </div>
+            </div>
+
+            <div id="scenario-fields" class="parameter-groups"></div>
+
+            <fieldset class="parameter-group series-group">
+              <legend>Time series</legend>
+              <div class="form-grid file-grid">
+                <div class="form-field">
+                  <label for="prices-file">Prices CSV</label>
+                  <input id="prices-file" name="prices" type="file" accept=".csv,text/csv" required>
+                  <small>Header: <code>time_index,price</code></small>
+                </div>
+                <div class="form-field">
+                  <label for="inflows-file">Inflows CSV</label>
+                  <input id="inflows-file" name="inflows" type="file" accept=".csv,text/csv" required>
+                  <small>Header: <code>time_index,natural_inflow</code></small>
+                </div>
+              </div>
+              <p id="series-preview" class="message" role="status" aria-live="polite">
+                Select both series files to validate their headers and horizon.
+              </p>
+            </fieldset>
+
+            <div class="form-actions">
+              <button id="reset-scenario-button" class="secondary-button" type="reset">Reset template</button>
+              <button id="save-scenario-button" type="submit">Validate and save scenario</button>
+            </div>
+            <p id="scenario-save-message" class="message" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </details>
+    </section>
+
     <section class="panel history-panel" aria-labelledby="history-title">
       <div class="section-heading history-heading">
         <div>
