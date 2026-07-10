@@ -2,7 +2,7 @@
 
 This is a thin FastAPI service for local demo and interview discussion around HTTP APIs, web servers, Docker, ORM-backed persistence, and future run tracking.
 
-The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, and synchronous optimization run execution through the C++ CLI. Dispatch download, NGINX, and frontend integration are intentionally left for later commits.
+The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, and guarded dispatch CSV download. NGINX and frontend integration are intentionally left for later commits.
 
 ## Local Python run
 
@@ -14,7 +14,8 @@ cmake --build build -j
 
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -r backend/requirements.txt
+pip install -r backend/requirements-dev.txt
+pytest -q backend/tests
 uvicorn backend.app.main:app --reload
 ```
 
@@ -27,6 +28,7 @@ curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
 curl http://localhost:8000/runs/1
+curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
 
 ## Docker run
@@ -48,6 +50,7 @@ curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
 curl http://localhost:8000/runs/1
+curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
 
 The Docker image copies the example CSV inputs into `/app/examples`, builds `/app/build/apps/solve_cli/optiflow_solve`, and sets `OPTIFLOW_REPO_ROOT=/app`, so `/scenarios` can verify that the referenced files are present inside the container. Optimization runs write dispatch artifacts under `/app/build/api-runs`, backed by a Docker volume.
@@ -63,6 +66,6 @@ The dispatch trajectory stays as a CSV artifact. It is not expanded into relatio
 
 ## Intended next steps
 
-1. Add dispatch CSV download and summary endpoints.
+1. Harden synchronous run failure handling, then add persisted run summaries.
 2. Add NGINX as a reverse proxy/load balancer in Docker Compose.
 3. Add a minimal frontend consuming the HTTP API.

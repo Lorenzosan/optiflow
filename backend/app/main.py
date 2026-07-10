@@ -5,12 +5,13 @@ from pathlib import Path
 import os
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.database import SessionLocal, create_schema, get_db
 from backend.app.models import OptimizationRun, Scenario
-from backend.app.runner import run_solver
+from backend.app.runner import resolve_dispatch_path, run_solver
 from backend.app.seed import seed_scenarios
 
 
@@ -154,3 +155,35 @@ def get_run(run_id: int, db: Session = Depends(get_db)) -> RunResponse:
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return run_response(run)
+
+
+@app.get("/runs/{run_id}/dispatch.csv", response_class=FileResponse)
+def download_dispatch(run_id: int, db: Session = Depends(get_db)) -> FileResponse:
+    run = db.get(OptimizationRun, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.status != "succeeded":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Dispatch is available only for succeeded runs",
+        )
+    if run.output_dispatch_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Succeeded run has no dispatch artifact path",
+        )
+
+    artifact_path = resolve_dispatch_path(repository_root(), run.output_dispatch_path)
+    if artifact_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Dispatch artifact path is invalid",
+        )
+    if not artifact_path.is_file():
+        raise HTTPException(status_code=404, detail="Dispatch artifact not found")
+
+    return FileResponse(
+        path=artifact_path,
+        media_type="text/csv",
+        filename=artifact_path.name,
+    )

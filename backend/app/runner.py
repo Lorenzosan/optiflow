@@ -50,6 +50,19 @@ def display_path(root: Path, path: Path) -> str:
         return str(path)
 
 
+def resolve_dispatch_path(root: Path, stored_path: str) -> Path | None:
+    try:
+        output_dir = run_output_dir(root).resolve()
+        candidate = Path(stored_path).expanduser()
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        candidate = candidate.resolve()
+        candidate.relative_to(output_dir)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return candidate
+
+
 def truncate_error(message: str) -> str:
     stripped = message.strip()
     if len(stripped) <= MAX_ERROR_MESSAGE_LENGTH:
