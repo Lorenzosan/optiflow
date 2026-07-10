@@ -152,7 +152,7 @@ def require_close(
 def axis_values(max_value: float, steps: int) -> list[float]:
     if steps <= 0:
         fail("action step count must be positive")
-    if steps == 1:
+    if steps == 1 or max_value == 0.0:
         return [0.0]
     return [max_value * index / float(steps - 1) for index in range(steps)]
 
@@ -226,12 +226,18 @@ def validate(args: argparse.Namespace) -> None:
     turbine_steps = integer_param(params, "turbine_flow_steps")
     spill_steps = integer_param(params, "spill_flow_steps")
     pump_steps = integer_param(params, "pump_flow_steps")
-    action_count = turbine_steps * spill_steps * pump_steps
     axes = {
         "turbine_flow": axis_values(turbine_max, turbine_steps),
         "spill_flow": axis_values(spill_max, spill_steps),
         "pump_flow": axis_values(pump_max, pump_steps),
     }
+    action_count = sum(
+        1
+        for turbine_flow in axes["turbine_flow"]
+        for _ in axes["spill_flow"]
+        for pump_flow in axes["pump_flow"]
+        if not (turbine_flow > 0.0 and pump_flow > 0.0)
+    )
 
     cumulative_profit = 0.0
     previous_next_reservoir = initial_reservoir

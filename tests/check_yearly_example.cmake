@@ -48,7 +48,7 @@ set(required_output_patterns
     "Scenario: synthetic_year"
     "Time steps: 8760"
     "Reservoir grid points: 9"
-    "Action count: 18"
+    "Action count: 10"
     "Solve seconds: [0-9]"
     "Simulation seconds: [0-9]"
     "Cumulative profit: ")

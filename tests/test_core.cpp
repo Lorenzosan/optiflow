@@ -76,6 +76,22 @@ void test_mutual_exclusion_and_bounds() {
     require(!outside.feasible, "outside state rejected");
 }
 
+void test_action_grid_contains_only_unique_feasible_controls() {
+    const numerics::ActionGrid grid = numerics::ActionGrid::from_parameters(
+        model_parameters(), core::SolverParameters(11, 3, 1, 2, 1.0));
+    require(grid.size() == 4, "mutually exclusive controls are filtered");
+    for (const core::Action& action : grid.actions()) {
+        require(!(action.turbine_flow > 0.0 && action.pump_flow > 0.0),
+                "action grid contains simultaneous turbine and pump flow");
+    }
+
+    const core::ModelParameters no_pumping(
+        1.0, 0.0, 100.0, 20.0, 0.0, 0.0, 0.9, 0.85, 0.5, 1.0);
+    const numerics::ActionGrid zero_range_grid = numerics::ActionGrid::from_parameters(
+        no_pumping, core::SolverParameters(11, 3, 1, 3, 1.0));
+    require(zero_range_grid.size() == 3, "zero-range control axis is collapsed");
+}
+
 void test_state_grid_and_linear_interpolation() {
     const numerics::StateGrid grid(0.0, 10.0, 3);
     near(grid.reservoir_volume_at(1), 5.0, "grid coordinate");
@@ -127,7 +143,7 @@ void test_bellman_forward_and_runner() {
         optiflow::runner::OptimizationRunner().run(bundle);
     require(result.dispatch.size() == 2, "runner trajectory size");
     require(result.diagnostics.reservoir_grid_points == 11, "runner grid diagnostic");
-    require(result.diagnostics.action_count == 6, "runner action diagnostic");
+    require(result.diagnostics.action_count == 4, "runner action diagnostic");
     near(result.diagnostics.final_reservoir_volume,
          result.dispatch.back().next_state.reservoir_volume,
          "final reservoir diagnostic");
@@ -162,6 +178,7 @@ void test_csv_reader_rejects_unsupported_key() {
 int main() {
     test_transition_and_reward();
     test_mutual_exclusion_and_bounds();
+    test_action_grid_contains_only_unique_feasible_controls();
     test_state_grid_and_linear_interpolation();
     test_scenario_validation();
     test_bellman_forward_and_runner();

@@ -73,7 +73,7 @@ Set the penalty to zero when the target should not affect the objective.
 
 ## Numerical solver
 
-The Bellman value function is tabulated on a one-dimensional uniform reservoir grid. Continuation values are linearly interpolated between adjacent reservoir grid points. The action grid is the Cartesian product of turbine, spill, and pump axes.
+The Bellman value function is tabulated on a one-dimensional uniform reservoir grid. Continuation values are linearly interpolated between adjacent reservoir grid points. The action grid is generated from turbine, spill, and pump axes, then pruned so mutually exclusive turbine and pump controls are never stored. Zero-range axes collapse to a single zero control.
 
 ## Dispatch and diagnostics
 

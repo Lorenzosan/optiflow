@@ -30,6 +30,9 @@ ActionGrid ActionGrid::from_parameters(const core::ModelParameters& model_parame
     for (double turbine_flow : turbine_axis) {
         for (double spill_flow : spill_axis) {
             for (double pump_flow : pump_axis) {
+                if (turbine_flow > 0.0 && pump_flow > 0.0) {
+                    continue;
+                }
                 actions.emplace_back(turbine_flow, spill_flow, pump_flow);
             }
         }
@@ -55,7 +58,7 @@ std::vector<double> ActionGrid::uniform_axis(double max_value,
 
     std::vector<double> axis;
     axis.reserve(steps);
-    if (steps == 1) {
+    if (steps == 1 || max_value == 0.0) {
         axis.push_back(0.0);
         return axis;
     }
