@@ -83,6 +83,14 @@ if(Python3_Interpreter_FOUND)
             -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/dispatch-validator
             -P ${CMAKE_CURRENT_SOURCE_DIR}/check_dispatch_validator_regression.cmake)
 
+    add_test(NAME optiflow_deterministic_hydro_oracles
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/check_deterministic_hydro_oracles.py
+            --solve $<TARGET_FILE:optiflow_solve>
+            --validator ${PROJECT_SOURCE_DIR}/tools/validate_dispatch.py
+            --source-dir ${PROJECT_SOURCE_DIR}
+            --output-dir ${PROJECT_BINARY_DIR}/test-output/deterministic-hydro-oracles)
+
     add_test(NAME optiflow_yearly_scenario_comparison
         COMMAND ${CMAKE_COMMAND}
             -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
