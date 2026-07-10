@@ -98,6 +98,35 @@ def test_create_run_rejects_unknown_scenario(api: ApiFixture) -> None:
     assert response.json() == {"detail": "Scenario not found"}
 
 
+def test_create_run_persists_unexpected_solver_failure(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, scenario, _, _ = api
+
+    def failing_run_solver(_root: Path, _scenario: Scenario, _run_id: int) -> SolverResult:
+        raise RuntimeError("internal diagnostic that must not reach the API")
+
+    monkeypatch.setattr("backend.app.main.run_solver", failing_run_solver)
+
+    response = client.post("/runs", json={"scenario_id": scenario.id})
+
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert detail["message"] == "Optimization run failed unexpectedly"
+
+    with testing_session() as db:
+        persisted = db.get(OptimizationRun, detail["run_id"])
+        assert persisted is not None
+        assert persisted.status == "failed"
+        assert persisted.completed_at is not None
+        assert persisted.output_dispatch_path is None
+        assert (
+            persisted.error_message
+            == "Unexpected solver execution error. See service logs for details."
+        )
+
+
 def test_create_run_persists_success(
     api: ApiFixture,
     monkeypatch: pytest.MonkeyPatch,

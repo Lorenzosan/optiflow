@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+import logging
 import os
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -13,6 +14,9 @@ from backend.app.database import SessionLocal, create_schema, get_db
 from backend.app.models import OptimizationRun, Scenario
 from backend.app.runner import resolve_dispatch_path, run_solver
 from backend.app.seed import seed_scenarios
+
+
+logger = logging.getLogger(__name__)
 
 
 class ScenarioFiles(BaseModel):
@@ -138,7 +142,23 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
     db.commit()
     db.refresh(run)
 
-    result = run_solver(repository_root(), scenario, run.id)
+    try:
+        result = run_solver(repository_root(), scenario, run.id)
+    except Exception:
+        logger.exception("Unexpected error while executing optimization run %s", run.id)
+        run.status = "failed"
+        run.completed_at = datetime.utcnow()
+        run.output_dispatch_path = None
+        run.error_message = "Unexpected solver execution error. See service logs for details."
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": "Optimization run failed unexpectedly",
+                "run_id": run.id,
+            },
+        )
+
     run.status = result.status
     run.completed_at = datetime.utcnow()
     run.output_dispatch_path = result.output_dispatch_path
