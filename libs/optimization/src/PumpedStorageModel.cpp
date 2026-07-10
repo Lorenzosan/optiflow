@@ -54,7 +54,8 @@ core::Outcome PumpedStorageModel::apply(core::State state,
     const double revenue = exogenous.electricity_price * net_power * dt;
     const double operating_throughput = (turbine_power + pump_power) * dt;
     const double operating_cost = parameters_.operating_cost_per_mwh * operating_throughput;
-    const double reward = revenue - operating_cost;
+    const double raw_reward = revenue - operating_cost;
+    const double reward = raw_reward == 0.0 ? 0.0 : raw_reward;
 
     return core::Outcome(next_state, turbine_power, pump_power, net_power, reward, true, "");
 }

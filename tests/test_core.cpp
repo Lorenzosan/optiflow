@@ -66,6 +66,15 @@ void test_transition_and_reward() {
     near(outcome.reward, 445.5, "reward");
 }
 
+void test_zero_reward_is_canonical_positive_zero() {
+    const model::PumpedStorageModel pumped_storage(model_parameters());
+    const core::Outcome outcome = pumped_storage.apply(
+        core::State(95.0), core::Action(0.0, 5.0, 0.0), core::Exogenous(-10.0, 5.0));
+    require(outcome.feasible, "zero-reward spill transition feasible");
+    require(outcome.reward == 0.0, "zero-reward spill has zero reward");
+    require(!std::signbit(outcome.reward), "zero reward is not negative zero");
+}
+
 void test_mutual_exclusion_and_bounds() {
     const model::PumpedStorageModel pumped_storage(model_parameters());
     const core::Outcome simultaneous = pumped_storage.apply(
@@ -177,6 +186,7 @@ void test_csv_reader_rejects_unsupported_key() {
 
 int main() {
     test_transition_and_reward();
+    test_zero_reward_is_canonical_positive_zero();
     test_mutual_exclusion_and_bounds();
     test_action_grid_contains_only_unique_feasible_controls();
     test_state_grid_and_linear_interpolation();

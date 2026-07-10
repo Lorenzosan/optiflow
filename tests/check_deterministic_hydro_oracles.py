@@ -79,6 +79,88 @@ CASES = (
         },
     ),
     OracleCase(
+        directory="break_even_below",
+        expected_rows=(
+            {
+                "time_index": 0,
+                "price": 30.0,
+                "natural_inflow": 0.0,
+                "reservoir_volume": 0.0,
+                "turbine_flow": 0.0,
+                "spill_flow": 0.0,
+                "pump_flow": 0.0,
+                "next_reservoir_volume": 0.0,
+                "net_power": 0.0,
+                "reward": 0.0,
+                "cumulative_profit": 0.0,
+            },
+            {
+                "time_index": 1,
+                "price": 50.0,
+                "natural_inflow": 0.0,
+                "reservoir_volume": 0.0,
+                "turbine_flow": 0.0,
+                "spill_flow": 0.0,
+                "pump_flow": 0.0,
+                "next_reservoir_volume": 0.0,
+                "net_power": 0.0,
+                "reward": 0.0,
+                "cumulative_profit": 0.0,
+            },
+        ),
+        expected_summary={
+            "cumulative_profit": 0.0,
+            "export_energy_mwh": 0.0,
+            "import_energy_mwh": 0.0,
+            "final_reservoir_volume": 0.0,
+            "turbine_steps": 0,
+            "pump_steps": 0,
+            "spill_steps": 0,
+            "wait_steps": 2,
+        },
+    ),
+    OracleCase(
+        directory="break_even_above",
+        expected_rows=(
+            {
+                "time_index": 0,
+                "price": 30.0,
+                "natural_inflow": 0.0,
+                "reservoir_volume": 0.0,
+                "turbine_flow": 0.0,
+                "spill_flow": 0.0,
+                "pump_flow": 10.0,
+                "next_reservoir_volume": 10.0,
+                "net_power": -12.5,
+                "reward": -400.0,
+                "cumulative_profit": -400.0,
+            },
+            {
+                "time_index": 1,
+                "price": 60.0,
+                "natural_inflow": 0.0,
+                "reservoir_volume": 10.0,
+                "turbine_flow": 10.0,
+                "spill_flow": 0.0,
+                "pump_flow": 0.0,
+                "next_reservoir_volume": 0.0,
+                "net_power": 8.0,
+                "reward": 464.0,
+                "cumulative_profit": 64.0,
+            },
+        ),
+        expected_summary={
+            "cumulative_profit": 64.0,
+            "export_energy_mwh": 8.0,
+            "import_energy_mwh": 12.5,
+            "final_reservoir_volume": 0.0,
+            "turbine_steps": 1,
+            "pump_steps": 1,
+            "spill_steps": 0,
+            "wait_steps": 0,
+        },
+    ),
+    OracleCase(
         directory="forced_spill",
         expected_rows=(
             {
@@ -132,6 +214,28 @@ def read_dispatch(path: Path) -> list[dict[str, float]]:
         for row in reader:
             rows.append({key: float(value) for key, value in row.items()})
         return rows
+
+
+def assert_no_negative_zero_csv(path: Path) -> None:
+    with path.open(newline="") as handle:
+        for row_index, row in enumerate(csv.reader(handle)):
+            if row_index == 0:
+                continue
+            for column_index, value in enumerate(row):
+                try:
+                    numeric = float(value)
+                except ValueError:
+                    continue
+                if numeric == 0.0 and value.lstrip().startswith("-"):
+                    raise AssertionError(
+                        f"{path}: negative zero at row {row_index + 1}, column {column_index + 1}"
+                    )
+
+
+def assert_no_negative_zero_json(path: Path) -> None:
+    for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+        if ": -0" in line:
+            raise AssertionError(f"{path}: negative zero at line {line_number}")
 
 
 def assert_dispatch(case: OracleCase, rows: list[dict[str, float]]) -> None:
@@ -214,6 +318,8 @@ def run_case(args: argparse.Namespace, case: OracleCase) -> None:
             f"stdout:\n{validator.stdout}\nstderr:\n{validator.stderr}"
         )
 
+    assert_no_negative_zero_csv(dispatch_path)
+    assert_no_negative_zero_json(summary_path)
     assert_dispatch(case, read_dispatch(dispatch_path))
     assert_summary(case, json.loads(summary_path.read_text()))
 
