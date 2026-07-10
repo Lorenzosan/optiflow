@@ -30,7 +30,6 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
     title: "Economic parameters",
     fields: Object.freeze([
       field("operating_cost_per_mwh", "Operating cost [currency/MWh]", 1, { min: 0 }),
-      field("infeasibility_penalty", "Infeasibility penalty [currency]", 1000000, { min: 0 }),
     ]),
   }),
   Object.freeze({

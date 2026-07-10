@@ -39,7 +39,7 @@ next_reservoir_volume = reservoir_volume
   - spill_flow * time_step_hours
 ```
 
-Both current and next reservoir volume must remain within configured hard bounds.
+Both current and next reservoir volume must remain within configured hard bounds. Actions that violate physical limits or reservoir bounds are infeasible and are excluded from the Bellman maximization; they do not receive a tunable objective penalty.
 
 ## Power and reward
 

@@ -20,7 +20,7 @@ void near(double actual, double expected, std::string_view message) { if (std::a
 
 core::ModelParameters parameters(double operating_cost = 0.0) {
     return core::ModelParameters(1.0, 0.0, 10.0, 10.0, 10.0, 0.0,
-                                 1.0, 1.0, 1.0, operating_cost, 1000000.0);
+                                 1.0, 1.0, 1.0, operating_cost);
 }
 std::vector<core::DispatchStep> solve(const core::Scenario& scenario) {
     const core::SolverParameters sp(2, 2, 1, 2, 1.0);

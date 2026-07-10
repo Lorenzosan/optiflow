@@ -118,7 +118,6 @@ turbine_efficiency
 pump_efficiency
 water_to_power_factor
 operating_cost_per_mwh
-infeasibility_penalty
 initial_reservoir_volume
 terminal_reservoir_min_volume
 terminal_reservoir_max_volume

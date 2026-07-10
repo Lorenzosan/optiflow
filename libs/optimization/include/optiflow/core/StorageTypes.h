@@ -93,7 +93,6 @@ struct ModelParameters {
     double pump_efficiency;
     double water_to_power_factor;
     double operating_cost_per_mwh;
-    double infeasibility_penalty;
 
     ModelParameters(double time_step_hours,
                     double reservoir_min_volume,
@@ -104,8 +103,7 @@ struct ModelParameters {
                     double turbine_efficiency,
                     double pump_efficiency,
                     double water_to_power_factor,
-                    double operating_cost_per_mwh,
-                    double infeasibility_penalty);
+                    double operating_cost_per_mwh);
 };
 
 /**

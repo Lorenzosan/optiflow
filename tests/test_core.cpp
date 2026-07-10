@@ -46,7 +46,7 @@ void require_throws(Function&& function, std::string_view fragment) {
 
 core::ModelParameters model_parameters() {
     return core::ModelParameters(1.0, 0.0, 100.0, 20.0, 10.0, 20.0,
-                                 0.9, 0.85, 0.5, 1.0, 1000000.0);
+                                 0.9, 0.85, 0.5, 1.0);
 }
 core::TerminalParameters open_terminal() {
     return core::TerminalParameters(0.0, 100.0, 50.0, 0.0);

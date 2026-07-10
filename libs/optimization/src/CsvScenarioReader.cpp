@@ -41,7 +41,6 @@ const std::set<std::string> allowed_scenario_keys = {
     "pump_efficiency",
     "water_to_power_factor",
     "operating_cost_per_mwh",
-    "infeasibility_penalty",
     "initial_reservoir_volume",
     "terminal_reservoir_min_volume",
     "terminal_reservoir_max_volume",
@@ -298,8 +297,7 @@ ScenarioBundle CsvScenarioReader::read(const std::filesystem::path& scenario_pat
             required_double(values, "turbine_efficiency", scenario_path),
             required_double(values, "pump_efficiency", scenario_path),
             required_double(values, "water_to_power_factor", scenario_path),
-            required_double(values, "operating_cost_per_mwh", scenario_path),
-            required_double(values, "infeasibility_penalty", scenario_path));
+            required_double(values, "operating_cost_per_mwh", scenario_path));
 
         const TerminalParameters terminal_parameters(
             required_double(values, "terminal_reservoir_min_volume", scenario_path),

@@ -87,8 +87,7 @@ ModelParameters::ModelParameters(double time_step_hours_value,
                                  double turbine_efficiency_value,
                                  double pump_efficiency_value,
                                  double water_to_power_factor_value,
-                                 double operating_cost_per_mwh_value,
-                                 double infeasibility_penalty_value)
+                                 double operating_cost_per_mwh_value)
     : time_step_hours(time_step_hours_value),
       reservoir_min_volume(reservoir_min_volume_value),
       reservoir_max_volume(reservoir_max_volume_value),
@@ -98,8 +97,7 @@ ModelParameters::ModelParameters(double time_step_hours_value,
       turbine_efficiency(turbine_efficiency_value),
       pump_efficiency(pump_efficiency_value),
       water_to_power_factor(water_to_power_factor_value),
-      operating_cost_per_mwh(operating_cost_per_mwh_value),
-      infeasibility_penalty(infeasibility_penalty_value) {}
+      operating_cost_per_mwh(operating_cost_per_mwh_value) {}
 
 TerminalParameters::TerminalParameters(double reservoir_min_volume_value,
                                        double reservoir_max_volume_value,
@@ -141,7 +139,6 @@ void validate_model_parameters(const ModelParameters& parameters) {
 
     require_positive(parameters.water_to_power_factor, "water_to_power_factor");
     require_nonnegative(parameters.operating_cost_per_mwh, "operating_cost_per_mwh");
-    require_nonnegative(parameters.infeasibility_penalty, "infeasibility_penalty");
 }
 
 void validate_terminal_parameters(const ModelParameters& model_parameters,

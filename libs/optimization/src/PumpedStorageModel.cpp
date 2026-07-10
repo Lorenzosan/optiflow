@@ -66,7 +66,7 @@ core::Outcome PumpedStorageModel::infeasible(core::State state, const char* reas
                          0.0,
                          0.0,
                          0.0,
-                         -parameters_.infeasibility_penalty,
+                         0.0,
                          false,
                          std::string(reason));
 }
