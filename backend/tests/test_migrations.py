@@ -78,5 +78,5 @@ def test_pre_alembic_schema_can_be_adopted_and_upgraded(tmp_path: Path) -> None:
     assert "run_summaries" in inspector.get_table_names()
     with engine.connect() as connection:
         revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert revision == "20260710_0003"
+    assert revision == "20260710_0002"
     engine.dispose()

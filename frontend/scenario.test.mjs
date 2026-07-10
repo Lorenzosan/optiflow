@@ -34,7 +34,10 @@ test("buildScenarioCsv emits the reservoir-only schema", () => {
   );
   assert.match(csv, /terminal_target_reservoir_volume,250/);
   assert.match(csv, /discount_factor,1/);
-  assert.doesNotMatch(csv, /soc|charge_power|discharge_power/i);
+  assert.deepEqual(
+    lines.slice(2, -SCENARIO_REPORTING_FIELDS.length).map((line) => line.split(",", 1)[0]),
+    SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => field.key),
+  );
 });
 
 test("buildScenarioCsv rejects unrepresentable names", () => {

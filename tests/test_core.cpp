@@ -147,7 +147,7 @@ void test_csv_reader_rejects_unsupported_key() {
     write_series(inflows_path, "time_index,natural_inflow");
     {
         std::ofstream scenario(scenario_path);
-        scenario << "key,value\nscenario_name,legacy\nobsolete_storage_soc,0\n";
+        scenario << "key,value\nscenario_name,legacy\nunexpected_parameter,0\n";
     }
     require_throws<std::invalid_argument>([&] {
         static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));

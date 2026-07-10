@@ -54,4 +54,4 @@ python -m alembic upgrade head
 python -m alembic check
 ```
 
-Revision `20260710_0003` removes obsolete summary columns from the former separate electrical-storage model. Historical migration files remain unchanged because they describe the schema evolution that existing databases must traverse.
+The migration chain creates the current reservoir-only schema directly.

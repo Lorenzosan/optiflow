@@ -96,3 +96,26 @@ def test_run_solver_rejects_incomplete_summary(
     assert "Field required" in result.error_message
     assert not (output_dir / "run_000008_dispatch.csv").exists()
     assert not (output_dir / "run_000008_summary.json").exists()
+
+
+def test_run_solver_rejects_unexpected_summary_fields(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unexpected_summary = SUMMARY_JSON.rstrip()[:-1] + ',\n  "unexpected_metric": 1\n}\n'
+    output_dir = configure_fake_solver(
+        tmp_path,
+        monkeypatch,
+        unexpected_summary,
+    )
+    result = run_solver(tmp_path, make_scenario(), 9)
+
+    assert result.status == "failed"
+    assert result.output_dispatch_path is None
+    assert result.summary is None
+    assert result.error_message is not None
+    assert result.error_message.startswith("Solver summary JSON is invalid:")
+    assert "unexpected_metric" in result.error_message
+    assert "Extra inputs are not permitted" in result.error_message
+    assert not (output_dir / "run_000009_dispatch.csv").exists()
+    assert not (output_dir / "run_000009_summary.json").exists()

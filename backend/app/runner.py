@@ -7,7 +7,7 @@ import json
 import os
 import subprocess
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from backend.app.models import Scenario
 
@@ -21,6 +21,8 @@ MAX_ERROR_LENGTH = 4000
 
 
 class RunSummaryData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     cumulative_profit: float
     export_energy_mwh: float
     import_energy_mwh: float

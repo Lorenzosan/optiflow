@@ -140,6 +140,6 @@ peak_start_hour
 peak_end_hour
 ```
 
-Legacy scenarios containing removed electrochemical-storage keys are rejected explicitly rather than silently interpreted as hydro-only inputs.
+Unknown scenario keys are rejected explicitly rather than silently ignored.
 
 Model units and equations are documented in [`docs/model.md`](docs/model.md).
