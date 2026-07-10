@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.app.database import SessionLocal, create_schema, get_db
+from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, Scenario
 from backend.app.runner import resolve_dispatch_path, run_solver
 from backend.app.seed import seed_scenarios
@@ -72,7 +72,6 @@ def files_available(root: Path, files: ScenarioFiles) -> bool:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    create_schema()
     with SessionLocal() as db:
         seed_scenarios(db)
     yield

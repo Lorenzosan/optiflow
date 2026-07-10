@@ -74,7 +74,7 @@ curl http://localhost:8000/runs/1
 curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
 
-The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, and stores scenario and run metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`. NGINX load balancing and the frontend are intentionally left for follow-up commits.
+The Docker path builds the C++ CLI inside the API image, starts PostgreSQL, applies Alembic migrations, and stores scenario and run metadata through SQLAlchemy models. The backend seeds the bundled yearly scenarios at startup, verifies that referenced CSV files are present in `/scenarios`, and writes run dispatch artifacts under `build/api-runs`. NGINX load balancing and the frontend are intentionally left for follow-up commits.
 
 ## Run the sample
 

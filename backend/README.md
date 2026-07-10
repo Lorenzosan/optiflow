@@ -14,8 +14,9 @@ cmake --build build -j
 
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -r backend/requirements-dev.txt
-pytest -q backend/tests
+python -m pip install -r backend/requirements-dev.txt
+python -m alembic upgrade head
+python -m pytest -q backend/tests
 uvicorn backend.app.main:app --reload
 ```
 
@@ -39,7 +40,7 @@ From the repository root:
 docker compose up --build api
 ```
 
-This builds the C++ solver inside the API image, then starts both the API and PostgreSQL. The API waits for PostgreSQL to pass its health check, creates the minimal schema on startup, and seeds the three included yearly scenarios.
+This builds the C++ solver inside the API image, then starts both the API and PostgreSQL. The API waits for PostgreSQL to pass its health check, applies Alembic migrations, and seeds the three included yearly scenarios.
 
 Then check:
 
@@ -62,7 +63,35 @@ The first ORM slice intentionally stores only durable control-plane data:
 * `Scenario`: scenario name, description, and paths to scenario, price, and inflow CSV files.
 * `OptimizationRun`: run-tracking table with scenario foreign key, status, timestamps, output dispatch path, and error message.
 
-The dispatch trajectory stays as a CSV artifact. It is not expanded into relational rows in this phase.
+The dispatch trajectory stays as a CSV artifact. It is not expanded into relational rows in this phase. Database schema changes are versioned under `backend/alembic/`; application startup no longer calls `create_all`.
+
+## One-time migration transition
+
+Earlier backend commits created tables directly with SQLAlchemy and did not write an Alembic revision marker. Choose one transition path before starting this version.
+
+For disposable local data, reset the old databases. The Docker command also deletes the dispatch-artifact volume:
+
+```bash
+rm -f optiflow_api.db
+docker compose down -v
+```
+
+To preserve an existing database that still matches the current ORM schema, adopt it without replaying the initial migration:
+
+```bash
+python -m alembic stamp head
+python -m alembic check
+```
+
+For the Docker PostgreSQL database, build the new image and run the same adoption commands through the API service:
+
+```bash
+docker compose build api
+docker compose run --rm api python -m alembic stamp head
+docker compose run --rm api python -m alembic check
+```
+
+After either transition, `python -m alembic upgrade head` initializes or upgrades local SQLite, while the Docker API command upgrades PostgreSQL automatically.
 
 ## Intended next steps
 

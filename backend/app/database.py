@@ -1,18 +1,9 @@
-import os
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from backend.app.models import Base
-
-
-DATABASE_URL_ENV = "OPTIFLOW_DATABASE_URL"
-DEFAULT_DATABASE_URL = "sqlite:///./optiflow_api.db"
-
-
-def database_url() -> str:
-    return os.environ.get(DATABASE_URL_ENV, DEFAULT_DATABASE_URL)
+from backend.app.config import database_url
 
 
 def engine_kwargs(url: str) -> dict[str, object]:
@@ -29,10 +20,6 @@ SessionLocal = sessionmaker(
     autocommit=False,
     expire_on_commit=False,
 )
-
-
-def create_schema() -> None:
-    Base.metadata.create_all(bind=engine)
 
 
 def get_db() -> Generator[Session, None, None]:
