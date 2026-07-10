@@ -10,7 +10,8 @@ endif()
 
 file(MAKE_DIRECTORY "${OPTIFLOW_TEST_OUTPUT_DIR}")
 set(dispatch_csv "${OPTIFLOW_TEST_OUTPUT_DIR}/dispatch.csv")
-file(REMOVE "${dispatch_csv}")
+set(summary_json "${OPTIFLOW_TEST_OUTPUT_DIR}/summary.json")
+file(REMOVE "${dispatch_csv}" "${summary_json}")
 
 execute_process(
     COMMAND "${OPTIFLOW_SOLVE}"
@@ -18,6 +19,7 @@ execute_process(
         --prices "${OPTIFLOW_SOURCE_DIR}/examples/prices.csv"
         --inflows "${OPTIFLOW_SOURCE_DIR}/examples/inflows.csv"
         --output "${dispatch_csv}"
+        --summary-output "${summary_json}"
     RESULT_VARIABLE command_result
     OUTPUT_VARIABLE command_output
     ERROR_VARIABLE command_error)
@@ -34,6 +36,10 @@ set(required_output_patterns
     "Action count: 216"
     "Solve seconds: [0-9]"
     "Simulation seconds: [0-9]"
+    "Export energy MWh: [0-9]"
+    "Import energy MWh: [0-9]"
+    "Final reservoir volume: [0-9]"
+    "Final battery SOC: [0-9]"
     "Turbine steps: [0-9]"
     "Pump steps: [0-9]"
     "Spill steps: [0-9]"
@@ -59,3 +65,25 @@ string(FIND "${dispatch_contents}" "time_index,price,natural_inflow,reservoir_vo
 if(header_position EQUAL -1)
     message(FATAL_ERROR "Dispatch CSV header is missing or was changed")
 endif()
+
+if(NOT EXISTS "${summary_json}")
+    message(FATAL_ERROR "Expected summary JSON was not created: ${summary_json}")
+endif()
+
+file(READ "${summary_json}" summary_contents)
+set(required_summary_patterns
+    "\"cumulative_profit\": [0-9.-]"
+    "\"export_energy_mwh\": [0-9.-]"
+    "\"import_energy_mwh\": [0-9.-]"
+    "\"final_reservoir_volume\": [0-9.-]"
+    "\"final_battery_soc\": [0-9.-]"
+    "\"solve_seconds\": [0-9.-]"
+    "\"simulation_seconds\": [0-9.-]"
+    "\"wait_steps\": [0-9]")
+
+foreach(pattern IN LISTS required_summary_patterns)
+    string(REGEX MATCH "${pattern}" match_result "${summary_contents}")
+    if(match_result STREQUAL "")
+        message(FATAL_ERROR "Summary JSON does not contain required pattern: ${pattern}\nJSON:\n${summary_contents}")
+    endif()
+endforeach()

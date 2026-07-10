@@ -622,6 +622,8 @@ void test_optimization_runner_produces_dispatch_and_diagnostics() {
     std::size_t battery_charge_steps = 0;
     std::size_t battery_discharge_steps = 0;
     std::size_t wait_steps = 0;
+    double export_energy_mwh = 0.0;
+    double import_energy_mwh = 0.0;
 
     for (const core::DispatchStep& step : result.dispatch) {
         const bool turbines = step.action.turbine_flow > 0.0;
@@ -636,6 +638,8 @@ void test_optimization_runner_produces_dispatch_and_diagnostics() {
         battery_charge_steps += charges ? 1U : 0U;
         battery_discharge_steps += discharges ? 1U : 0U;
         wait_steps += (!turbines && !pumps && !spills && !charges && !discharges) ? 1U : 0U;
+        export_energy_mwh += step.net_power > 0.0 ? step.net_power * model.time_step_hours : 0.0;
+        import_energy_mwh += step.net_power < 0.0 ? -step.net_power * model.time_step_hours : 0.0;
     }
 
     const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
@@ -650,6 +654,14 @@ void test_optimization_runner_produces_dispatch_and_diagnostics() {
             "diagnostic solve time");
     require(std::isfinite(diagnostics.simulation_seconds) && diagnostics.simulation_seconds >= 0.0,
             "diagnostic simulation time");
+    require_near(diagnostics.export_energy_mwh, export_energy_mwh, "diagnostic export energy");
+    require_near(diagnostics.import_energy_mwh, import_energy_mwh, "diagnostic import energy");
+    require_near(diagnostics.final_reservoir_volume,
+                 result.dispatch.back().next_state.reservoir_volume,
+                 "diagnostic final reservoir volume");
+    require_near(diagnostics.final_battery_soc,
+                 result.dispatch.back().next_state.battery_soc,
+                 "diagnostic final battery SOC");
     require(diagnostics.turbine_steps == turbine_steps, "diagnostic turbine steps");
     require(diagnostics.pump_steps == pump_steps, "diagnostic pump steps");
     require(diagnostics.spill_steps == spill_steps, "diagnostic spill steps");

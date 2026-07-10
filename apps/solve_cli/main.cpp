@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -17,26 +18,30 @@ struct CliOptions {
     std::filesystem::path prices_path;
     std::filesystem::path inflows_path;
     std::filesystem::path output_path;
+    std::filesystem::path summary_output_path;
 
     CliOptions(std::filesystem::path scenario_path_arg,
                std::filesystem::path prices_path_arg,
                std::filesystem::path inflows_path_arg,
-               std::filesystem::path output_path_arg)
+               std::filesystem::path output_path_arg,
+               std::filesystem::path summary_output_path_arg)
         : scenario_path(std::move(scenario_path_arg)),
           prices_path(std::move(prices_path_arg)),
           inflows_path(std::move(inflows_path_arg)),
-          output_path(std::move(output_path_arg)) {}
+          output_path(std::move(output_path_arg)),
+          summary_output_path(std::move(summary_output_path_arg)) {}
 };
 
 void print_usage(const char* program_name) {
     std::cerr << "Usage: " << program_name
               << " --scenario <scenario.csv> --prices <prices.csv> --inflows <inflows.csv> "
-              << "--output <dispatch.csv>\n\n"
+              << "--output <dispatch.csv> [--summary-output <summary.json>]\n\n"
               << "Inputs:\n"
-              << "  --scenario   CSV file with key,value rows for scenario, model, terminal, and solver parameters.\n"
-              << "  --prices     CSV file with time_index,price rows.\n"
-              << "  --inflows    CSV file with time_index,natural_inflow rows.\n"
-              << "  --output     Dispatch CSV output path.\n";
+              << "  --scenario        CSV file with key,value rows for scenario, model, terminal, and solver parameters.\n"
+              << "  --prices          CSV file with time_index,price rows.\n"
+              << "  --inflows         CSV file with time_index,natural_inflow rows.\n"
+              << "  --output          Dispatch CSV output path.\n"
+              << "  --summary-output  Optional machine-readable run summary JSON path.\n";
 }
 
 CliOptions parse_args(int argc, char** argv) {
@@ -44,6 +49,7 @@ CliOptions parse_args(int argc, char** argv) {
     std::string prices_path;
     std::string inflows_path;
     std::string output_path;
+    std::string summary_output_path;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -55,6 +61,8 @@ CliOptions parse_args(int argc, char** argv) {
             inflows_path = argv[++i];
         } else if (arg == "--output" && i + 1 < argc) {
             output_path = argv[++i];
+        } else if (arg == "--summary-output" && i + 1 < argc) {
+            summary_output_path = argv[++i];
         } else if (arg == "--help" || arg == "-h") {
             print_usage(argv[0]);
             std::exit(0);
@@ -76,7 +84,8 @@ CliOptions parse_args(int argc, char** argv) {
         throw std::invalid_argument("--output is required");
     }
 
-    return CliOptions(scenario_path, prices_path, inflows_path, output_path);
+    return CliOptions(
+        scenario_path, prices_path, inflows_path, output_path, summary_output_path);
 }
 
 void write_dispatch_csv(const std::filesystem::path& output_path,
@@ -109,6 +118,32 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
     }
 }
 
+void write_summary_json(const std::filesystem::path& output_path,
+                        const optiflow::runner::OptimizationResult& result) {
+    std::ofstream output(output_path);
+    if (!output) {
+        throw std::runtime_error("cannot open summary output file: " + output_path.string());
+    }
+
+    const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
+    output << std::setprecision(17)
+           << "{\n"
+           << "  \"cumulative_profit\": " << result.cumulative_profit << ",\n"
+           << "  \"export_energy_mwh\": " << diagnostics.export_energy_mwh << ",\n"
+           << "  \"import_energy_mwh\": " << diagnostics.import_energy_mwh << ",\n"
+           << "  \"final_reservoir_volume\": " << diagnostics.final_reservoir_volume << ",\n"
+           << "  \"final_battery_soc\": " << diagnostics.final_battery_soc << ",\n"
+           << "  \"solve_seconds\": " << diagnostics.solve_seconds << ",\n"
+           << "  \"simulation_seconds\": " << diagnostics.simulation_seconds << ",\n"
+           << "  \"turbine_steps\": " << diagnostics.turbine_steps << ",\n"
+           << "  \"pump_steps\": " << diagnostics.pump_steps << ",\n"
+           << "  \"spill_steps\": " << diagnostics.spill_steps << ",\n"
+           << "  \"battery_charge_steps\": " << diagnostics.battery_charge_steps << ",\n"
+           << "  \"battery_discharge_steps\": " << diagnostics.battery_discharge_steps << ",\n"
+           << "  \"wait_steps\": " << diagnostics.wait_steps << "\n"
+           << "}\n";
+}
+
 void print_summary(std::ostream& output,
                    const optiflow::core::ScenarioBundle& bundle,
                    const optiflow::runner::OptimizationResult& result,
@@ -122,6 +157,10 @@ void print_summary(std::ostream& output,
     output << "Action count: " << diagnostics.action_count << '\n';
     output << "Solve seconds: " << diagnostics.solve_seconds << '\n';
     output << "Simulation seconds: " << diagnostics.simulation_seconds << '\n';
+    output << "Export energy MWh: " << diagnostics.export_energy_mwh << '\n';
+    output << "Import energy MWh: " << diagnostics.import_energy_mwh << '\n';
+    output << "Final reservoir volume: " << diagnostics.final_reservoir_volume << '\n';
+    output << "Final battery SOC: " << diagnostics.final_battery_soc << '\n';
     output << "Turbine steps: " << diagnostics.turbine_steps << '\n';
     output << "Pump steps: " << diagnostics.pump_steps << '\n';
     output << "Spill steps: " << diagnostics.spill_steps << '\n';
@@ -146,6 +185,9 @@ int main(int argc, char** argv) {
         const optiflow::runner::OptimizationResult result = runner.run(bundle);
 
         write_dispatch_csv(options.output_path, result.dispatch);
+        if (!options.summary_output_path.empty()) {
+            write_summary_json(options.summary_output_path, result);
+        }
         print_summary(std::cout, bundle, result, options.output_path);
         return 0;
     } catch (const std::exception& error) {

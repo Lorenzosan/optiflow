@@ -14,9 +14,13 @@ namespace optiflow::runner {
 
 namespace {
 
-OptimizationDiagnostics dispatch_activity_diagnostics(const std::vector<core::DispatchStep>& dispatch) {
+OptimizationDiagnostics dispatch_diagnostics(const std::vector<core::DispatchStep>& dispatch,
+                                             double time_step_hours,
+                                             const core::State& initial_state) {
     OptimizationDiagnostics diagnostics{};
     diagnostics.horizon_steps = dispatch.size();
+    diagnostics.final_reservoir_volume = initial_state.reservoir_volume;
+    diagnostics.final_battery_soc = initial_state.battery_soc;
 
     for (const core::DispatchStep& step : dispatch) {
         const bool turbines = step.action.turbine_flow > 0.0;
@@ -31,6 +35,10 @@ OptimizationDiagnostics dispatch_activity_diagnostics(const std::vector<core::Di
         diagnostics.battery_charge_steps += charges ? 1U : 0U;
         diagnostics.battery_discharge_steps += discharges ? 1U : 0U;
         diagnostics.wait_steps += (!turbines && !pumps && !spills && !charges && !discharges) ? 1U : 0U;
+        diagnostics.export_energy_mwh += step.net_power > 0.0 ? step.net_power * time_step_hours : 0.0;
+        diagnostics.import_energy_mwh += step.net_power < 0.0 ? -step.net_power * time_step_hours : 0.0;
+        diagnostics.final_reservoir_volume = step.next_state.reservoir_volume;
+        diagnostics.final_battery_soc = step.next_state.battery_soc;
     }
 
     return diagnostics;
@@ -77,7 +85,8 @@ OptimizationResult OptimizationRunner::run(const core::ScenarioBundle& bundle) c
     const double cumulative_profit =
         dispatch.empty() ? 0.0 : dispatch.back().cumulative_profit;
 
-    OptimizationDiagnostics diagnostics = dispatch_activity_diagnostics(dispatch);
+    OptimizationDiagnostics diagnostics = dispatch_diagnostics(
+        dispatch, model_parameters.time_step_hours, scenario.initial_state());
     diagnostics.horizon_steps = scenario.horizon_size();
     diagnostics.reservoir_grid_points = state_grid.reservoir_size();
     diagnostics.battery_grid_points = state_grid.battery_size();

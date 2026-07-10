@@ -18,6 +18,10 @@ struct OptimizationDiagnostics {
     std::size_t action_count; ///< Number of candidate actions considered at each Bellman state.
     double solve_seconds; ///< Wall-clock time spent in the Bellman solve.
     double simulation_seconds; ///< Wall-clock time spent in forward simulation.
+    double export_energy_mwh; ///< Energy exported to the market.
+    double import_energy_mwh; ///< Energy imported from the market.
+    double final_reservoir_volume; ///< Reservoir volume after the final dispatch step.
+    double final_battery_soc; ///< Battery state of charge after the final dispatch step.
     std::size_t turbine_steps; ///< Number of dispatch steps with positive turbine flow.
     std::size_t pump_steps; ///< Number of dispatch steps with positive pump flow.
     std::size_t spill_steps; ///< Number of dispatch steps with positive spill flow.
