@@ -3,16 +3,23 @@ import test from "node:test";
 
 import {
   SCENARIO_PARAMETER_GROUPS,
+  SCENARIO_REPORTING_FIELDS,
   buildScenarioCsv,
   validateSeriesCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
 
 function defaultValues() {
-  return Object.fromEntries(
-    SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
-      .map((field) => [field.key, String(field.defaultValue)]),
-  );
+  return {
+    ...Object.fromEntries(
+      SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
+        .map((field) => [field.key, String(field.defaultValue)]),
+    ),
+    market_start_utc: "2026-12-31T23:00:00Z",
+    market_timezone: "Europe/Zurich",
+    peak_start_hour: "9",
+    peak_end_hour: "20",
+  };
 }
 
 test("buildScenarioCsv emits every required scalar parameter", () => {
@@ -21,9 +28,15 @@ test("buildScenarioCsv emits every required scalar parameter", () => {
 
   assert.equal(lines[0], "key,value");
   assert.equal(lines[1], "scenario_name,custom_case");
-  assert.equal(lines.length, 2 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length);
+  assert.equal(
+    lines.length,
+    2
+      + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length
+      + SCENARIO_REPORTING_FIELDS.length,
+  );
   assert.match(csv, /terminal_target_reservoir_volume,250/);
   assert.match(csv, /discount_factor,1/);
+  assert.match(csv, /market_timezone,Europe\/Zurich/);
 });
 
 test("buildScenarioCsv rejects names that cannot be represented by the parser", () => {
@@ -86,5 +99,27 @@ test("validateSeriesPair rejects mismatched horizons", () => {
       "time_index,natural_inflow\n0,3\n",
     ),
     /horizons differ/,
+  );
+});
+
+
+test("buildScenarioCsv rejects invalid reporting metadata", () => {
+  const values = defaultValues();
+  values.market_timezone = "not-a-timezone";
+
+  assert.throws(
+    () => buildScenarioCsv("bad_reporting", values),
+    /valid IANA timezone/,
+  );
+});
+
+test("buildScenarioCsv requires an ordered daytime peak window", () => {
+  const values = defaultValues();
+  values.peak_start_hour = "20";
+  values.peak_end_hour = "9";
+
+  assert.throws(
+    () => buildScenarioCsv("bad_peak", values),
+    /earlier than peak end/,
   );
 });

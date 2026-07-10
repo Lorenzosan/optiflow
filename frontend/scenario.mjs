@@ -9,65 +9,72 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
     title: "Time, storage bounds, and initial state",
     fields: Object.freeze([
-      field("time_step_hours", "Time step (hours)", 1, { min: 0, exclusiveMin: true }),
-      field("reservoir_min_volume", "Reservoir minimum volume", 0),
-      field("reservoir_max_volume", "Reservoir maximum volume", 500),
-      field("initial_reservoir_volume", "Initial reservoir volume", 250),
-      field("battery_min_soc", "Battery minimum SOC", 0),
-      field("battery_max_soc", "Battery maximum SOC", 100),
-      field("initial_battery_soc", "Initial battery SOC", 50),
+      field("time_step_hours", "Time step [h]", 1, { min: 0, exclusiveMin: true }),
+      field("reservoir_min_volume", "Reservoir minimum [volume units]", 0),
+      field("reservoir_max_volume", "Reservoir maximum [volume units]", 500),
+      field("initial_reservoir_volume", "Initial reservoir [volume units]", 250),
+      field("battery_min_soc", "Battery minimum SOC [MWh]", 0),
+      field("battery_max_soc", "Battery maximum SOC [MWh]", 100),
+      field("initial_battery_soc", "Initial battery SOC [MWh]", 50),
     ]),
   }),
   Object.freeze({
     title: "Actions and conversion",
     fields: Object.freeze([
-      field("turbine_max_flow", "Maximum turbine flow", 40, { min: 0 }),
-      field("pump_max_flow", "Maximum pump flow", 30, { min: 0 }),
-      field("spill_max_flow", "Maximum spill flow", 50, { min: 0 }),
-      field("battery_max_charge_power", "Maximum battery charge power", 25, { min: 0 }),
-      field("battery_max_discharge_power", "Maximum battery discharge power", 25, { min: 0 }),
-      field("turbine_efficiency", "Turbine efficiency", 0.9, { min: 0, max: 1, exclusiveMin: true }),
-      field("pump_efficiency", "Pump efficiency", 0.85, { min: 0, max: 1, exclusiveMin: true }),
-      field("battery_charge_efficiency", "Battery charge efficiency", 1, { min: 0, max: 1, exclusiveMin: true }),
-      field("battery_discharge_efficiency", "Battery discharge efficiency", 1, { min: 0, max: 1, exclusiveMin: true }),
-      field("water_to_power_factor", "Water-to-power factor", 0.4, { min: 0, exclusiveMin: true }),
+      field("turbine_max_flow", "Maximum turbine flow [volume units/h]", 40, { min: 0 }),
+      field("pump_max_flow", "Maximum pump flow [volume units/h]", 30, { min: 0 }),
+      field("spill_max_flow", "Maximum spill flow [volume units/h]", 50, { min: 0 }),
+      field("battery_max_charge_power", "Maximum battery charge power [MW]", 25, { min: 0 }),
+      field("battery_max_discharge_power", "Maximum battery discharge power [MW]", 25, { min: 0 }),
+      field("turbine_efficiency", "Turbine efficiency [fraction]", 0.9, { min: 0, max: 1, exclusiveMin: true }),
+      field("pump_efficiency", "Pump efficiency [fraction]", 0.85, { min: 0, max: 1, exclusiveMin: true }),
+      field("battery_charge_efficiency", "Battery charge efficiency [fraction]", 1, { min: 0, max: 1, exclusiveMin: true }),
+      field("battery_discharge_efficiency", "Battery discharge efficiency [fraction]", 1, { min: 0, max: 1, exclusiveMin: true }),
+      field("water_to_power_factor", "Water-to-power factor [MW per volume unit/h]", 0.4, { min: 0, exclusiveMin: true }),
     ]),
   }),
   Object.freeze({
     title: "Economic parameters",
     fields: Object.freeze([
-      field("battery_degradation_cost_per_mwh", "Battery degradation cost / MWh", 3, { min: 0 }),
-      field("operating_cost_per_mwh", "Operating cost / MWh", 1, { min: 0 }),
-      field("infeasibility_penalty", "Infeasibility penalty", 1000000, { min: 0 }),
+      field("battery_degradation_cost_per_mwh", "Battery degradation cost [currency/MWh]", 3, { min: 0 }),
+      field("operating_cost_per_mwh", "Operating cost [currency/MWh]", 1, { min: 0 }),
+      field("infeasibility_penalty", "Infeasibility penalty [currency]", 1000000, { min: 0 }),
     ]),
   }),
   Object.freeze({
     title: "Terminal constraints and targets",
     fields: Object.freeze([
-      field("terminal_reservoir_min_volume", "Terminal reservoir minimum", 187.5),
-      field("terminal_reservoir_max_volume", "Terminal reservoir maximum", 312.5),
-      field("terminal_target_reservoir_volume", "Terminal reservoir target", 250),
-      field("terminal_reservoir_target_penalty", "Reservoir target penalty", 20, { min: 0 }),
-      field("terminal_battery_min_soc", "Terminal battery minimum SOC", 25),
-      field("terminal_battery_max_soc", "Terminal battery maximum SOC", 75),
-      field("terminal_target_battery_soc", "Terminal battery target SOC", 50),
-      field("terminal_battery_target_penalty", "Battery target penalty", 20, { min: 0 }),
+      field("terminal_reservoir_min_volume", "Terminal reservoir minimum [volume units]", 187.5),
+      field("terminal_reservoir_max_volume", "Terminal reservoir maximum [volume units]", 312.5),
+      field("terminal_target_reservoir_volume", "Terminal reservoir target [volume units]", 250),
+      field("terminal_reservoir_target_penalty", "Reservoir target penalty [currency/volume unit²]", 20, { min: 0 }),
+      field("terminal_battery_min_soc", "Terminal battery minimum SOC [MWh]", 25),
+      field("terminal_battery_max_soc", "Terminal battery maximum SOC [MWh]", 75),
+      field("terminal_target_battery_soc", "Terminal battery target SOC [MWh]", 50),
+      field("terminal_battery_target_penalty", "Battery target penalty [currency/MWh²]", 20, { min: 0 }),
     ]),
   }),
   Object.freeze({
     title: "Solver resolution",
     note: "Higher grid and action counts can increase solve time and memory use sharply.",
     fields: Object.freeze([
-      field("reservoir_volume_grid_points", "Reservoir grid points", 9, { integer: true, min: 1 }),
-      field("battery_soc_grid_points", "Battery SOC grid points", 5, { integer: true, min: 1 }),
-      field("turbine_flow_steps", "Turbine flow steps", 3, { integer: true, min: 1 }),
-      field("spill_flow_steps", "Spill flow steps", 2, { integer: true, min: 1 }),
-      field("pump_flow_steps", "Pump flow steps", 3, { integer: true, min: 1 }),
-      field("battery_charge_steps", "Battery charge steps", 2, { integer: true, min: 1 }),
-      field("battery_discharge_steps", "Battery discharge steps", 2, { integer: true, min: 1 }),
-      field("discount_factor", "Discount factor", 1, { min: 0, max: 1 }),
+      field("reservoir_volume_grid_points", "Reservoir grid points [count]", 9, { integer: true, min: 1 }),
+      field("battery_soc_grid_points", "Battery SOC grid points [count]", 5, { integer: true, min: 1 }),
+      field("turbine_flow_steps", "Turbine flow steps [count]", 3, { integer: true, min: 1 }),
+      field("spill_flow_steps", "Spill flow steps [count]", 2, { integer: true, min: 1 }),
+      field("pump_flow_steps", "Pump flow steps [count]", 3, { integer: true, min: 1 }),
+      field("battery_charge_steps", "Battery charge steps [count]", 2, { integer: true, min: 1 }),
+      field("battery_discharge_steps", "Battery discharge steps [count]", 2, { integer: true, min: 1 }),
+      field("discount_factor", "Discount factor [fraction]", 1, { min: 0, max: 1 }),
     ]),
   }),
+]);
+
+export const SCENARIO_REPORTING_FIELDS = Object.freeze([
+  Object.freeze({ key: "market_start_utc", label: "Market start (UTC)" }),
+  Object.freeze({ key: "market_timezone", label: "Market timezone" }),
+  Object.freeze({ key: "peak_start_hour", label: "Peak start hour" }),
+  Object.freeze({ key: "peak_end_hour", label: "Peak end hour" }),
 ]);
 
 const ALL_FIELDS = SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields);
@@ -163,6 +170,44 @@ function validateBounds(values) {
   }
 }
 
+function parseReportingValues(values) {
+  const marketStartUtc = String(values.market_start_utc ?? "").trim();
+  requireCondition(marketStartUtc.length > 0, "Market start (UTC) is required.");
+  requireCondition(!/[\r\n,]/.test(marketStartUtc), "Market start (UTC) is invalid.");
+  requireCondition(
+    /(?:Z|\+00:00)$/.test(marketStartUtc) && Number.isFinite(Date.parse(marketStartUtc)),
+    "Market start must be an ISO-8601 UTC datetime ending in Z or +00:00.",
+  );
+
+  const marketTimezone = String(values.market_timezone ?? "").trim();
+  requireCondition(marketTimezone.length > 0, "Market timezone is required.");
+  requireCondition(!/[\r\n,]/.test(marketTimezone), "Market timezone is invalid.");
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: marketTimezone }).format(new Date(0));
+  } catch {
+    throw new Error("Market timezone must be a valid IANA timezone such as Europe/Zurich.");
+  }
+
+  const peakStartHour = Number(String(values.peak_start_hour ?? "").trim());
+  const peakEndHour = Number(String(values.peak_end_hour ?? "").trim());
+  requireCondition(
+    Number.isInteger(peakStartHour) && peakStartHour >= 0 && peakStartHour <= 23,
+    "Peak start hour must be an integer between 0 and 23.",
+  );
+  requireCondition(
+    Number.isInteger(peakEndHour) && peakEndHour >= 1 && peakEndHour <= 24,
+    "Peak end hour must be an integer between 1 and 24.",
+  );
+  requireCondition(peakStartHour < peakEndHour, "Peak start hour must be earlier than peak end hour.");
+
+  return {
+    market_start_utc: marketStartUtc,
+    market_timezone: marketTimezone,
+    peak_start_hour: String(peakStartHour),
+    peak_end_hour: String(peakEndHour),
+  };
+}
+
 export function buildScenarioCsv(name, values) {
   const normalizedName = normalizeScenarioName(name);
   const parsedValues = {};
@@ -175,6 +220,10 @@ export function buildScenarioCsv(name, values) {
   }
 
   validateBounds(parsedValues);
+  const reporting = parseReportingValues(values);
+  for (const fieldDefinition of SCENARIO_REPORTING_FIELDS) {
+    lines.push(`${fieldDefinition.key},${reporting[fieldDefinition.key]}`);
+  }
   return `${lines.join("\n")}\n`;
 }
 

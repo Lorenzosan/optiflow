@@ -1,0 +1,25 @@
+.trader-panel {
+  grid-column: 1 / -1;
+  padding: 1.4rem;
+}
+
+.trader-heading {
+  margin-top: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.trader-table-scroll {
+  margin-top: 0.75rem;
+}
+
+.trader-table-scroll tbody tr:nth-child(3n + 1) td {
+  border-top: 2px solid var(--border);
+}
+
+.trader-table-scroll tbody tr:first-child td {
+  border-top: 0;
+}
+
+.history-panel {
+  grid-column: 1 / -1;
+}

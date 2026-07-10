@@ -15,6 +15,11 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, RunSummary, Scenario
 from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
+from backend.app.scenario_metadata import (
+    ScenarioReportingError,
+    ScenarioReportingMetadata,
+    load_scenario_reporting,
+)
 from backend.app.scenario_uploads import (
     ScenarioUploadError,
     ScenarioValidatorError,
@@ -33,12 +38,21 @@ class ScenarioFiles(BaseModel):
     inflows: str = Field(description="Path to the inflows CSV, relative to the repository root.")
 
 
+class ScenarioReportingResponse(BaseModel):
+    market_start_utc: datetime
+    market_timezone: str
+    peak_start_hour: int
+    peak_end_hour: int
+    time_step_hours: float
+
+
 class ScenarioResponse(BaseModel):
     id: int
     name: str
     description: str
     files: ScenarioFiles
     available: bool
+    reporting: ScenarioReportingResponse | None
 
 
 class HealthResponse(BaseModel):
@@ -105,18 +119,44 @@ def files_available(root: Path, files: ScenarioFiles) -> bool:
     )
 
 
+def reporting_response(
+    metadata: ScenarioReportingMetadata | None,
+) -> ScenarioReportingResponse | None:
+    if metadata is None:
+        return None
+    return ScenarioReportingResponse(
+        market_start_utc=metadata.market_start_utc,
+        market_timezone=metadata.market_timezone,
+        peak_start_hour=metadata.peak_start_hour,
+        peak_end_hour=metadata.peak_end_hour,
+        time_step_hours=metadata.time_step_hours,
+    )
+
+
 def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
     files = ScenarioFiles(
         scenario=scenario.scenario_path,
         prices=scenario.prices_path,
         inflows=scenario.inflows_path,
     )
+    available = files_available(root, files)
+    reporting = None
+    if available:
+        try:
+            reporting = load_scenario_reporting(root / files.scenario)
+        except ScenarioReportingError:
+            logger.warning(
+                "Ignoring invalid reporting metadata for scenario %s",
+                scenario.name,
+                exc_info=True,
+            )
     return ScenarioResponse(
         id=scenario.id,
         name=scenario.name,
         description=scenario.description,
         files=files,
-        available=files_available(root, files),
+        available=available,
+        reporting=reporting_response(reporting),
     )
 
 
@@ -184,6 +224,18 @@ async def create_scenario(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Scenario validation service is unavailable",
+        ) from error
+
+    try:
+        load_scenario_reporting(root / stored.scenario_path)
+    except ScenarioReportingError as error:
+        remove_scenario_directory(stored.directory)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Scenario reporting metadata is invalid",
+                "error": str(error),
+            },
         ) from error
 
     existing = db.query(Scenario).filter(Scenario.name == stored.name).one_or_none()

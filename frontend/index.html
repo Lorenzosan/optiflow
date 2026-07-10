@@ -6,6 +6,7 @@
   <meta name="description" content="OptiFlow optimization run console">
   <title>OptiFlow Console</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/trader.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -73,17 +74,46 @@
             <div id="scenario-fields" class="parameter-groups"></div>
 
             <fieldset class="parameter-group series-group">
+              <legend>Market calendar for trader view</legend>
+              <p class="group-note">
+                Peak is classified in local market time. The end hour is exclusive.
+              </p>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="market-start-utc">Market start [UTC]</label>
+                  <input id="market-start-utc" name="market_start_utc" type="text"
+                         placeholder="2026-12-31T23:00:00Z" required>
+                </div>
+                <div class="form-field">
+                  <label for="market-timezone">Market timezone [IANA]</label>
+                  <input id="market-timezone" name="market_timezone" type="text"
+                         placeholder="Europe/Zurich" required>
+                </div>
+                <div class="form-field">
+                  <label for="peak-start-hour">Peak start [local hour]</label>
+                  <input id="peak-start-hour" name="peak_start_hour" type="number"
+                         min="0" max="23" step="1" placeholder="9" required>
+                </div>
+                <div class="form-field">
+                  <label for="peak-end-hour">Peak end [local hour, exclusive]</label>
+                  <input id="peak-end-hour" name="peak_end_hour" type="number"
+                         min="1" max="24" step="1" placeholder="20" required>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="parameter-group series-group">
               <legend>Time series</legend>
               <div class="form-grid file-grid">
                 <div class="form-field">
                   <label for="prices-file">Prices CSV</label>
                   <input id="prices-file" name="prices" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>time_index,price</code></small>
+                  <small>Header: <code>time_index,price</code>; price unit is currency/MWh.</small>
                 </div>
                 <div class="form-field">
                   <label for="inflows-file">Inflows CSV</label>
                   <input id="inflows-file" name="inflows" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>time_index,natural_inflow</code></small>
+                  <small>Header: <code>time_index,natural_inflow</code>; inflow unit is volume units/h.</small>
                 </div>
               </div>
               <p id="series-preview" class="message" role="status" aria-live="polite">
@@ -99,6 +129,65 @@
           </form>
         </div>
       </details>
+    </section>
+
+    <section class="panel trader-panel" aria-labelledby="details-title">
+      <div id="details-empty">
+        <p class="eyebrow">Latest result</p>
+        <h2 id="details-title">Trader view</h2>
+        <p class="supporting-text">The newest succeeded run is loaded automatically. Select a historical run to replace it.</p>
+      </div>
+
+      <div id="details-content" hidden>
+        <div class="section-heading details-heading">
+          <div>
+            <p class="eyebrow">Selected optimization</p>
+            <h2 id="run-title">Run details</h2>
+          </div>
+          <span id="run-status" class="status-chip">Unknown</span>
+        </div>
+
+        <dl class="metadata-grid">
+          <div>
+            <dt>Started</dt>
+            <dd id="run-started">—</dd>
+          </div>
+          <div>
+            <dt>Completed</dt>
+            <dd id="run-completed">—</dd>
+          </div>
+        </dl>
+
+        <p id="run-error" class="error-box" hidden></p>
+
+        <div id="summary-grid" class="summary-grid" aria-label="Optimization summary"></div>
+
+        <div class="section-heading trader-heading">
+          <div>
+            <p class="eyebrow">Dispatch products</p>
+            <h2>Baseload, peak, and off-peak</h2>
+          </div>
+        </div>
+        <p id="trader-caption" class="supporting-text"></p>
+        <p id="trader-message" class="message" role="status" aria-live="polite"></p>
+        <div class="table-scroll trader-table-scroll">
+          <table aria-label="Selected optimization trader aggregation">
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Product</th>
+                <th scope="col" class="numeric">Hours [h]</th>
+                <th scope="col" class="numeric">Average [MW]</th>
+                <th scope="col" class="numeric">Energy [MWh]</th>
+                <th scope="col" class="numeric">P&amp;L [currency]</th>
+              </tr>
+            </thead>
+            <tbody id="trader-body"></tbody>
+          </table>
+        </div>
+
+        <a id="download-link" class="download-link" href="#" hidden>Download selected dispatch CSV</a>
+      </div>
     </section>
 
     <section class="panel history-panel" aria-labelledby="history-title">
@@ -137,7 +226,7 @@
               <th scope="col">Scenario</th>
               <th scope="col">Started</th>
               <th scope="col">Status</th>
-              <th scope="col" class="numeric">Profit</th>
+              <th scope="col" class="numeric">Profit [currency]</th>
               <th scope="col" class="numeric">Runtime</th>
               <th scope="col">Artifact</th>
             </tr>
@@ -157,40 +246,7 @@
       </div>
     </section>
 
-    <section class="panel details-panel" aria-labelledby="details-title">
-      <div id="details-empty">
-        <p class="eyebrow">Selected run</p>
-        <h2 id="details-title">Run details</h2>
-        <p class="supporting-text">Select a run to inspect its persisted result.</p>
-      </div>
 
-      <div id="details-content" hidden>
-        <div class="section-heading details-heading">
-          <div>
-            <p class="eyebrow">Selected run</p>
-            <h2 id="run-title">Run details</h2>
-          </div>
-          <span id="run-status" class="status-chip">Unknown</span>
-        </div>
-
-        <dl class="metadata-grid">
-          <div>
-            <dt>Started</dt>
-            <dd id="run-started">—</dd>
-          </div>
-          <div>
-            <dt>Completed</dt>
-            <dd id="run-completed">—</dd>
-          </div>
-        </dl>
-
-        <p id="run-error" class="error-box" hidden></p>
-
-        <div id="summary-grid" class="summary-grid" aria-label="Optimization summary"></div>
-
-        <a id="download-link" class="download-link" href="#" hidden>Download dispatch CSV</a>
-      </div>
-    </section>
   </main>
 
   <footer>

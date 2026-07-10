@@ -5,6 +5,7 @@ import {
   buildScenarioCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
+import { buildTraderRows } from "./trader.mjs";
 
 const API_BASE = "/api";
 const PAGE_SIZE = 10;
@@ -16,6 +17,7 @@ const state = {
   total: 0,
   offset: 0,
   selectedRunId: null,
+  traderRequestId: 0,
 };
 
 const elements = {
@@ -49,6 +51,9 @@ const elements = {
   runCompleted: document.querySelector("#run-completed"),
   runError: document.querySelector("#run-error"),
   summaryGrid: document.querySelector("#summary-grid"),
+  traderCaption: document.querySelector("#trader-caption"),
+  traderMessage: document.querySelector("#trader-message"),
+  traderBody: document.querySelector("#trader-body"),
   downloadLink: document.querySelector("#download-link"),
 };
 
@@ -366,12 +371,11 @@ async function loadRuns({ selectFirst = false } = {}) {
     renderPagination(page);
 
     const selected = state.runs.find((run) => run.id === state.selectedRunId);
+    const newestSucceeded = state.runs.find((run) => run.status === "succeeded");
     if (selected) {
-      renderRunDetails(selected);
-    } else if (selectFirst && state.runs.length > 0) {
-      renderRunDetails(state.runs[0]);
-    } else if (state.selectedRunId === null && state.runs.length > 0) {
-      renderRunDetails(state.runs[0]);
+      await renderRunDetails(selected);
+    } else if ((selectFirst || state.selectedRunId === null) && state.runs.length > 0) {
+      await renderRunDetails(newestSucceeded ?? state.runs[0]);
     } else if (state.runs.length === 0) {
       clearRunDetails();
     }
@@ -408,7 +412,9 @@ function renderRunTable() {
     selectButton.className = "run-button";
     selectButton.textContent = `#${run.id}`;
     selectButton.setAttribute("aria-label", `Inspect run ${run.id}`);
-    selectButton.addEventListener("click", () => renderRunDetails(run));
+    selectButton.addEventListener("click", () => {
+      void renderRunDetails(run);
+    });
     idCell.append(selectButton);
 
     const scenarioCell = document.createElement("td");
@@ -482,13 +488,46 @@ function renderPagination(page) {
   elements.nextButton.disabled = page.offset + page.limit >= page.total;
 }
 
-function clearRunDetails() {
-  state.selectedRunId = null;
-  elements.detailsEmpty.hidden = false;
-  elements.detailsContent.hidden = true;
+function clearTraderView(message = "") {
+  elements.traderBody.replaceChildren();
+  elements.traderMessage.textContent = message;
+  elements.traderMessage.classList.remove("error");
+  elements.traderCaption.textContent = "";
 }
 
-function renderRunDetails(run) {
+function clearRunDetails() {
+  state.selectedRunId = null;
+  state.traderRequestId += 1;
+  elements.detailsEmpty.hidden = false;
+  elements.detailsContent.hidden = true;
+  clearTraderView();
+}
+
+function renderTraderTable(rows) {
+  const tableRows = rows.map((item) => {
+    const row = document.createElement("tr");
+    const values = [
+      item.period,
+      item.product,
+      formatNumber(item.hours, 2),
+      item.averageMw === null ? "—" : formatNumber(item.averageMw, 2),
+      formatNumber(item.energyMwh, 2),
+      formatNumber(item.pnl, 2),
+    ];
+    values.forEach((value, index) => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      if (index >= 2) {
+        cell.className = "numeric";
+      }
+      row.append(cell);
+    });
+    return row;
+  });
+  elements.traderBody.replaceChildren(...tableRows);
+}
+
+async function renderRunDetails(run) {
   state.selectedRunId = run.id;
   elements.detailsEmpty.hidden = true;
   elements.detailsContent.hidden = false;
@@ -507,6 +546,41 @@ function renderRunDetails(run) {
   elements.downloadLink.href = canDownload
     ? `${API_BASE}/runs/${run.id}/dispatch.csv`
     : "#";
+
+  const requestId = ++state.traderRequestId;
+  if (!canDownload) {
+    clearTraderView("Trader view is available only for succeeded runs with a dispatch artifact.");
+    return;
+  }
+
+  const scenario = state.scenarios.find((item) => item.id === run.scenario_id);
+  if (!scenario?.reporting) {
+    clearTraderView("Trader view unavailable: this scenario has no market calendar metadata.");
+    return;
+  }
+
+  clearTraderView("Loading the selected dispatch…");
+  try {
+    const dispatchText = await apiRequest(`/runs/${run.id}/dispatch.csv`);
+    const rows = buildTraderRows(dispatchText, scenario.reporting);
+    if (requestId !== state.traderRequestId) {
+      return;
+    }
+    renderTraderTable(rows);
+    elements.traderMessage.textContent = "";
+    elements.traderCaption.textContent =
+      `Run #${run.id}. Baseload contains all hours. Peak is Monday–Friday `
+      + `${String(scenario.reporting.peak_start_hour).padStart(2, "0")}:00–`
+      + `${String(scenario.reporting.peak_end_hour).padStart(2, "0")}:00 `
+      + `in ${scenario.reporting.market_timezone}; the end hour is exclusive. `
+      + "The first 12 calendar months are monthly, then results are quarterly.";
+  } catch (error) {
+    if (requestId !== state.traderRequestId) {
+      return;
+    }
+    clearTraderView(error.message);
+    elements.traderMessage.classList.add("error");
+  }
 }
 
 function renderSummary(summary) {
@@ -517,19 +591,19 @@ function renderSummary(summary) {
   }
 
   const metrics = [
-    ["Cumulative profit", formatNumber(summary.cumulative_profit)],
-    ["Export energy", `${formatNumber(summary.export_energy_mwh)} MWh`],
-    ["Import energy", `${formatNumber(summary.import_energy_mwh)} MWh`],
-    ["Final reservoir", formatNumber(summary.final_reservoir_volume)],
-    ["Final battery SOC", formatNumber(summary.final_battery_soc)],
-    ["Solve time", `${formatNumber(summary.solve_seconds, 3)} s`],
-    ["Simulation time", `${formatNumber(summary.simulation_seconds, 3)} s`],
-    ["Turbine steps", formatNumber(summary.turbine_steps, 0)],
-    ["Pump steps", formatNumber(summary.pump_steps, 0)],
-    ["Spill steps", formatNumber(summary.spill_steps, 0)],
-    ["Battery charge steps", formatNumber(summary.battery_charge_steps, 0)],
-    ["Battery discharge steps", formatNumber(summary.battery_discharge_steps, 0)],
-    ["Wait steps", formatNumber(summary.wait_steps, 0)],
+    ["Cumulative profit [currency]", formatNumber(summary.cumulative_profit)],
+    ["Export energy [MWh]", formatNumber(summary.export_energy_mwh)],
+    ["Import energy [MWh]", formatNumber(summary.import_energy_mwh)],
+    ["Final reservoir [volume units]", formatNumber(summary.final_reservoir_volume)],
+    ["Final battery SOC [MWh]", formatNumber(summary.final_battery_soc)],
+    ["Solve time [s]", formatNumber(summary.solve_seconds, 3)],
+    ["Simulation time [s]", formatNumber(summary.simulation_seconds, 3)],
+    ["Turbine steps [count]", formatNumber(summary.turbine_steps, 0)],
+    ["Pump steps [count]", formatNumber(summary.pump_steps, 0)],
+    ["Spill steps [count]", formatNumber(summary.spill_steps, 0)],
+    ["Battery charge steps [count]", formatNumber(summary.battery_charge_steps, 0)],
+    ["Battery discharge steps [count]", formatNumber(summary.battery_discharge_steps, 0)],
+    ["Wait steps [count]", formatNumber(summary.wait_steps, 0)],
   ];
 
   elements.summaryGrid.replaceChildren(
@@ -566,7 +640,7 @@ async function createRun(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scenario_id: scenarioId }),
     });
-    renderRunDetails(run);
+    await renderRunDetails(run);
     state.offset = 0;
     await loadRuns();
     setOperationMessage(`Run #${run.id} completed with status ${run.status}.`);
@@ -607,4 +681,5 @@ elements.nextButton.addEventListener("click", () => {
   loadRuns();
 });
 
-await Promise.all([loadScenarios(), loadRuns({ selectFirst: true })]);
+await loadScenarios();
+await loadRuns({ selectFirst: true });
