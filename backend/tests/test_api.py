@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -94,6 +95,7 @@ def add_run(
     *,
     run_status: str,
     output_dispatch_path: str | None = None,
+    started_at: datetime | None = None,
 ) -> int:
     with testing_session() as db:
         run = OptimizationRun(
@@ -101,10 +103,85 @@ def add_run(
             status=run_status,
             output_dispatch_path=output_dispatch_path,
         )
+        if started_at is not None:
+            run.started_at = started_at
         db.add(run)
         db.commit()
         db.refresh(run)
         return run.id
+
+
+def test_list_runs_returns_newest_first_with_bounded_pagination(api: ApiFixture) -> None:
+    client, testing_session, scenario, _, _ = api
+    base_time = datetime(2026, 1, 1, 12, 0, 0)
+    run_ids = [
+        add_run(
+            testing_session,
+            scenario.id,
+            run_status=run_status,
+            started_at=base_time + timedelta(minutes=index),
+        )
+        for index, run_status in enumerate(["failed", "succeeded", "running", "succeeded"])
+    ]
+
+    response = client.get("/runs", params={"limit": 2, "offset": 1})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 4
+    assert payload["limit"] == 2
+    assert payload["offset"] == 1
+    assert [item["id"] for item in payload["items"]] == [run_ids[2], run_ids[1]]
+
+
+def test_list_runs_filters_by_scenario_and_status(api: ApiFixture) -> None:
+    client, testing_session, scenario, _, _ = api
+    with testing_session() as db:
+        other_scenario = Scenario(
+            name="other_scenario",
+            description="Other test scenario",
+            scenario_path="examples/other_scenario.csv",
+            prices_path="examples/other_prices.csv",
+            inflows_path="examples/other_inflows.csv",
+        )
+        db.add(other_scenario)
+        db.commit()
+        db.refresh(other_scenario)
+        other_scenario_id = other_scenario.id
+
+    add_run(testing_session, scenario.id, run_status="failed")
+    expected_run_id = add_run(testing_session, scenario.id, run_status="succeeded")
+    add_run(testing_session, other_scenario_id, run_status="succeeded")
+
+    response = client.get(
+        "/runs",
+        params={"scenario_id": scenario.id, "status": "succeeded"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 1
+    assert [item["id"] for item in payload["items"]] == [expected_run_id]
+    assert payload["items"][0]["scenario_id"] == scenario.id
+    assert payload["items"][0]["status"] == "succeeded"
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "limit=0",
+        "limit=101",
+        "offset=-1",
+        "scenario_id=0",
+        "status=unknown",
+    ],
+)
+def test_list_runs_rejects_invalid_query_parameters(api: ApiFixture, query: str) -> None:
+    client, _, _, _, _ = api
+
+    response = client.get(f"/runs?{query}")
+
+    assert response.status_code == 422
 
 
 def test_create_run_rejects_unknown_scenario(api: ApiFixture) -> None:

@@ -54,8 +54,11 @@ The backend slice is a thin FastAPI service under `backend/`. It is intentionall
 * `GET /health` for container and reverse-proxy health checks.
 * `GET /scenarios` for discovering the bundled yearly scenarios.
 * `POST /runs` for synchronously launching an optimization through the C++ CLI.
+* `GET /runs` for retrieving newest-first persisted run history with bounded pagination and optional filters.
 * `GET /runs/{run_id}` for retrieving persisted run status, summary metrics, and dispatch artifact path.
 * `GET /runs/{run_id}/dispatch.csv` for downloading a succeeded run's guarded CSV artifact.
+
+`GET /runs` returns `{items, total, limit, offset}` and accepts optional `scenario_id` and `status` filters. Results are ordered by newest start time, then run ID.
 
 Run it locally through Docker from the repository root:
 
@@ -71,6 +74,7 @@ curl http://localhost:8000/scenarios
 curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
+curl 'http://localhost:8000/runs?limit=20&offset=0'
 curl http://localhost:8000/runs/1
 curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```

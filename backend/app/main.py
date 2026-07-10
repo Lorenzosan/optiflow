@@ -2,13 +2,14 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 import logging
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, RunSummary, Scenario
@@ -42,6 +43,9 @@ class RunCreate(BaseModel):
     scenario_id: int = Field(description="Database id of the scenario to solve.")
 
 
+RunStatus = Literal["pending", "running", "succeeded", "failed"]
+
+
 class RunSummaryResponse(BaseModel):
     cumulative_profit: float
     export_energy_mwh: float
@@ -68,6 +72,13 @@ class RunResponse(BaseModel):
     output_dispatch_path: str | None
     error_message: str | None
     summary: RunSummaryResponse | None
+
+
+class RunListResponse(BaseModel):
+    items: list[RunResponse]
+    total: int
+    limit: int
+    offset: int
 
 
 REPOSITORY_ROOT_ENV = "OPTIFLOW_REPO_ROOT"
@@ -228,6 +239,39 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
     db.refresh(run)
 
     return run_response(run)
+
+
+@app.get("/runs", response_model=RunListResponse)
+def list_runs(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    scenario_id: int | None = Query(default=None, gt=0),
+    run_status: RunStatus | None = Query(default=None, alias="status"),
+    db: Session = Depends(get_db),
+) -> RunListResponse:
+    query = db.query(OptimizationRun)
+    if scenario_id is not None:
+        query = query.filter(OptimizationRun.scenario_id == scenario_id)
+    if run_status is not None:
+        query = query.filter(OptimizationRun.status == run_status)
+
+    total = query.count()
+    runs = (
+        query.options(
+            joinedload(OptimizationRun.scenario),
+            joinedload(OptimizationRun.summary),
+        )
+        .order_by(OptimizationRun.started_at.desc(), OptimizationRun.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return RunListResponse(
+        items=[run_response(run) for run in runs],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @app.get("/runs/{run_id}", response_model=RunResponse)

@@ -4,6 +4,8 @@ This is a thin FastAPI service for local demo and interview discussion around HT
 
 The backend does not own the optimizer. The C++ optimizer remains in `libs/optimization` and the CLI remains the stable execution boundary. This backend slice exposes scenario discovery from a SQLAlchemy-managed database, a health check, synchronous optimization run execution through the C++ CLI, persisted run summaries, and guarded dispatch CSV download. NGINX and frontend integration are intentionally left for later commits.
 
+`GET /runs` returns `{items, total, limit, offset}` with newest-first ordering, bounded `limit`/`offset` pagination, and optional `scenario_id` and `status` filters.
+
 ## Local Python run
 
 The backend defaults to a local SQLite database when `OPTIFLOW_DATABASE_URL` is not set. This is useful for quick development without Docker. Local optimization execution also requires the C++ CLI to be built at `build/apps/solve_cli/optiflow_solve`.
@@ -28,6 +30,7 @@ curl http://localhost:8000/scenarios
 curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
+curl 'http://localhost:8000/runs?limit=20&offset=0'
 curl http://localhost:8000/runs/1
 curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
@@ -50,6 +53,7 @@ curl http://localhost:8000/scenarios
 curl -X POST http://localhost:8000/runs \
   -H "Content-Type: application/json" \
   -d '{"scenario_id":1}'
+curl 'http://localhost:8000/runs?limit=20&offset=0'
 curl http://localhost:8000/runs/1
 curl -OJ http://localhost:8000/runs/1/dispatch.csv
 ```
@@ -98,6 +102,5 @@ After either transition, `python -m alembic upgrade head` initializes or upgrade
 
 ## Intended next steps
 
-1. Add `GET /runs` with bounded pagination and stable ordering.
-2. Add NGINX as a reverse proxy/load balancer in Docker Compose.
-3. Add a minimal frontend consuming the HTTP API.
+1. Add NGINX as a reverse proxy/load balancer in Docker Compose.
+2. Add a minimal frontend consuming the HTTP API.
