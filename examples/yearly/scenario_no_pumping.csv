@@ -20,4 +20,3 @@ turbine_flow_steps,3
 spill_flow_steps,2
 pump_flow_steps,1
 discount_factor,1
-series_start_utc,2026-12-31T23:00:00Z

@@ -2,9 +2,9 @@
 
 The frontend is a dependency-free browser application served by NGINX. It uses plain HTML, CSS, and ES modules and sends same-origin requests through `/api/`.
 
-The custom-scenario editor generates the reservoir-only `key,value` optimizer schema, validates price and inflow files, records the UTC start of the optimization series, and submits immutable inputs for server-side C++ validation.
+The custom-scenario editor generates the reservoir-only `key,value` optimizer schema, validates separate timestamped price and inflow files, and submits immutable inputs for server-side C++ validation.
 
-The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It shows one row per period, with Baseload, Peak, and Off-peak columns for average power, energy, and P&L. The trader uses the optimization series start and time step, converts intervals to `Europe/Zurich`, and classifies Peak as Monday-Friday 09:00-20:00 with the end hour exclusive. The first twelve calendar months are monthly and later periods are quarterly. Units are shown on scenario inputs, summaries, and trader outputs.
+The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It shows one row per reporting period, with Baseload, Peak, and Off-peak columns for average power, energy, and P&L. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich. The first twelve calendar months are monthly and later periods are quarterly. Units are shown on scenario inputs, summaries, and trader outputs.
 
 Run frontend checks from the repository root:
 

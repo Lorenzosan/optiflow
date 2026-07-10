@@ -15,11 +15,7 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, RunSummary, Scenario
 from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
-from backend.app.scenario_timeline import (
-    ScenarioTimelineError,
-    ScenarioTimelineMetadata,
-    load_scenario_timeline,
-)
+from backend.app.scenario_parameters import ScenarioParameterError, load_time_step_hours
 from backend.app.scenario_uploads import (
     ScenarioUploadError,
     ScenarioValidatorError,
@@ -38,18 +34,13 @@ class ScenarioFiles(BaseModel):
     inflows: str = Field(description="Path to the inflows CSV, relative to the repository root.")
 
 
-class ScenarioTimelineResponse(BaseModel):
-    series_start_utc: datetime
-    time_step_hours: float
-
-
 class ScenarioResponse(BaseModel):
     id: int
     name: str
     description: str
     files: ScenarioFiles
     available: bool
-    timeline: ScenarioTimelineResponse | None
+    time_step_hours: float | None
 
 
 class HealthResponse(BaseModel):
@@ -113,17 +104,6 @@ def files_available(root: Path, files: ScenarioFiles) -> bool:
     )
 
 
-def timeline_response(
-    metadata: ScenarioTimelineMetadata | None,
-) -> ScenarioTimelineResponse | None:
-    if metadata is None:
-        return None
-    return ScenarioTimelineResponse(
-        series_start_utc=metadata.series_start_utc,
-        time_step_hours=metadata.time_step_hours,
-    )
-
-
 def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
     files = ScenarioFiles(
         scenario=scenario.scenario_path,
@@ -131,13 +111,13 @@ def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
         inflows=scenario.inflows_path,
     )
     available = files_available(root, files)
-    timeline = None
+    time_step_hours = None
     if available:
         try:
-            timeline = load_scenario_timeline(root / files.scenario)
-        except ScenarioTimelineError:
+            time_step_hours = load_time_step_hours(root / files.scenario)
+        except ScenarioParameterError:
             logger.warning(
-                "Ignoring invalid timeline metadata for scenario %s",
+                "Could not read time_step_hours for scenario %s",
                 scenario.name,
                 exc_info=True,
             )
@@ -147,7 +127,7 @@ def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
         description=scenario.description,
         files=files,
         available=available,
-        timeline=timeline_response(timeline),
+        time_step_hours=time_step_hours,
     )
 
 
@@ -212,18 +192,6 @@ async def create_scenario(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Scenario validation service is unavailable",
-        ) from error
-
-    try:
-        load_scenario_timeline(root / stored.scenario_path)
-    except ScenarioTimelineError as error:
-        remove_scenario_directory(stored.directory)
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Scenario timeline metadata is invalid",
-                "error": str(error),
-            },
         ) from error
 
     existing = db.query(Scenario).filter(Scenario.name == stored.name).one_or_none()

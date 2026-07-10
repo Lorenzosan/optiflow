@@ -4,7 +4,7 @@ OptiFlow models one pumped-storage hydro plant. The stored-energy inventory is t
 
 ## Time indexing
 
-The optimization horizon has `N` decisions indexed from `0` to `N - 1`. `time_step_hours` is the duration of one decision interval. Price and inflow files use consecutive `time_index` values starting at zero.
+The optimization horizon has `N` decisions indexed internally from `0` to `N - 1`. `time_step_hours` is the duration of one decision interval. Price and inflow files carry matching canonical UTC interval-start timestamps. Timestamps must be strictly increasing and spaced exactly by `time_step_hours`.
 
 ## State
 
@@ -77,6 +77,6 @@ The Bellman value function is tabulated on a one-dimensional uniform reservoir g
 
 ## Dispatch and diagnostics
 
-The dispatch CSV contains state, hydraulic actions, net power, reward, and cumulative profit. Runner diagnostics include horizon size, reservoir grid size, action count, solve/simulation timings, import/export energy, final reservoir volume, and turbine/pump/spill/wait counters.
+The dispatch CSV contains the generated `time_index`, authoritative `timestamp_utc`, state, hydraulic actions, net power, reward, and cumulative profit. Runner diagnostics include horizon size, reservoir grid size, action count, solve/simulation timings, import/export energy, final reservoir volume, and turbine/pump/spill/wait counters.
 
 `tools/validate_dispatch.py` checks the generated trajectory against input series, grid actions, physical constraints, state transitions, power, reward, cumulative profit, terminal bounds, and optional CLI diagnostics.

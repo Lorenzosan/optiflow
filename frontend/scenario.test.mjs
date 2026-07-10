@@ -9,29 +9,40 @@ import {
 } from "./scenario.mjs";
 
 function defaultValues() {
-  return {
-    ...Object.fromEntries(
-      SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
-        .map((definition) => [definition.key, String(definition.defaultValue)]),
-    ),
-    series_start_utc: "2026-12-31T23:00:00Z",
-  };
+  return Object.fromEntries(
+    SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
+      .map((definition) => [definition.key, String(definition.defaultValue)]),
+  );
 }
 
-test("buildScenarioCsv emits the reservoir-only schema", () => {
+const PRICE_CSV = [
+  "timestamp_utc,price",
+  "2027-01-01T00:00:00Z,-10",
+  "2027-01-01T01:00:00Z,42.5",
+  "",
+].join("\n");
+
+const INFLOW_CSV = [
+  "timestamp_utc,natural_inflow",
+  "2027-01-01T00:00:00Z,3",
+  "2027-01-01T01:00:00Z,1",
+  "",
+].join("\n");
+
+test("buildScenarioCsv emits only the optimizer scalar schema", () => {
   const csv = buildScenarioCsv("custom_case", defaultValues());
   const lines = csv.trimEnd().split("\n");
   assert.equal(lines[0], "key,value");
   assert.equal(lines[1], "scenario_name,custom_case");
   assert.equal(
     lines.length,
-    3 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
+    2 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
   );
   assert.match(csv, /terminal_target_reservoir_volume,250/);
   assert.match(csv, /discount_factor,1/);
-  assert.equal(lines[2], "series_start_utc,2026-12-31T23:00:00Z");
+  assert.doesNotMatch(csv, /market_|peak_|series_start/);
   assert.deepEqual(
-    lines.slice(3).map((line) => line.split(",", 1)[0]),
+    lines.slice(2).map((line) => line.split(",", 1)[0]),
     SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => field.key),
   );
 });
@@ -52,36 +63,77 @@ test("buildScenarioCsv requires integer solver counts", () => {
   assert.throws(() => buildScenarioCsv("bad_steps", values), /must be an integer/);
 });
 
-test("validateSeriesCsv accepts negative prices", () => {
-  assert.equal(validateSeriesCsv("time_index,price\n0,-10\n1,42.5\n", "price").rowCount, 2);
+test("validateSeriesCsv accepts canonical UTC timestamps and negative prices", () => {
+  const result = validateSeriesCsv(PRICE_CSV, "price");
+  assert.equal(result.rowCount, 2);
+  assert.equal(result.timestamps[0].text, "2027-01-01T00:00:00Z");
+});
+
+test("validateSeriesCsv rejects malformed or invalid timestamps", () => {
+  assert.throws(
+    () => validateSeriesCsv(
+      "timestamp_utc,price\n2027-01-01T00:00:00+00:00,1\n",
+      "price",
+    ),
+    /YYYY-MM-DDTHH:MM:SSZ/,
+  );
+  assert.throws(
+    () => validateSeriesCsv(
+      "timestamp_utc,price\n2027-02-30T00:00:00Z,1\n",
+      "price",
+    ),
+    /invalid timestamp_utc/,
+  );
+});
+
+test("validateSeriesCsv rejects non-increasing timestamps", () => {
+  assert.throws(
+    () => validateSeriesCsv(
+      "timestamp_utc,price\n2027-01-01T01:00:00Z,1\n2027-01-01T00:00:00Z,2\n",
+      "price",
+    ),
+    /strictly increasing/,
+  );
 });
 
 test("validateSeriesCsv rejects negative inflows", () => {
   assert.throws(
-    () => validateSeriesCsv("time_index,natural_inflow\n0,3\n1,-1\n", "natural_inflow"),
+    () => validateSeriesCsv(
+      "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,3\n2027-01-01T01:00:00Z,-1\n",
+      "natural_inflow",
+    ),
     /negative natural_inflow/,
   );
 });
 
-test("validateSeriesCsv rejects non-sequential indices", () => {
+test("validateSeriesPair requires identical timestamps", () => {
   assert.throws(
-    () => validateSeriesCsv("time_index,price\n0,1\n2,3\n", "price"),
-    /must use time_index 1/,
+    () => validateSeriesPair(
+      PRICE_CSV,
+      "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,3\n2027-01-01T02:00:00Z,1\n",
+      1,
+    ),
+    /timestamps differ/,
   );
+});
+
+test("validateSeriesPair enforces spacing from time_step_hours", () => {
+  const twoHourPrices = PRICE_CSV.replace("T01:00:00Z", "T02:00:00Z");
+  const twoHourInflows = INFLOW_CSV.replace("T01:00:00Z", "T02:00:00Z");
+  assert.throws(
+    () => validateSeriesPair(twoHourPrices, twoHourInflows, 1),
+    /must equal time_step_hours/,
+  );
+  assert.equal(validateSeriesPair(twoHourPrices, twoHourInflows, 2).rowCount, 2);
 });
 
 test("validateSeriesPair rejects mismatched horizons", () => {
   assert.throws(
     () => validateSeriesPair(
-      "time_index,price\n0,1\n1,2\n",
-      "time_index,natural_inflow\n0,3\n",
+      PRICE_CSV,
+      "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,3\n",
+      1,
     ),
     /horizons differ/,
   );
-});
-
-test("buildScenarioCsv rejects an invalid series start", () => {
-  const values = defaultValues();
-  values.series_start_utc = "2027-01-01T00:00:00+01:00";
-  assert.throws(() => buildScenarioCsv("bad_start", values), /must be an ISO-8601 UTC datetime/);
 });

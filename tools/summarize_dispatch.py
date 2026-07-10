@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -45,22 +47,44 @@ def numeric_param(params: dict[str, str], key: str) -> float:
     return value
 
 
-def read_series(path: Path, value_column: str) -> list[float]:
+def parse_timestamp_utc(value: str, context: str) -> datetime:
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value) is None:
+        fail(f"{context}: timestamp_utc must use YYYY-MM-DDTHH:MM:SSZ")
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError as error:
+        raise SummaryError(f"{context}: invalid timestamp_utc {value}") from error
+
+
+def read_series(path: Path, value_column: str) -> tuple[list[str], list[datetime], list[float]]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        if reader.fieldnames != ["time_index", value_column]:
-            fail(f"{path}: expected header time_index,{value_column}")
-        result: list[float] = []
-        for expected_index, row in enumerate(reader):
-            if int(row["time_index"]) != expected_index:
-                fail(f"{path}: invalid time_index at row {expected_index + 2}")
-            result.append(float(row[value_column]))
-        return result
+        if reader.fieldnames != ["timestamp_utc", value_column]:
+            fail(f"{path}: expected header timestamp_utc,{value_column}")
+        timestamp_texts: list[str] = []
+        timestamps: list[datetime] = []
+        values: list[float] = []
+        for row_number, row in enumerate(reader, start=2):
+            timestamp_text = row["timestamp_utc"].strip()
+            timestamp = parse_timestamp_utc(timestamp_text, f"{path}:{row_number}")
+            if timestamps and timestamp <= timestamps[-1]:
+                fail(f"{path}:{row_number}: timestamps must be strictly increasing")
+            try:
+                value = float(row[value_column])
+            except ValueError as error:
+                raise SummaryError(f"{path}:{row_number}: invalid {value_column}") from error
+            if not math.isfinite(value):
+                fail(f"{path}:{row_number}: nonfinite {value_column}")
+            timestamp_texts.append(timestamp_text)
+            timestamps.append(timestamp)
+            values.append(value)
+        return timestamp_texts, timestamps, values
 
 
-def read_dispatch(path: Path) -> list[dict[str, float]]:
+def read_dispatch(path: Path) -> list[dict[str, float | str]]:
     expected = [
         "time_index",
+        "timestamp_utc",
         "price",
         "natural_inflow",
         "reservoir_volume",
@@ -76,10 +100,21 @@ def read_dispatch(path: Path) -> list[dict[str, float]]:
         reader = csv.DictReader(handle)
         if reader.fieldnames != expected:
             fail(f"{path}: unexpected dispatch header")
-        return [
-            {key: float(value) for key, value in row.items()}
-            for row in reader
-        ]
+        rows: list[dict[str, float | str]] = []
+        for expected_index, row in enumerate(reader):
+            if int(row["time_index"]) != expected_index:
+                fail(f"{path}: invalid time_index at row {expected_index + 2}")
+            timestamp_text = row["timestamp_utc"].strip()
+            parse_timestamp_utc(timestamp_text, f"{path}:{expected_index + 2}")
+            parsed: dict[str, float | str] = {
+                key: float(value)
+                for key, value in row.items()
+                if key not in {"time_index", "timestamp_utc"}
+            }
+            parsed["time_index"] = float(expected_index)
+            parsed["timestamp_utc"] = timestamp_text
+            rows.append(parsed)
+        return rows
 
 
 def weighted_average(total: float, energy: float) -> str:
@@ -97,8 +132,8 @@ def metric(label: str, value: float | int | str, unit: str = "") -> None:
 
 def summarize(args: argparse.Namespace) -> None:
     params = read_key_value_csv(args.scenario)
-    prices = read_series(args.prices, "price")
-    inflows = read_series(args.inflows, "natural_inflow")
+    price_timestamp_texts, price_timestamps, prices = read_series(args.prices, "price")
+    inflow_timestamp_texts, inflow_timestamps, inflows = read_series(args.inflows, "natural_inflow")
     rows = read_dispatch(args.dispatch)
     if not rows:
         fail("dispatch file is empty")
@@ -106,6 +141,20 @@ def summarize(args: argparse.Namespace) -> None:
         fail("dispatch and input horizons differ")
 
     dt = numeric_param(params, "time_step_hours")
+    interval_seconds = dt * 3600.0
+    rounded_interval_seconds = round(interval_seconds)
+    if not math.isclose(interval_seconds, rounded_interval_seconds, abs_tol=1.0e-9):
+        fail("time_step_hours must resolve to a whole number of seconds")
+    for index in range(len(rows)):
+        if price_timestamp_texts[index] != inflow_timestamp_texts[index]:
+            fail(f"price and inflow timestamps differ at index {index}")
+        if rows[index]["timestamp_utc"] != price_timestamp_texts[index]:
+            fail(f"dispatch timestamp mismatch at index {index}")
+        if index > 0:
+            actual_seconds = (price_timestamps[index] - price_timestamps[index - 1]).total_seconds()
+            if actual_seconds != rounded_interval_seconds:
+                fail(f"input timestamp spacing mismatch at index {index}")
+
     water_to_power = numeric_param(params, "water_to_power_factor")
     turbine_efficiency = numeric_param(params, "turbine_efficiency")
     pump_efficiency = numeric_param(params, "pump_efficiency")

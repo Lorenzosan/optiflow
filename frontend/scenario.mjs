@@ -54,9 +54,6 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   }),
 ]);
 
-export const DEFAULT_SERIES_START_UTC = "2026-12-31T23:00:00Z";
-
-
 const ALL_FIELDS = SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields);
 
 function requireCondition(condition, message) {
@@ -120,26 +117,10 @@ function validateBounds(values) {
   }
 }
 
-function parseSeriesStartUtc(value) {
-  const seriesStartUtc = String(value ?? "").trim();
-  requireCondition(seriesStartUtc.length > 0, "Series start (UTC) is required.");
-  requireCondition(!/[\r\n,]/.test(seriesStartUtc), "Series start (UTC) is invalid.");
-  requireCondition(
-    /(?:Z|\+00:00)$/.test(seriesStartUtc) && Number.isFinite(Date.parse(seriesStartUtc)),
-    "Series start must be an ISO-8601 UTC datetime ending in Z or +00:00.",
-  );
-  return seriesStartUtc;
-}
-
 export function buildScenarioCsv(name, values) {
   const normalizedName = normalizeScenarioName(name);
   const parsedValues = {};
-  const seriesStartUtc = parseSeriesStartUtc(values.series_start_utc);
-  const lines = [
-    "key,value",
-    `scenario_name,${normalizedName}`,
-    `series_start_utc,${seriesStartUtc}`,
-  ];
+  const lines = ["key,value", `scenario_name,${normalizedName}`];
   for (const definition of ALL_FIELDS) {
     const parsed = parseFieldValue(definition, values[definition.key]);
     parsedValues[definition.key] = parsed.value;
@@ -147,6 +128,21 @@ export function buildScenarioCsv(name, values) {
   }
   validateBounds(parsedValues);
   return `${lines.join("\n")}\n`;
+}
+
+const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+function parseTimestampUtc(value, rowNumber) {
+  requireCondition(
+    UTC_TIMESTAMP_PATTERN.test(value),
+    `Row ${rowNumber} timestamp_utc must use YYYY-MM-DDTHH:MM:SSZ.`,
+  );
+  const milliseconds = Date.parse(value);
+  const canonical = Number.isFinite(milliseconds)
+    ? new Date(milliseconds).toISOString().replace(".000Z", "Z")
+    : "";
+  requireCondition(canonical === value, `Row ${rowNumber} has an invalid timestamp_utc.`);
+  return Object.freeze({ text: value, milliseconds });
 }
 
 export function validateSeriesCsv(text, valueColumn) {
@@ -158,39 +154,75 @@ export function validateSeriesCsv(text, valueColumn) {
   const lines = String(text).split(/\r?\n/);
   const header = (lines.shift() ?? "").split(",").map((item) => item.trim());
   requireCondition(
-    header.length === 2 && header[0] === "time_index" && header[1] === valueColumn,
-    `Expected header time_index,${valueColumn}.`,
+    header.length === 2 && header[0] === "timestamp_utc" && header[1] === valueColumn,
+    `Expected header timestamp_utc,${valueColumn}.`,
   );
 
-  let expectedIndex = 0;
+  const timestamps = [];
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const line = lines[lineIndex].trim();
     if (!line) continue;
     const columns = line.split(",").map((item) => item.trim());
-    requireCondition(columns.length === 2, `Row ${lineIndex + 2} must contain two columns.`);
-    requireCondition(/^\d+$/.test(columns[0]), `Row ${lineIndex + 2} has an invalid time_index.`);
-    const timeIndex = Number(columns[0]);
-    requireCondition(
-      Number.isSafeInteger(timeIndex) && timeIndex === expectedIndex,
-      `Row ${lineIndex + 2} must use time_index ${expectedIndex}.`,
-    );
-    const value = Number(columns[1]);
-    requireCondition(Number.isFinite(value), `Row ${lineIndex + 2} has an invalid ${valueColumn}.`);
-    if (valueColumn === "natural_inflow") {
-      requireCondition(value >= 0, `Row ${lineIndex + 2} has a negative natural_inflow.`);
+    const rowNumber = lineIndex + 2;
+    requireCondition(columns.length === 2, `Row ${rowNumber} must contain two columns.`);
+    const timestamp = parseTimestampUtc(columns[0], rowNumber);
+    if (timestamps.length > 0) {
+      requireCondition(
+        timestamp.milliseconds > timestamps.at(-1).milliseconds,
+        `Row ${rowNumber} timestamp_utc must be strictly increasing.`,
+      );
     }
-    expectedIndex += 1;
+    const value = Number(columns[1]);
+    requireCondition(Number.isFinite(value), `Row ${rowNumber} has an invalid ${valueColumn}.`);
+    if (valueColumn === "natural_inflow") {
+      requireCondition(value >= 0, `Row ${rowNumber} has a negative natural_inflow.`);
+    }
+    timestamps.push(timestamp);
   }
-  requireCondition(expectedIndex > 0, `${valueColumn} CSV must contain at least one data row.`);
-  return Object.freeze({ rowCount: expectedIndex });
+  requireCondition(timestamps.length > 0, `${valueColumn} CSV must contain at least one data row.`);
+  return Object.freeze({ rowCount: timestamps.length, timestamps: Object.freeze(timestamps) });
 }
 
-export function validateSeriesPair(pricesText, inflowsText) {
+export function validateSeriesPair(pricesText, inflowsText, timeStepHours) {
   const prices = validateSeriesCsv(pricesText, "price");
   const inflows = validateSeriesCsv(inflowsText, "natural_inflow");
   requireCondition(
     prices.rowCount === inflows.rowCount,
     `Price and inflow horizons differ: ${prices.rowCount} versus ${inflows.rowCount}.`,
   );
-  return Object.freeze({ rowCount: prices.rowCount });
+
+  const parsedTimeStepHours = Number(timeStepHours);
+  requireCondition(
+    Number.isFinite(parsedTimeStepHours) && parsedTimeStepHours > 0,
+    "Time step must be finite and positive before validating the series.",
+  );
+  const intervalSeconds = parsedTimeStepHours * 3600;
+  const roundedIntervalSeconds = Math.round(intervalSeconds);
+  requireCondition(
+    Math.abs(intervalSeconds - roundedIntervalSeconds) <= 1e-9,
+    "Time step must resolve to a whole number of seconds for timestamped series.",
+  );
+  const intervalMilliseconds = roundedIntervalSeconds * 1000;
+
+  for (let index = 0; index < prices.rowCount; index += 1) {
+    const priceTimestamp = prices.timestamps[index];
+    const inflowTimestamp = inflows.timestamps[index];
+    requireCondition(
+      priceTimestamp.text === inflowTimestamp.text,
+      `Price and inflow timestamps differ at row ${index + 2}.`,
+    );
+    if (index > 0) {
+      requireCondition(
+        priceTimestamp.milliseconds - prices.timestamps[index - 1].milliseconds
+          === intervalMilliseconds,
+        `Timestamp spacing at row ${index + 2} must equal time_step_hours.`,
+      );
+    }
+  }
+
+  return Object.freeze({
+    rowCount: prices.rowCount,
+    startTimestampUtc: prices.timestamps[0].text,
+    endTimestampUtc: prices.timestamps.at(-1).text,
+  });
 }

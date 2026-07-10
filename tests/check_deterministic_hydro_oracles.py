@@ -16,6 +16,7 @@ from pathlib import Path
 
 DISPATCH_HEADER = [
     "time_index",
+    "timestamp_utc",
     "price",
     "natural_inflow",
     "reservoir_volume",
@@ -32,7 +33,7 @@ DISPATCH_HEADER = [
 @dataclass(frozen=True)
 class OracleCase:
     directory: str
-    expected_rows: tuple[dict[str, float], ...]
+    expected_rows: tuple[dict[str, float | str], ...]
     expected_summary: dict[str, float | int]
 
 
@@ -42,6 +43,7 @@ CASES = (
         expected_rows=(
             {
                 "time_index": 0,
+                "timestamp_utc": "2027-01-04T00:00:00Z",
                 "price": -20.0,
                 "natural_inflow": 0.0,
                 "reservoir_volume": 0.0,
@@ -55,6 +57,7 @@ CASES = (
             },
             {
                 "time_index": 1,
+                "timestamp_utc": "2027-01-04T01:00:00Z",
                 "price": 100.0,
                 "natural_inflow": 0.0,
                 "reservoir_volume": 10.0,
@@ -83,6 +86,7 @@ CASES = (
         expected_rows=(
             {
                 "time_index": 0,
+                "timestamp_utc": "2027-01-04T00:00:00Z",
                 "price": 30.0,
                 "natural_inflow": 0.0,
                 "reservoir_volume": 0.0,
@@ -96,6 +100,7 @@ CASES = (
             },
             {
                 "time_index": 1,
+                "timestamp_utc": "2027-01-04T01:00:00Z",
                 "price": 50.0,
                 "natural_inflow": 0.0,
                 "reservoir_volume": 0.0,
@@ -124,6 +129,7 @@ CASES = (
         expected_rows=(
             {
                 "time_index": 0,
+                "timestamp_utc": "2027-01-04T00:00:00Z",
                 "price": 30.0,
                 "natural_inflow": 0.0,
                 "reservoir_volume": 0.0,
@@ -137,6 +143,7 @@ CASES = (
             },
             {
                 "time_index": 1,
+                "timestamp_utc": "2027-01-04T01:00:00Z",
                 "price": 60.0,
                 "natural_inflow": 0.0,
                 "reservoir_volume": 10.0,
@@ -165,6 +172,7 @@ CASES = (
         expected_rows=(
             {
                 "time_index": 0,
+                "timestamp_utc": "2027-01-04T00:00:00Z",
                 "price": -10.0,
                 "natural_inflow": 5.0,
                 "reservoir_volume": 8.0,
@@ -205,14 +213,20 @@ def require_close(label: str, actual: float, expected: float, tolerance: float =
         raise AssertionError(f"{label}: expected {expected}, got {actual}")
 
 
-def read_dispatch(path: Path) -> list[dict[str, float]]:
+def read_dispatch(path: Path) -> list[dict[str, float | str]]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
         if reader.fieldnames != DISPATCH_HEADER:
             raise AssertionError(f"{path}: unexpected dispatch header {reader.fieldnames}")
-        rows = []
+        rows: list[dict[str, float | str]] = []
         for row in reader:
-            rows.append({key: float(value) for key, value in row.items()})
+            parsed: dict[str, float | str] = {
+                key: float(value)
+                for key, value in row.items()
+                if key != "timestamp_utc"
+            }
+            parsed["timestamp_utc"] = row["timestamp_utc"]
+            rows.append(parsed)
         return rows
 
 
@@ -245,9 +259,16 @@ def assert_dispatch(case: OracleCase, rows: list[dict[str, float]]) -> None:
         )
     for row_index, (actual, expected) in enumerate(zip(rows, case.expected_rows, strict=True)):
         for field, expected_value in expected.items():
+            if isinstance(expected_value, str):
+                if actual[field] != expected_value:
+                    raise AssertionError(
+                        f"{case.directory} row {row_index} field {field}: "
+                        f"expected {expected_value}, got {actual[field]}"
+                    )
+                continue
             require_close(
                 f"{case.directory} row {row_index} field {field}",
-                actual[field],
+                float(actual[field]),
                 float(expected_value),
             )
 

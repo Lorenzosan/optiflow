@@ -100,7 +100,7 @@ Endpoints:
 * `GET /runs/{run_id}`
 * `GET /runs/{run_id}/dispatch.csv`
 
-The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates each reporting period into Baseload, Peak, and Off-peak metric columns using scenario calendar metadata.
+The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its timestamped dispatch into Baseload, Peak, and Off-peak columns. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich.
 
 ## Scenario schema
 
@@ -130,14 +130,19 @@ pump_flow_steps
 discount_factor
 ```
 
-Web scenarios also include:
+Price and inflow files are separate timestamped series:
 
-```text
-series_start_utc
+```csv
+timestamp_utc,price
+2027-01-01T00:00:00Z,25
 ```
 
-`series_start_utc` anchors `time_index = 0`. The trader view advances that same timeline using the scenario's `time_step_hours`. Baseload contains every interval; Peak is fixed to Monday-Friday 09:00-20:00 in `Europe/Zurich`, with the end hour exclusive; Off-peak contains the remaining intervals.
+```csv
+timestamp_utc,natural_inflow
+2027-01-01T00:00:00Z,4
+```
 
-Unknown scenario keys are rejected explicitly rather than silently ignored.
+Timestamps use canonical UTC `YYYY-MM-DDTHH:MM:SSZ`, must match row by row, and must be spaced exactly by `time_step_hours`. The dispatch retains `time_index` and adds the authoritative `timestamp_utc`.
+
 
 Model units and equations are documented in [`docs/model.md`](docs/model.md).

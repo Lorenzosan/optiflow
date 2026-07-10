@@ -69,12 +69,6 @@
                 <label for="scenario-description-input">Description</label>
                 <textarea id="scenario-description-input" name="description" maxlength="2000" required></textarea>
               </div>
-              <div class="form-field">
-                <label for="series-start-utc">Series start [UTC]</label>
-                <input id="series-start-utc" name="series_start_utc" type="text"
-                       placeholder="2026-12-31T23:00:00Z" required>
-                <small>Time index zero. Trader products use Europe/Zurich and fixed weekday peak hours.</small>
-              </div>
             </div>
 
             <div id="scenario-fields" class="parameter-groups"></div>
@@ -85,12 +79,12 @@
                 <div class="form-field">
                   <label for="prices-file">Prices CSV</label>
                   <input id="prices-file" name="prices" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>time_index,price</code>; price unit is currency/MWh.</small>
+                  <small>Header: <code>timestamp_utc,price</code>; timestamps use <code>YYYY-MM-DDTHH:MM:SSZ</code>.</small>
                 </div>
                 <div class="form-field">
                   <label for="inflows-file">Inflows CSV</label>
                   <input id="inflows-file" name="inflows" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>time_index,natural_inflow</code>; inflow unit is volume units/h.</small>
+                  <small>Header: <code>timestamp_utc,natural_inflow</code>; timestamps must match prices exactly.</small>
                 </div>
               </div>
               <p id="series-preview" class="message" role="status" aria-live="polite">

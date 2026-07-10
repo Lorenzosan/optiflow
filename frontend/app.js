@@ -1,5 +1,4 @@
 import {
-  DEFAULT_SERIES_START_UTC,
   SCENARIO_FILE_LIMIT_BYTES,
   SCENARIO_PARAMETER_GROUPS,
   SERIES_FILE_LIMIT_BYTES,
@@ -36,7 +35,6 @@ const elements = {
   scenarioForm: document.querySelector("#scenario-form"),
   scenarioName: document.querySelector("#scenario-name"),
   scenarioDescriptionInput: document.querySelector("#scenario-description-input"),
-  seriesStartUtc: document.querySelector("#series-start-utc"),
   scenarioFields: document.querySelector("#scenario-fields"),
   pricesFile: document.querySelector("#prices-file"),
   inflowsFile: document.querySelector("#inflows-file"),
@@ -293,7 +291,8 @@ async function validateSelectedSeries() {
     pricesFile.text(),
     inflowsFile.text(),
   ]);
-  const summary = validateSeriesPair(pricesText, inflowsText);
+  const timeStepInput = elements.scenarioForm.elements.namedItem("time_step_hours");
+  const summary = validateSeriesPair(pricesText, inflowsText, timeStepInput?.value);
   return { pricesFile, inflowsFile, summary };
 }
 
@@ -306,7 +305,7 @@ async function updateSeriesPreview() {
 
   try {
     const { summary } = await validateSelectedSeries();
-    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching time steps detected.`;
+    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching timestamped steps detected.`;
     elements.seriesPreview.classList.remove("error");
     elements.seriesPreview.classList.add("success");
   } catch (error) {
@@ -565,15 +564,15 @@ async function renderRunDetails(run) {
   }
 
   const scenario = state.scenarios.find((item) => item.id === run.scenario_id);
-  if (!scenario?.timeline) {
-    clearTraderView("Trader view unavailable: this scenario has no series timeline.");
+  if (!Number.isFinite(Number(scenario?.time_step_hours))) {
+    clearTraderView("Trader view unavailable: the scenario time step could not be read.");
     return;
   }
 
   clearTraderView("Loading the selected dispatch…");
   try {
     const dispatchText = await apiRequest(`/runs/${run.id}/dispatch.csv`);
-    const rows = buildTraderRows(dispatchText, scenario.timeline);
+    const rows = buildTraderRows(dispatchText, scenario.time_step_hours);
     if (requestId !== state.traderRequestId) {
       return;
     }
@@ -582,9 +581,9 @@ async function renderRunDetails(run) {
     elements.traderCaption.textContent =
       `Run #${run.id}. Baseload contains all intervals. Peak is Monday–Friday `
       + `${String(PEAK_START_HOUR).padStart(2, "0")}:00–`
-      + `${String(PEAK_END_HOUR).padStart(2, "0")}:00 ${TRADER_TIME_ZONE}; `
-      + "the end hour is exclusive. The first 12 calendar months are monthly, "
-      + "then results are quarterly.";
+      + `${String(PEAK_END_HOUR).padStart(2, "0")}:00 `
+      + `in ${TRADER_TIME_ZONE}; the end hour is exclusive. `
+      + "The first 12 calendar months are monthly, then results are quarterly.";
   } catch (error) {
     if (requestId !== state.traderRequestId) {
       return;
@@ -667,8 +666,9 @@ function resetAndLoadRuns() {
 }
 
 renderScenarioFields();
-elements.seriesStartUtc.value = DEFAULT_SERIES_START_UTC;
-elements.seriesStartUtc.defaultValue = DEFAULT_SERIES_START_UTC;
+
+const timeStepInput = elements.scenarioForm.elements.namedItem("time_step_hours");
+timeStepInput?.addEventListener("change", () => updateSeriesPreview());
 
 elements.scenarioForm.addEventListener("submit", createScenario);
 elements.scenarioForm.addEventListener("reset", () => {

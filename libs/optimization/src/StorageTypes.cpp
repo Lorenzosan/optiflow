@@ -43,8 +43,15 @@ Action::Action(double turbine_flow_value, double spill_flow_value, double pump_f
       spill_flow(spill_flow_value),
       pump_flow(pump_flow_value) {}
 
+Exogenous::Exogenous(std::string timestamp_utc_value,
+                       double electricity_price_value,
+                       double natural_inflow_value)
+    : timestamp_utc(std::move(timestamp_utc_value)),
+      electricity_price(electricity_price_value),
+      natural_inflow(natural_inflow_value) {}
+
 Exogenous::Exogenous(double electricity_price_value, double natural_inflow_value)
-    : electricity_price(electricity_price_value), natural_inflow(natural_inflow_value) {}
+    : Exogenous("", electricity_price_value, natural_inflow_value) {}
 
 Outcome::Outcome(State next_state_value,
                  double turbine_power_value,

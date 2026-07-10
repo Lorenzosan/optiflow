@@ -42,6 +42,7 @@ def read_params(path: Path) -> dict[str, str]:
 def read_dispatch(path: Path) -> list[dict[str, float]]:
     expected = [
         "time_index",
+        "timestamp_utc",
         "price",
         "natural_inflow",
         "reservoir_volume",
@@ -57,7 +58,14 @@ def read_dispatch(path: Path) -> list[dict[str, float]]:
         reader = csv.DictReader(handle)
         if reader.fieldnames != expected:
             fail(f"{path}: unexpected dispatch header")
-        return [{key: float(value) for key, value in row.items()} for row in reader]
+        rows: list[dict[str, float]] = []
+        for row in reader:
+            rows.append({
+                key: float(value)
+                for key, value in row.items()
+                if key != "timestamp_utc"
+            })
+        return rows
 
 
 def safe_name(name: str) -> str:

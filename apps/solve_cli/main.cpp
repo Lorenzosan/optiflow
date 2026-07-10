@@ -28,8 +28,8 @@ void print_usage(const char* program_name) {
               << "(--output <dispatch.csv> [--summary-output <summary.json>] | --validate-only)\n\n"
               << "Inputs:\n"
               << "  --scenario        CSV file with key,value rows for scenario, model, terminal, and solver parameters.\n"
-              << "  --prices          CSV file with time_index,price rows.\n"
-              << "  --inflows         CSV file with time_index,natural_inflow rows.\n"
+              << "  --prices          CSV file with timestamp_utc,price rows.\n"
+              << "  --inflows         CSV file with timestamp_utc,natural_inflow rows.\n"
               << "  --output          Dispatch CSV output path. Required unless --validate-only is used.\n"
               << "  --summary-output  Optional machine-readable run summary JSON path.\n"
               << "  --validate-only   Parse and validate all inputs without solving or writing output files.\n";
@@ -87,11 +87,12 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
         throw std::runtime_error("cannot open output file: " + output_path.string());
     }
 
-    output << "time_index,price,natural_inflow,reservoir_volume,"
+    output << "time_index,timestamp_utc,price,natural_inflow,reservoir_volume,"
            << "turbine_flow,spill_flow,pump_flow,next_reservoir_volume,"
            << "net_power,reward,cumulative_profit\n";
     for (const optiflow::core::DispatchStep& step : trajectory) {
         output << step.time_index << ','
+               << step.exogenous.timestamp_utc << ','
                << step.exogenous.electricity_price << ','
                << step.exogenous.natural_inflow << ','
                << step.state.reservoir_volume << ','

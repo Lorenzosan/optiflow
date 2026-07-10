@@ -29,9 +29,11 @@ struct Action {
  * @brief Exogenous market and hydrological inputs for one time step.
  */
 struct Exogenous {
+    std::string timestamp_utc; ///< Canonical UTC interval start, empty only for programmatic tests.
     double electricity_price; ///< Electricity price in currency per MWh.
     double natural_inflow; ///< Natural inflow in reservoir-volume units per hour.
 
+    Exogenous(std::string timestamp_utc, double electricity_price, double natural_inflow);
     Exogenous(double electricity_price, double natural_inflow);
 };
 

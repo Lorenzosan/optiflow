@@ -1,6 +1,5 @@
 key,value
 scenario_name,sample_day
-series_start_utc,2026-12-31T23:00:00Z
 time_step_hours,1
 reservoir_min_volume,0
 reservoir_max_volume,200

@@ -1,3 +1,3 @@
-time_index,natural_inflow
-0,0
-1,0
+timestamp_utc,natural_inflow
+2027-01-04T00:00:00Z,0
+2027-01-04T01:00:00Z,0

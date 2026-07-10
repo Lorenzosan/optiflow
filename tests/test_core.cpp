@@ -158,9 +158,93 @@ void test_bellman_forward_and_runner() {
          "final reservoir diagnostic");
 }
 
-void write_series(const std::filesystem::path& path, const char* header) {
+void write_valid_scenario(const std::filesystem::path& path, double time_step_hours = 1.0) {
+    std::ofstream scenario(path);
+    scenario << "key,value\n"
+             << "scenario_name,timestamp_case\n"
+             << "time_step_hours," << time_step_hours << "\n"
+             << "reservoir_min_volume,0\n"
+             << "reservoir_max_volume,100\n"
+             << "turbine_max_flow,20\n"
+             << "pump_max_flow,10\n"
+             << "spill_max_flow,20\n"
+             << "turbine_efficiency,0.9\n"
+             << "pump_efficiency,0.85\n"
+             << "water_to_power_factor,0.5\n"
+             << "operating_cost_per_mwh,1\n"
+             << "initial_reservoir_volume,50\n"
+             << "terminal_reservoir_min_volume,0\n"
+             << "terminal_reservoir_max_volume,100\n"
+             << "terminal_target_reservoir_volume,50\n"
+             << "terminal_reservoir_target_penalty,0\n"
+             << "reservoir_volume_grid_points,11\n"
+             << "turbine_flow_steps,3\n"
+             << "spill_flow_steps,1\n"
+             << "pump_flow_steps,2\n"
+             << "discount_factor,1\n";
+}
+
+void write_series(const std::filesystem::path& path,
+                  const char* value_column,
+                  const std::vector<std::pair<std::string, double>>& rows) {
     std::ofstream output(path);
-    output << header << "\n0,0\n";
+    output << "timestamp_utc," << value_column << '\n';
+    for (const auto& [timestamp, value] : rows) {
+        output << timestamp << ',' << value << '\n';
+    }
+}
+
+void test_csv_reader_preserves_and_validates_timestamps() {
+    const auto directory = std::filesystem::temp_directory_path();
+    const auto scenario_path = directory / "optiflow_timestamp_scenario.csv";
+    const auto prices_path = directory / "optiflow_timestamp_prices.csv";
+    const auto inflows_path = directory / "optiflow_timestamp_inflows.csv";
+    write_valid_scenario(scenario_path);
+    write_series(prices_path, "price", {
+        {"2027-01-01T00:00:00Z", 10.0},
+        {"2027-01-01T01:00:00Z", 20.0},
+    });
+    write_series(inflows_path, "natural_inflow", {
+        {"2027-01-01T00:00:00Z", 0.0},
+        {"2027-01-01T01:00:00Z", 1.0},
+    });
+
+    const core::ScenarioBundle bundle =
+        core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path);
+    require(bundle.scenario.exogenous_series().at(1).timestamp_utc ==
+                "2027-01-01T01:00:00Z",
+            "CSV timestamp is preserved in the exogenous series");
+
+    write_series(inflows_path, "natural_inflow", {
+        {"2027-01-01T00:00:00Z", 0.0},
+        {"2027-01-01T02:00:00Z", 1.0},
+    });
+    require_throws<std::invalid_argument>([&] {
+        static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
+    }, "timestamp spacing");
+
+    write_series(inflows_path, "natural_inflow", {
+        {"2027-01-01T01:00:00Z", 0.0},
+        {"2027-01-01T02:00:00Z", 1.0},
+    });
+    require_throws<std::invalid_argument>([&] {
+        static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
+    }, "timestamp_utc values must match");
+
+    write_series(inflows_path, "natural_inflow", {
+        {"2027-01-01T00:00:00Z", 0.0},
+        {"2027-01-01T01:00:00Z", 1.0},
+    });
+    write_series(prices_path, "price", {
+        {"2027-01-01T00:00:00+00:00", 10.0},
+    });
+    require_throws<std::invalid_argument>([&] {
+        static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
+    }, "YYYY-MM-DDTHH:MM:SSZ");
+
+    std::filesystem::remove(scenario_path);
+    std::filesystem::remove(prices_path);
+    std::filesystem::remove(inflows_path);
 }
 
 void test_csv_reader_rejects_unsupported_key() {
@@ -168,8 +252,8 @@ void test_csv_reader_rejects_unsupported_key() {
     const auto scenario_path = directory / "optiflow_removed_storage.csv";
     const auto prices_path = directory / "optiflow_removed_storage_prices.csv";
     const auto inflows_path = directory / "optiflow_removed_storage_inflows.csv";
-    write_series(prices_path, "time_index,price");
-    write_series(inflows_path, "time_index,natural_inflow");
+    write_series(prices_path, "price", {{"2027-01-01T00:00:00Z", 0.0}});
+    write_series(inflows_path, "natural_inflow", {{"2027-01-01T00:00:00Z", 0.0}});
     {
         std::ofstream scenario(scenario_path);
         scenario << "key,value\nscenario_name,legacy\nunexpected_parameter,0\n";
@@ -192,6 +276,7 @@ int main() {
     test_state_grid_and_linear_interpolation();
     test_scenario_validation();
     test_bellman_forward_and_runner();
+    test_csv_reader_preserves_and_validates_timestamps();
     test_csv_reader_rejects_unsupported_key();
     return 0;
 }

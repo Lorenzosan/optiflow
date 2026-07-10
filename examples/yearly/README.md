@@ -7,8 +7,8 @@ Files:
 - `scenario.csv`: base hydro plant with pumping, turbining, and spilling.
 - `scenario_no_pumping.csv`: pumping disabled while generation remains available.
 - `scenario_high_operating_cost.csv`: the same physical plant with expensive hydraulic throughput.
-- `prices.csv`: hourly synthetic market prices.
-- `inflows.csv`: hourly synthetic natural inflows.
+- `prices.csv`: hourly synthetic market prices with UTC interval-start timestamps.
+- `inflows.csv`: hourly synthetic natural inflows with matching UTC timestamps.
 
 The upper-reservoir volume is the only storage state. Pumping consumes electricity and moves water into that reservoir. Turbining releases water and produces electricity. Spilling releases water without generation.
 

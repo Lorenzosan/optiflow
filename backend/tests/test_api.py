@@ -117,22 +117,17 @@ def scenario_upload_files(
     return {
         "scenario": (
             scenario_filename,
-            (
-                "key,value\n"
-                f"scenario_name,{name}\n"
-                "series_start_utc,2026-12-31T23:00:00Z\n"
-                "time_step_hours,1\n"
-            ).encode(),
+            f"key,value\nscenario_name,{name}\ntime_step_hours,1\n".encode(),
             "text/csv",
         ),
         "prices": (
             "prices.csv",
-            b"time_index,price\n0,10\n1,20\n",
+            b"timestamp_utc,price\n2027-01-01T00:00:00Z,10\n2027-01-01T01:00:00Z,20\n",
             "text/csv",
         ),
         "inflows": (
             "inflows.csv",
-            b"time_index,natural_inflow\n0,0\n1,1\n",
+            b"timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,0\n2027-01-01T01:00:00Z,1\n",
             "text/csv",
         ),
     }
@@ -152,13 +147,10 @@ def test_create_scenario_validates_stores_and_persists_uploads(
     ) -> None:
         assert selected_root == root
         assert scenario_path.read_text() == (
-            "key,value\n"
-            "scenario_name,custom_case\n"
-            "series_start_utc,2026-12-31T23:00:00Z\n"
-            "time_step_hours,1\n"
+            "key,value\nscenario_name,custom_case\ntime_step_hours,1\n"
         )
-        assert prices_path.read_text().startswith("time_index,price")
-        assert inflows_path.read_text().startswith("time_index,natural_inflow")
+        assert prices_path.read_text().startswith("timestamp_utc,price")
+        assert inflows_path.read_text().startswith("timestamp_utc,natural_inflow")
 
     monkeypatch.setattr("backend.app.scenario_uploads.validate_scenario_inputs", fake_validate)
     response = client.post(
@@ -171,43 +163,13 @@ def test_create_scenario_validates_stores_and_persists_uploads(
     assert payload["name"] == "custom_case"
     assert payload["description"] == "Custom uploaded scenario"
     assert payload["available"] is True
-    assert payload["timeline"] == {
-        "series_start_utc": "2026-12-31T23:00:00Z",
-        "time_step_hours": 1.0,
-    }
+    assert payload["time_step_hours"] == 1
 
     with testing_session() as db:
         persisted = db.get(Scenario, payload["id"])
         assert persisted is not None
         assert persisted.name == "custom_case"
-        assert "series_start_utc,2026-12-31T23:00:00Z" in (
-            root / persisted.scenario_path
-        ).read_text()
-
-
-def test_create_scenario_rejects_missing_timeline(
-    api: ApiFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    client, testing_session, _, _, _ = api
-    monkeypatch.setattr("backend.app.scenario_uploads.validate_scenario_inputs", lambda *_: None)
-    files = scenario_upload_files(name="missing_timeline")
-    files["scenario"] = (
-        "scenario.csv",
-        b"key,value\nscenario_name,missing_timeline\ntime_step_hours,1\n",
-        "text/csv",
-    )
-
-    response = client.post(
-        "/scenarios",
-        data={"description": "Missing timeline"},
-        files=files,
-    )
-
-    assert response.status_code == 422
-    assert "missing series_start_utc" in response.json()["detail"]["error"]
-    with testing_session() as db:
-        assert db.query(Scenario).filter(Scenario.name == "missing_timeline").count() == 0
+        assert "scenario_name,custom_case\n" in (root / persisted.scenario_path).read_text()
 
 
 def test_create_scenario_rejects_duplicate_name(

@@ -14,8 +14,8 @@ set(dispatch_csv "${OPTIFLOW_TEST_OUTPUT_DIR}/dispatch.csv")
 
 file(REMOVE "${scenario_csv}" "${prices_csv}" "${inflows_csv}" "${dispatch_csv}")
 
-file(WRITE "${prices_csv}" "time_index,price\n0,100\n")
-file(WRITE "${inflows_csv}" "time_index,natural_inflow\n0,0\n")
+file(WRITE "${prices_csv}" "timestamp_utc,price\n2027-01-01T00:00:00Z,100\n")
+file(WRITE "${inflows_csv}" "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,0\n")
 file(WRITE "${scenario_csv}" "key,value\nscenario_name,first\nscenario_name,second\n")
 
 execute_process(
