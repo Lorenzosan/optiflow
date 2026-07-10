@@ -1,11 +1,17 @@
 import {
+  DEFAULT_SERIES_START_UTC,
   SCENARIO_FILE_LIMIT_BYTES,
   SCENARIO_PARAMETER_GROUPS,
   SERIES_FILE_LIMIT_BYTES,
   buildScenarioCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
-import { buildTraderRows } from "./trader.mjs";
+import {
+  PEAK_END_HOUR,
+  PEAK_START_HOUR,
+  TRADER_TIME_ZONE,
+  buildTraderRows,
+} from "./trader.mjs";
 
 const API_BASE = "/api";
 const PAGE_SIZE = 10;
@@ -30,6 +36,7 @@ const elements = {
   scenarioForm: document.querySelector("#scenario-form"),
   scenarioName: document.querySelector("#scenario-name"),
   scenarioDescriptionInput: document.querySelector("#scenario-description-input"),
+  seriesStartUtc: document.querySelector("#series-start-utc"),
   scenarioFields: document.querySelector("#scenario-fields"),
   pricesFile: document.querySelector("#prices-file"),
   inflowsFile: document.querySelector("#inflows-file"),
@@ -558,26 +565,26 @@ async function renderRunDetails(run) {
   }
 
   const scenario = state.scenarios.find((item) => item.id === run.scenario_id);
-  if (!scenario?.reporting) {
-    clearTraderView("Trader view unavailable: this scenario has no market calendar metadata.");
+  if (!scenario?.timeline) {
+    clearTraderView("Trader view unavailable: this scenario has no series timeline.");
     return;
   }
 
   clearTraderView("Loading the selected dispatch…");
   try {
     const dispatchText = await apiRequest(`/runs/${run.id}/dispatch.csv`);
-    const rows = buildTraderRows(dispatchText, scenario.reporting);
+    const rows = buildTraderRows(dispatchText, scenario.timeline);
     if (requestId !== state.traderRequestId) {
       return;
     }
     renderTraderTable(rows);
     elements.traderMessage.textContent = "";
     elements.traderCaption.textContent =
-      `Run #${run.id}. Baseload contains all hours. Peak is Monday–Friday `
-      + `${String(scenario.reporting.peak_start_hour).padStart(2, "0")}:00–`
-      + `${String(scenario.reporting.peak_end_hour).padStart(2, "0")}:00 `
-      + `in ${scenario.reporting.market_timezone}; the end hour is exclusive. `
-      + "The first 12 calendar months are monthly, then results are quarterly.";
+      `Run #${run.id}. Baseload contains all intervals. Peak is Monday–Friday `
+      + `${String(PEAK_START_HOUR).padStart(2, "0")}:00–`
+      + `${String(PEAK_END_HOUR).padStart(2, "0")}:00 ${TRADER_TIME_ZONE}; `
+      + "the end hour is exclusive. The first 12 calendar months are monthly, "
+      + "then results are quarterly.";
   } catch (error) {
     if (requestId !== state.traderRequestId) {
       return;
@@ -660,6 +667,8 @@ function resetAndLoadRuns() {
 }
 
 renderScenarioFields();
+elements.seriesStartUtc.value = DEFAULT_SERIES_START_UTC;
+elements.seriesStartUtc.defaultValue = DEFAULT_SERIES_START_UTC;
 
 elements.scenarioForm.addEventListener("submit", createScenario);
 elements.scenarioForm.addEventListener("reset", () => {

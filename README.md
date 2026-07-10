@@ -130,14 +130,13 @@ pump_flow_steps
 discount_factor
 ```
 
-Trader reporting optionally uses:
+Web scenarios also include:
 
 ```text
-market_start_utc
-market_timezone
-peak_start_hour
-peak_end_hour
+series_start_utc
 ```
+
+`series_start_utc` anchors `time_index = 0`. The trader view advances that same timeline using the scenario's `time_step_hours`. Baseload contains every interval; Peak is fixed to Monday-Friday 09:00-20:00 in `Europe/Zurich`, with the end hour exclusive; Off-peak contains the remaining intervals.
 
 Unknown scenario keys are rejected explicitly rather than silently ignored.
 

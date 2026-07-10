@@ -117,7 +117,12 @@ def scenario_upload_files(
     return {
         "scenario": (
             scenario_filename,
-            f"key,value\nscenario_name,{name}\n".encode(),
+            (
+                "key,value\n"
+                f"scenario_name,{name}\n"
+                "series_start_utc,2026-12-31T23:00:00Z\n"
+                "time_step_hours,1\n"
+            ).encode(),
             "text/csv",
         ),
         "prices": (
@@ -146,7 +151,12 @@ def test_create_scenario_validates_stores_and_persists_uploads(
         inflows_path: Path,
     ) -> None:
         assert selected_root == root
-        assert scenario_path.read_text() == "key,value\nscenario_name,custom_case\n"
+        assert scenario_path.read_text() == (
+            "key,value\n"
+            "scenario_name,custom_case\n"
+            "series_start_utc,2026-12-31T23:00:00Z\n"
+            "time_step_hours,1\n"
+        )
         assert prices_path.read_text().startswith("time_index,price")
         assert inflows_path.read_text().startswith("time_index,natural_inflow")
 
@@ -161,13 +171,43 @@ def test_create_scenario_validates_stores_and_persists_uploads(
     assert payload["name"] == "custom_case"
     assert payload["description"] == "Custom uploaded scenario"
     assert payload["available"] is True
-    assert payload["reporting"] is None
+    assert payload["timeline"] == {
+        "series_start_utc": "2026-12-31T23:00:00Z",
+        "time_step_hours": 1.0,
+    }
 
     with testing_session() as db:
         persisted = db.get(Scenario, payload["id"])
         assert persisted is not None
         assert persisted.name == "custom_case"
-        assert (root / persisted.scenario_path).read_text().endswith("scenario_name,custom_case\n")
+        assert "series_start_utc,2026-12-31T23:00:00Z" in (
+            root / persisted.scenario_path
+        ).read_text()
+
+
+def test_create_scenario_rejects_missing_timeline(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, _, _, _ = api
+    monkeypatch.setattr("backend.app.scenario_uploads.validate_scenario_inputs", lambda *_: None)
+    files = scenario_upload_files(name="missing_timeline")
+    files["scenario"] = (
+        "scenario.csv",
+        b"key,value\nscenario_name,missing_timeline\ntime_step_hours,1\n",
+        "text/csv",
+    )
+
+    response = client.post(
+        "/scenarios",
+        data={"description": "Missing timeline"},
+        files=files,
+    )
+
+    assert response.status_code == 422
+    assert "missing series_start_utc" in response.json()["detail"]["error"]
+    with testing_session() as db:
+        assert db.query(Scenario).filter(Scenario.name == "missing_timeline").count() == 0
 
 
 def test_create_scenario_rejects_duplicate_name(

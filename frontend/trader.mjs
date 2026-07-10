@@ -1,5 +1,9 @@
 const PRODUCT_KEYS = Object.freeze(["baseload", "peak", "offPeak"]);
+export const TRADER_TIME_ZONE = "Europe/Zurich";
+export const PEAK_START_HOUR = 9;
+export const PEAK_END_HOUR = 20;
 const WEEKDAYS = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+const HOUR_MILLISECONDS = 3_600_000;
 
 function requireCondition(condition, message) {
   if (!condition) {
@@ -101,19 +105,13 @@ function periodFor(parts, startParts) {
   };
 }
 
-function validateReporting(reporting) {
-  requireCondition(reporting, "Scenario has no market calendar metadata.");
-  const startMilliseconds = Date.parse(reporting.market_start_utc);
-  requireCondition(Number.isFinite(startMilliseconds), "Scenario market start is invalid.");
-  const timeStepHours = Number(reporting.time_step_hours);
+function validateTimeline(timeline) {
+  requireCondition(timeline, "Scenario has no series timeline.");
+  const startMilliseconds = Date.parse(timeline.series_start_utc);
+  requireCondition(Number.isFinite(startMilliseconds), "Scenario series start is invalid.");
+  const timeStepHours = Number(timeline.time_step_hours);
   requireCondition(Number.isFinite(timeStepHours) && timeStepHours > 0, "Scenario time step is invalid.");
-  const peakStart = Number(reporting.peak_start_hour);
-  const peakEnd = Number(reporting.peak_end_hour);
-  requireCondition(
-    Number.isInteger(peakStart) && Number.isInteger(peakEnd) && peakStart >= 0 && peakEnd <= 24 && peakStart < peakEnd,
-    "Scenario peak-hour window is invalid.",
-  );
-  return { startMilliseconds, timeStepHours, peakStart, peakEnd };
+  return { startMilliseconds, timeStepHours };
 }
 
 function emptyProductAggregate() {
@@ -128,10 +126,10 @@ function finalizedProduct(aggregate) {
   });
 }
 
-export function buildTraderRows(dispatchText, reporting) {
+export function buildTraderRows(dispatchText, timeline) {
   const dispatch = parseDispatchCsv(dispatchText);
-  const { startMilliseconds, timeStepHours, peakStart, peakEnd } = validateReporting(reporting);
-  const formatter = formatterFor(reporting.market_timezone);
+  const { startMilliseconds, timeStepHours } = validateTimeline(timeline);
+  const formatter = formatterFor(TRADER_TIME_ZONE);
   const startParts = localParts(formatter, new Date(startMilliseconds));
   const periods = new Map();
 
@@ -148,20 +146,33 @@ export function buildTraderRows(dispatchText, reporting) {
     return periods.get(period.key);
   }
 
-  function add(periodAggregate, productKey, row) {
+  function add(periodAggregate, productKey, row, durationHours, pnl) {
     const product = periodAggregate.products[productKey];
-    product.hours += timeStepHours;
-    product.energyMwh += row.netPowerMw * timeStepHours;
-    product.pnl += row.reward;
+    product.hours += durationHours;
+    product.energyMwh += row.netPowerMw * durationHours;
+    product.pnl += pnl;
   }
 
   for (const row of dispatch) {
-    const timestamp = new Date(startMilliseconds + row.timeIndex * timeStepHours * 3_600_000);
-    const parts = localParts(formatter, timestamp);
-    const periodAggregate = ensurePeriod(periodFor(parts, startParts));
-    const isPeak = WEEKDAYS.has(parts.weekday) && parts.hour >= peakStart && parts.hour < peakEnd;
-    add(periodAggregate, "baseload", row);
-    add(periodAggregate, isPeak ? "peak" : "offPeak", row);
+    const intervalStart = startMilliseconds + row.timeIndex * timeStepHours * HOUR_MILLISECONDS;
+    const intervalEnd = intervalStart + timeStepHours * HOUR_MILLISECONDS;
+    let segmentStart = intervalStart;
+
+    while (segmentStart < intervalEnd) {
+      const nextHourBoundary = (Math.floor(segmentStart / HOUR_MILLISECONDS) + 1)
+        * HOUR_MILLISECONDS;
+      const segmentEnd = Math.min(intervalEnd, nextHourBoundary);
+      const durationHours = (segmentEnd - segmentStart) / HOUR_MILLISECONDS;
+      const pnl = row.reward * (durationHours / timeStepHours);
+      const parts = localParts(formatter, new Date(segmentStart));
+      const periodAggregate = ensurePeriod(periodFor(parts, startParts));
+      const isPeak = WEEKDAYS.has(parts.weekday)
+        && parts.hour >= PEAK_START_HOUR
+        && parts.hour < PEAK_END_HOUR;
+      add(periodAggregate, "baseload", row, durationHours, pnl);
+      add(periodAggregate, isPeak ? "peak" : "offPeak", row, durationHours, pnl);
+      segmentStart = segmentEnd;
+    }
   }
 
   return Object.freeze(

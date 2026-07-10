@@ -54,12 +54,8 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   }),
 ]);
 
-export const SCENARIO_REPORTING_FIELDS = Object.freeze([
-  Object.freeze({ key: "market_start_utc", label: "Market start (UTC)" }),
-  Object.freeze({ key: "market_timezone", label: "Market timezone" }),
-  Object.freeze({ key: "peak_start_hour", label: "Peak start hour" }),
-  Object.freeze({ key: "peak_end_hour", label: "Peak end hour" }),
-]);
+export const DEFAULT_SERIES_START_UTC = "2026-12-31T23:00:00Z";
+
 
 const ALL_FIELDS = SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields);
 
@@ -124,58 +120,32 @@ function validateBounds(values) {
   }
 }
 
-function parseReportingValues(values) {
-  const marketStartUtc = String(values.market_start_utc ?? "").trim();
-  requireCondition(marketStartUtc.length > 0, "Market start (UTC) is required.");
-  requireCondition(!/[\r\n,]/.test(marketStartUtc), "Market start (UTC) is invalid.");
+function parseSeriesStartUtc(value) {
+  const seriesStartUtc = String(value ?? "").trim();
+  requireCondition(seriesStartUtc.length > 0, "Series start (UTC) is required.");
+  requireCondition(!/[\r\n,]/.test(seriesStartUtc), "Series start (UTC) is invalid.");
   requireCondition(
-    /(?:Z|\+00:00)$/.test(marketStartUtc) && Number.isFinite(Date.parse(marketStartUtc)),
-    "Market start must be an ISO-8601 UTC datetime ending in Z or +00:00.",
+    /(?:Z|\+00:00)$/.test(seriesStartUtc) && Number.isFinite(Date.parse(seriesStartUtc)),
+    "Series start must be an ISO-8601 UTC datetime ending in Z or +00:00.",
   );
-
-  const marketTimezone = String(values.market_timezone ?? "").trim();
-  requireCondition(marketTimezone.length > 0, "Market timezone is required.");
-  requireCondition(!/[\r\n,]/.test(marketTimezone), "Market timezone is invalid.");
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: marketTimezone }).format(new Date(0));
-  } catch {
-    throw new Error("Market timezone must be a valid IANA timezone such as Europe/Zurich.");
-  }
-
-  const peakStartHour = Number(String(values.peak_start_hour ?? "").trim());
-  const peakEndHour = Number(String(values.peak_end_hour ?? "").trim());
-  requireCondition(
-    Number.isInteger(peakStartHour) && peakStartHour >= 0 && peakStartHour <= 23,
-    "Peak start hour must be an integer between 0 and 23.",
-  );
-  requireCondition(
-    Number.isInteger(peakEndHour) && peakEndHour >= 1 && peakEndHour <= 24,
-    "Peak end hour must be an integer between 1 and 24.",
-  );
-  requireCondition(peakStartHour < peakEndHour, "Peak start hour must be earlier than peak end hour.");
-
-  return {
-    market_start_utc: marketStartUtc,
-    market_timezone: marketTimezone,
-    peak_start_hour: String(peakStartHour),
-    peak_end_hour: String(peakEndHour),
-  };
+  return seriesStartUtc;
 }
 
 export function buildScenarioCsv(name, values) {
   const normalizedName = normalizeScenarioName(name);
   const parsedValues = {};
-  const lines = ["key,value", `scenario_name,${normalizedName}`];
+  const seriesStartUtc = parseSeriesStartUtc(values.series_start_utc);
+  const lines = [
+    "key,value",
+    `scenario_name,${normalizedName}`,
+    `series_start_utc,${seriesStartUtc}`,
+  ];
   for (const definition of ALL_FIELDS) {
     const parsed = parseFieldValue(definition, values[definition.key]);
     parsedValues[definition.key] = parsed.value;
     lines.push(`${definition.key},${parsed.text}`);
   }
   validateBounds(parsedValues);
-  const reporting = parseReportingValues(values);
-  for (const definition of SCENARIO_REPORTING_FIELDS) {
-    lines.push(`${definition.key},${reporting[definition.key]}`);
-  }
   return `${lines.join("\n")}\n`;
 }
 

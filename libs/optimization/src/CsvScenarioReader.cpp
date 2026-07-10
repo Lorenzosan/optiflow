@@ -51,10 +51,7 @@ const std::set<std::string> allowed_scenario_keys = {
     "spill_flow_steps",
     "pump_flow_steps",
     "discount_factor",
-    "market_start_utc",
-    "market_timezone",
-    "peak_start_hour",
-    "peak_end_hour",
+    "series_start_utc",
 };
 
 std::string trim(const std::string& value) {

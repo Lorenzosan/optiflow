@@ -11,16 +11,13 @@ function dispatchCsv(rowCount, netPower = 1, reward = 2) {
   return `${rows.join("\n")}\n`;
 }
 
-const reporting = {
-  market_start_utc: "2027-01-04T00:00:00Z",
-  market_timezone: "UTC",
-  peak_start_hour: 9,
-  peak_end_hour: 20,
+const timeline = {
+  series_start_utc: "2027-01-03T23:00:00Z",
   time_step_hours: 1,
 };
 
 test("buildTraderRows returns one period row with product metric columns", () => {
-  const rows = buildTraderRows(dispatchCsv(24), reporting);
+  const rows = buildTraderRows(dispatchCsv(24), timeline);
 
   assert.equal(rows.length, 1);
   assert.equal(rows[0].period, "January 2027");
@@ -39,10 +36,31 @@ test("buildTraderRows returns one period row with product metric columns", () =>
   assert.equal("hours" in rows[0].baseload, false);
 });
 
+test("buildTraderRows uses fixed Europe/Zurich peak hours", () => {
+  const rows = buildTraderRows(
+    dispatchCsv(1),
+    { ...timeline, series_start_utc: "2027-01-04T08:00:00Z" },
+  );
+
+  assert.equal(rows[0].peak.energyMwh, 1);
+  assert.equal(rows[0].offPeak.energyMwh, 0);
+});
+
+test("buildTraderRows splits optimization intervals at peak boundaries", () => {
+  const rows = buildTraderRows(
+    dispatchCsv(1, 2, 20),
+    { series_start_utc: "2027-01-04T07:00:00Z", time_step_hours: 2 },
+  );
+
+  assert.deepEqual(rows[0].baseload, { averageMw: 2, energyMwh: 4, pnl: 20 });
+  assert.deepEqual(rows[0].peak, { averageMw: 2, energyMwh: 2, pnl: 10 });
+  assert.deepEqual(rows[0].offPeak, { averageMw: 2, energyMwh: 2, pnl: 10 });
+});
+
 test("buildTraderRows reports an unavailable average for an empty product", () => {
   const rows = buildTraderRows(
     dispatchCsv(2, -3, -4),
-    { ...reporting, market_start_utc: "2027-01-09T00:00:00Z" },
+    { ...timeline, series_start_utc: "2027-01-08T23:00:00Z" },
   );
 
   assert.equal(rows[0].peak.averageMw, null);
@@ -57,7 +75,7 @@ test("buildTraderRows reports an unavailable average for an empty product", () =
 test("buildTraderRows uses monthly periods first and calendar quarters later", () => {
   const rows = buildTraderRows(
     dispatchCsv(370),
-    { ...reporting, market_start_utc: "2027-01-01T00:00:00Z", time_step_hours: 24 },
+    { ...timeline, series_start_utc: "2026-12-31T23:00:00Z", time_step_hours: 24 },
   );
   const periods = rows.map((row) => row.period);
 

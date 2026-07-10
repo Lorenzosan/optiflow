@@ -69,38 +69,15 @@
                 <label for="scenario-description-input">Description</label>
                 <textarea id="scenario-description-input" name="description" maxlength="2000" required></textarea>
               </div>
+              <div class="form-field">
+                <label for="series-start-utc">Series start [UTC]</label>
+                <input id="series-start-utc" name="series_start_utc" type="text"
+                       placeholder="2026-12-31T23:00:00Z" required>
+                <small>Time index zero. Trader products use Europe/Zurich and fixed weekday peak hours.</small>
+              </div>
             </div>
 
             <div id="scenario-fields" class="parameter-groups"></div>
-
-            <fieldset class="parameter-group series-group">
-              <legend>Market calendar for trader view</legend>
-              <p class="group-note">
-                Peak is classified in local market time. The end hour is exclusive.
-              </p>
-              <div class="form-grid">
-                <div class="form-field">
-                  <label for="market-start-utc">Market start [UTC]</label>
-                  <input id="market-start-utc" name="market_start_utc" type="text"
-                         placeholder="2026-12-31T23:00:00Z" required>
-                </div>
-                <div class="form-field">
-                  <label for="market-timezone">Market timezone [IANA]</label>
-                  <input id="market-timezone" name="market_timezone" type="text"
-                         placeholder="Europe/Zurich" required>
-                </div>
-                <div class="form-field">
-                  <label for="peak-start-hour">Peak start [local hour]</label>
-                  <input id="peak-start-hour" name="peak_start_hour" type="number"
-                         min="0" max="23" step="1" placeholder="9" required>
-                </div>
-                <div class="form-field">
-                  <label for="peak-end-hour">Peak end [local hour, exclusive]</label>
-                  <input id="peak-end-hour" name="peak_end_hour" type="number"
-                         min="1" max="24" step="1" placeholder="20" required>
-                </div>
-              </div>
-            </fieldset>
 
             <fieldset class="parameter-group series-group">
               <legend>Time series</legend>

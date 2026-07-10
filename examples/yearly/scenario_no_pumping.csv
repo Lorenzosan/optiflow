@@ -20,7 +20,4 @@ turbine_flow_steps,3
 spill_flow_steps,2
 pump_flow_steps,1
 discount_factor,1
-market_start_utc,2026-12-31T23:00:00Z
-market_timezone,Europe/Zurich
-peak_start_hour,9
-peak_end_hour,20
+series_start_utc,2026-12-31T23:00:00Z

@@ -3,7 +3,6 @@ import test from "node:test";
 
 import {
   SCENARIO_PARAMETER_GROUPS,
-  SCENARIO_REPORTING_FIELDS,
   buildScenarioCsv,
   validateSeriesCsv,
   validateSeriesPair,
@@ -15,10 +14,7 @@ function defaultValues() {
       SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
         .map((definition) => [definition.key, String(definition.defaultValue)]),
     ),
-    market_start_utc: "2026-12-31T23:00:00Z",
-    market_timezone: "Europe/Zurich",
-    peak_start_hour: "9",
-    peak_end_hour: "20",
+    series_start_utc: "2026-12-31T23:00:00Z",
   };
 }
 
@@ -29,13 +25,13 @@ test("buildScenarioCsv emits the reservoir-only schema", () => {
   assert.equal(lines[1], "scenario_name,custom_case");
   assert.equal(
     lines.length,
-    2 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length
-      + SCENARIO_REPORTING_FIELDS.length,
+    3 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
   );
   assert.match(csv, /terminal_target_reservoir_volume,250/);
   assert.match(csv, /discount_factor,1/);
+  assert.equal(lines[2], "series_start_utc,2026-12-31T23:00:00Z");
   assert.deepEqual(
-    lines.slice(2, -SCENARIO_REPORTING_FIELDS.length).map((line) => line.split(",", 1)[0]),
+    lines.slice(3).map((line) => line.split(",", 1)[0]),
     SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => field.key),
   );
 });
@@ -84,15 +80,8 @@ test("validateSeriesPair rejects mismatched horizons", () => {
   );
 });
 
-test("buildScenarioCsv rejects invalid reporting metadata", () => {
+test("buildScenarioCsv rejects an invalid series start", () => {
   const values = defaultValues();
-  values.market_timezone = "not-a-timezone";
-  assert.throws(() => buildScenarioCsv("bad_reporting", values), /valid IANA timezone/);
-});
-
-test("buildScenarioCsv requires an ordered peak window", () => {
-  const values = defaultValues();
-  values.peak_start_hour = "20";
-  values.peak_end_hour = "9";
-  assert.throws(() => buildScenarioCsv("bad_peak", values), /earlier than peak end/);
+  values.series_start_utc = "2027-01-01T00:00:00+01:00";
+  assert.throws(() => buildScenarioCsv("bad_start", values), /must be an ISO-8601 UTC datetime/);
 });

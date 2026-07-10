@@ -15,10 +15,10 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, RunSummary, Scenario
 from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
-from backend.app.scenario_metadata import (
-    ScenarioReportingError,
-    ScenarioReportingMetadata,
-    load_scenario_reporting,
+from backend.app.scenario_timeline import (
+    ScenarioTimelineError,
+    ScenarioTimelineMetadata,
+    load_scenario_timeline,
 )
 from backend.app.scenario_uploads import (
     ScenarioUploadError,
@@ -38,11 +38,8 @@ class ScenarioFiles(BaseModel):
     inflows: str = Field(description="Path to the inflows CSV, relative to the repository root.")
 
 
-class ScenarioReportingResponse(BaseModel):
-    market_start_utc: datetime
-    market_timezone: str
-    peak_start_hour: int
-    peak_end_hour: int
+class ScenarioTimelineResponse(BaseModel):
+    series_start_utc: datetime
     time_step_hours: float
 
 
@@ -52,7 +49,7 @@ class ScenarioResponse(BaseModel):
     description: str
     files: ScenarioFiles
     available: bool
-    reporting: ScenarioReportingResponse | None
+    timeline: ScenarioTimelineResponse | None
 
 
 class HealthResponse(BaseModel):
@@ -116,16 +113,13 @@ def files_available(root: Path, files: ScenarioFiles) -> bool:
     )
 
 
-def reporting_response(
-    metadata: ScenarioReportingMetadata | None,
-) -> ScenarioReportingResponse | None:
+def timeline_response(
+    metadata: ScenarioTimelineMetadata | None,
+) -> ScenarioTimelineResponse | None:
     if metadata is None:
         return None
-    return ScenarioReportingResponse(
-        market_start_utc=metadata.market_start_utc,
-        market_timezone=metadata.market_timezone,
-        peak_start_hour=metadata.peak_start_hour,
-        peak_end_hour=metadata.peak_end_hour,
+    return ScenarioTimelineResponse(
+        series_start_utc=metadata.series_start_utc,
         time_step_hours=metadata.time_step_hours,
     )
 
@@ -137,13 +131,13 @@ def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
         inflows=scenario.inflows_path,
     )
     available = files_available(root, files)
-    reporting = None
+    timeline = None
     if available:
         try:
-            reporting = load_scenario_reporting(root / files.scenario)
-        except ScenarioReportingError:
+            timeline = load_scenario_timeline(root / files.scenario)
+        except ScenarioTimelineError:
             logger.warning(
-                "Ignoring invalid reporting metadata for scenario %s",
+                "Ignoring invalid timeline metadata for scenario %s",
                 scenario.name,
                 exc_info=True,
             )
@@ -153,7 +147,7 @@ def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
         description=scenario.description,
         files=files,
         available=available,
-        reporting=reporting_response(reporting),
+        timeline=timeline_response(timeline),
     )
 
 
@@ -221,13 +215,13 @@ async def create_scenario(
         ) from error
 
     try:
-        load_scenario_reporting(root / stored.scenario_path)
-    except ScenarioReportingError as error:
+        load_scenario_timeline(root / stored.scenario_path)
+    except ScenarioTimelineError as error:
         remove_scenario_directory(stored.directory)
         raise HTTPException(
             status_code=422,
             detail={
-                "message": "Scenario reporting metadata is invalid",
+                "message": "Scenario timeline metadata is invalid",
                 "error": str(error),
             },
         ) from error
