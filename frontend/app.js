@@ -508,16 +508,20 @@ function renderTraderTable(rows) {
     const row = document.createElement("tr");
     const values = [
       item.period,
-      item.product,
-      formatNumber(item.hours, 2),
-      item.averageMw === null ? "—" : formatNumber(item.averageMw, 2),
-      formatNumber(item.energyMwh, 2),
-      formatNumber(item.pnl, 2),
+      item.baseload.averageMw === null ? "—" : formatNumber(item.baseload.averageMw, 2),
+      formatNumber(item.baseload.energyMwh, 2),
+      formatNumber(item.baseload.pnl, 2),
+      item.peak.averageMw === null ? "—" : formatNumber(item.peak.averageMw, 2),
+      formatNumber(item.peak.energyMwh, 2),
+      formatNumber(item.peak.pnl, 2),
+      item.offPeak.averageMw === null ? "—" : formatNumber(item.offPeak.averageMw, 2),
+      formatNumber(item.offPeak.energyMwh, 2),
+      formatNumber(item.offPeak.pnl, 2),
     ];
     values.forEach((value, index) => {
       const cell = document.createElement("td");
       cell.textContent = value;
-      if (index >= 2) {
+      if (index >= 1) {
         cell.className = "numeric";
       }
       row.append(cell);

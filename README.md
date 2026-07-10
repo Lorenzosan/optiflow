@@ -100,7 +100,7 @@ Endpoints:
 * `GET /runs/{run_id}`
 * `GET /runs/{run_id}/dispatch.csv`
 
-The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its dispatch into Baseload, Peak, and Off-peak rows using scenario calendar metadata.
+The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates each reporting period into Baseload, Peak, and Off-peak metric columns using scenario calendar metadata.
 
 ## Scenario schema
 

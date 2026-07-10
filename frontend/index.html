@@ -174,12 +174,21 @@
           <table aria-label="Selected optimization trader aggregation">
             <thead>
               <tr>
-                <th scope="col">Period</th>
-                <th scope="col">Product</th>
-                <th scope="col" class="numeric">Hours [h]</th>
-                <th scope="col" class="numeric">Average [MW]</th>
+                <th scope="col" rowspan="2">Period</th>
+                <th scope="colgroup" colspan="3" class="trader-product-heading">Baseload</th>
+                <th scope="colgroup" colspan="3" class="trader-product-heading">Peak</th>
+                <th scope="colgroup" colspan="3" class="trader-product-heading">Off-peak</th>
+              </tr>
+              <tr>
+                <th scope="col" class="numeric trader-group-start">Avg [MW]</th>
                 <th scope="col" class="numeric">Energy [MWh]</th>
-                <th scope="col" class="numeric">P&amp;L [currency]</th>
+                <th scope="col" class="numeric">P&amp;L</th>
+                <th scope="col" class="numeric trader-group-start">Avg [MW]</th>
+                <th scope="col" class="numeric">Energy [MWh]</th>
+                <th scope="col" class="numeric">P&amp;L</th>
+                <th scope="col" class="numeric trader-group-start">Avg [MW]</th>
+                <th scope="col" class="numeric">Energy [MWh]</th>
+                <th scope="col" class="numeric">P&amp;L</th>
               </tr>
             </thead>
             <tbody id="trader-body"></tbody>

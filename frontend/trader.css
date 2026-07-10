@@ -12,12 +12,19 @@
   margin-top: 0.75rem;
 }
 
-.trader-table-scroll tbody tr:nth-child(3n + 1) td {
-  border-top: 2px solid var(--border);
+.trader-product-heading {
+  border-left: 1px solid var(--border);
+  text-align: center;
 }
 
-.trader-table-scroll tbody tr:first-child td {
-  border-top: 0;
+.trader-group-start {
+  border-left: 1px solid var(--border);
+}
+
+.trader-table-scroll tbody td:nth-child(2),
+.trader-table-scroll tbody td:nth-child(5),
+.trader-table-scroll tbody td:nth-child(8) {
+  border-left: 1px solid var(--border);
 }
 
 .history-panel {

@@ -4,7 +4,7 @@ The frontend is a dependency-free browser application served by NGINX. It uses p
 
 The custom-scenario editor generates the reservoir-only `key,value` optimizer schema, validates price and inflow files, records market-calendar metadata, and submits immutable inputs for server-side C++ validation.
 
-The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It aggregates that run's dispatch into monthly Baseload, Peak, and Off-peak rows for the first twelve calendar months and quarterly rows afterwards. Units are shown on scenario inputs, summaries, and trader outputs.
+The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It shows one row per reporting period, with Baseload, Peak, and Off-peak columns for average power, energy, and P&L. The first twelve calendar months are monthly and later periods are quarterly. Units are shown on scenario inputs, summaries, and trader outputs.
 
 Run frontend checks from the repository root:
 

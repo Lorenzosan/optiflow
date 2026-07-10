@@ -1,4 +1,4 @@
-const PRODUCT_ORDER = Object.freeze(["Baseload", "Peak", "Off-peak"]);
+const PRODUCT_KEYS = Object.freeze(["baseload", "peak", "offPeak"]);
 const WEEKDAYS = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
 
 function requireCondition(condition, message) {
@@ -116,61 +116,62 @@ function validateReporting(reporting) {
   return { startMilliseconds, timeStepHours, peakStart, peakEnd };
 }
 
+function emptyProductAggregate() {
+  return { hours: 0, energyMwh: 0, pnl: 0 };
+}
+
+function finalizedProduct(aggregate) {
+  return Object.freeze({
+    averageMw: aggregate.hours > 0 ? aggregate.energyMwh / aggregate.hours : null,
+    energyMwh: aggregate.energyMwh,
+    pnl: aggregate.pnl,
+  });
+}
+
 export function buildTraderRows(dispatchText, reporting) {
   const dispatch = parseDispatchCsv(dispatchText);
   const { startMilliseconds, timeStepHours, peakStart, peakEnd } = validateReporting(reporting);
   const formatter = formatterFor(reporting.market_timezone);
   const startParts = localParts(formatter, new Date(startMilliseconds));
-  const aggregates = new Map();
+  const periods = new Map();
 
   function ensurePeriod(period) {
-    for (const product of PRODUCT_ORDER) {
-      const key = `${period.key}|${product}`;
-      if (!aggregates.has(key)) {
-        aggregates.set(key, {
-          period: period.label,
-          periodOrder: period.order,
-          product,
-          hours: 0,
-          energyMwh: 0,
-          pnl: 0,
-        });
-      }
+    if (!periods.has(period.key)) {
+      periods.set(period.key, {
+        period: period.label,
+        periodOrder: period.order,
+        products: Object.fromEntries(
+          PRODUCT_KEYS.map((productKey) => [productKey, emptyProductAggregate()]),
+        ),
+      });
     }
+    return periods.get(period.key);
   }
 
-  function add(period, product, row) {
-    const aggregate = aggregates.get(`${period.key}|${product}`);
-    aggregate.hours += timeStepHours;
-    aggregate.energyMwh += row.netPowerMw * timeStepHours;
-    aggregate.pnl += row.reward;
+  function add(periodAggregate, productKey, row) {
+    const product = periodAggregate.products[productKey];
+    product.hours += timeStepHours;
+    product.energyMwh += row.netPowerMw * timeStepHours;
+    product.pnl += row.reward;
   }
 
   for (const row of dispatch) {
     const timestamp = new Date(startMilliseconds + row.timeIndex * timeStepHours * 3_600_000);
     const parts = localParts(formatter, timestamp);
-    const period = periodFor(parts, startParts);
-    ensurePeriod(period);
+    const periodAggregate = ensurePeriod(periodFor(parts, startParts));
     const isPeak = WEEKDAYS.has(parts.weekday) && parts.hour >= peakStart && parts.hour < peakEnd;
-    add(period, "Baseload", row);
-    add(period, isPeak ? "Peak" : "Off-peak", row);
+    add(periodAggregate, "baseload", row);
+    add(periodAggregate, isPeak ? "peak" : "offPeak", row);
   }
 
   return Object.freeze(
-    [...aggregates.values()]
-      .sort((left, right) => {
-        if (left.periodOrder !== right.periodOrder) {
-          return left.periodOrder - right.periodOrder;
-        }
-        return PRODUCT_ORDER.indexOf(left.product) - PRODUCT_ORDER.indexOf(right.product);
-      })
+    [...periods.values()]
+      .sort((left, right) => left.periodOrder - right.periodOrder)
       .map((aggregate) => Object.freeze({
         period: aggregate.period,
-        product: aggregate.product,
-        hours: aggregate.hours,
-        averageMw: aggregate.hours > 0 ? aggregate.energyMwh / aggregate.hours : null,
-        energyMwh: aggregate.energyMwh,
-        pnl: aggregate.pnl,
+        baseload: finalizedProduct(aggregate.products.baseload),
+        peak: finalizedProduct(aggregate.products.peak),
+        offPeak: finalizedProduct(aggregate.products.offPeak),
       })),
   );
 }
