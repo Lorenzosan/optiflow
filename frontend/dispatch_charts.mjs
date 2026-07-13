@@ -1,7 +1,6 @@
 const HOUR_MILLISECONDS = 3_600_000;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-const CONTROL_TARGET_BUCKETS = 366;
 
 export const DISPATCH_CHART_TIME_ZONE = "Europe/Zurich";
 
@@ -150,53 +149,6 @@ function linePoints(rows, valueForRow) {
   })));
 }
 
-function buildControlBuckets(rows, stepMilliseconds) {
-  const bucketSize = Math.max(1, Math.ceil(rows.length / CONTROL_TARGET_BUCKETS));
-  const buckets = [];
-  for (let start = 0; start < rows.length; start += bucketSize) {
-    const end = Math.min(rows.length, start + bucketSize);
-    const bucketRows = rows.slice(start, end);
-    const average = (valueForRow) => bucketRows.reduce(
-      (sum, row) => sum + valueForRow(row),
-      0,
-    ) / bucketRows.length;
-    buckets.push(Object.freeze({
-      timestampMilliseconds: bucketRows[0].timestampMilliseconds,
-      endMilliseconds: bucketRows.at(-1).timestampMilliseconds + stepMilliseconds,
-      turbineFlow: average((row) => row.turbineFlow),
-      pumpFlow: average((row) => row.pumpFlow),
-      spillFlow: average((row) => row.spillFlow),
-    }));
-  }
-  return Object.freeze({
-    buckets: Object.freeze(buckets),
-    bucketSize,
-  });
-}
-
-function bucketStepPoints(buckets, valueForBucket) {
-  const points = buckets.map((bucket) => Object.freeze({
-    timestampMilliseconds: bucket.timestampMilliseconds,
-    value: valueForBucket(bucket),
-  }));
-  points.push(Object.freeze({
-    timestampMilliseconds: buckets.at(-1).endMilliseconds,
-    value: valueForBucket(buckets.at(-1)),
-  }));
-  return Object.freeze(points);
-}
-
-function averageWindowLabel(bucketSize, stepMilliseconds) {
-  if (bucketSize === 1) {
-    return null;
-  }
-  const hours = (bucketSize * stepMilliseconds) / HOUR_MILLISECONDS;
-  const formatted = new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: Number.isInteger(hours) ? 0 : 2,
-  }).format(hours);
-  return `${formatted} h averages`;
-}
-
 function operatingMode(row) {
   const modes = [];
   if (row.turbineFlow > 0) {
@@ -216,8 +168,8 @@ function operatingMode(row) {
     : mode).join(" + ");
 }
 
-function series(key, label, points, className, { areaToZero = false } = {}) {
-  return Object.freeze({ key, label, points, className, areaToZero });
+function series(key, label, points, className) {
+  return Object.freeze({ key, label, points, className });
 }
 
 export function buildDispatchChartModel(dispatchText, timeStepHours) {
@@ -240,8 +192,6 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       value: row.cumulativeProfit,
     })),
   ]);
-  const controls = buildControlBuckets(rows, stepMilliseconds);
-
   return Object.freeze({
     rows,
     stepMilliseconds,
@@ -279,34 +229,49 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
         ]),
       }),
       Object.freeze({
-        key: "controls",
-        title: "Hydraulic flow",
+        key: "turbine",
+        title: "Turbine flow",
         unit: "volume units per hour",
-        detail: averageWindowLabel(controls.bucketSize, stepMilliseconds),
+        height: 72,
         interpolation: "step",
         includeZero: true,
         series: Object.freeze([
           series(
             "turbine",
-            "Turbine (+)",
-            bucketStepPoints(controls.buckets, (bucket) => bucket.turbineFlow),
+            "Turbine",
+            stepPoints(rows, (row) => row.turbineFlow, stepMilliseconds),
             "dispatch-series-turbine",
-            { areaToZero: true },
           ),
+        ]),
+      }),
+      Object.freeze({
+        key: "pump",
+        title: "Pump flow",
+        unit: "volume units per hour",
+        height: 72,
+        interpolation: "step",
+        includeZero: true,
+        series: Object.freeze([
           series(
             "pump",
-            "Pump (−)",
-            bucketStepPoints(
-              controls.buckets,
-              (bucket) => bucket.pumpFlow === 0 ? 0 : -bucket.pumpFlow,
-            ),
+            "Pump",
+            stepPoints(rows, (row) => row.pumpFlow, stepMilliseconds),
             "dispatch-series-pump",
-            { areaToZero: true },
           ),
+        ]),
+      }),
+      Object.freeze({
+        key: "spill",
+        title: "Spill flow",
+        unit: "volume units per hour",
+        height: 72,
+        interpolation: "step",
+        includeZero: true,
+        series: Object.freeze([
           series(
             "spill",
             "Spill",
-            bucketStepPoints(controls.buckets, (bucket) => bucket.spillFlow),
+            stepPoints(rows, (row) => row.spillFlow, stepMilliseconds),
             "dispatch-series-spill",
           ),
         ]),
@@ -405,18 +370,6 @@ export function buildSeriesPath(points, interpolation, xScale, yScale) {
   return commands.join(" ");
 }
 
-export function buildSeriesAreaPath(points, interpolation, xScale, yScale, baseline = 0) {
-  requireCondition(points.length > 0, "A chart area must contain at least one point.");
-  const first = points[0];
-  const last = points.at(-1);
-  return [
-    buildSeriesPath(points, interpolation, xScale, yScale),
-    `L ${xScale(last.timestampMilliseconds)} ${yScale(baseline)}`,
-    `L ${xScale(first.timestampMilliseconds)} ${yScale(baseline)}`,
-    "Z",
-  ].join(" ");
-}
-
 function svgElement(name, attributes = {}) {
   const element = document.createElementNS(SVG_NAMESPACE, name);
   for (const [key, value] of Object.entries(attributes)) {
@@ -484,16 +437,21 @@ export function renderDispatchCharts(container, model) {
   const plotLeft = 132;
   const plotRight = 1090;
   const top = 18;
-  const panelHeight = 104;
-  const panelGap = 28;
+  const defaultPanelHeight = 104;
+  const panelGap = 22;
   const bottomAxisHeight = 42;
   const plotWidth = plotRight - plotLeft;
-  const panelLayouts = model.panels.map((panel, index) => {
-    const panelTop = top + index * (panelHeight + panelGap);
+  let nextPanelTop = top;
+  const panelLayouts = model.panels.map((panel) => {
+    const panelHeight = panel.height ?? defaultPanelHeight;
+    const panelTop = nextPanelTop;
+    const panelBottom = panelTop + panelHeight;
+    nextPanelTop = panelBottom + panelGap;
     return {
       panel,
       panelTop,
-      panelBottom: panelTop + panelHeight,
+      panelBottom,
+      panelHeight,
       extent: extentForPanel(panel),
     };
   });
@@ -517,7 +475,7 @@ export function renderDispatchCharts(container, model) {
   });
 
   for (const layout of panelLayouts) {
-    const { panel, panelTop, panelBottom, extent } = layout;
+    const { panel, panelTop, panelBottom, panelHeight, extent } = layout;
     const yScale = linearScale(extent.minimum, extent.maximum, panelBottom, panelTop);
     layout.yScale = yScale;
 
@@ -540,14 +498,6 @@ export function renderDispatchCharts(container, model) {
       x: 8,
       y: panelTop + 35,
     }));
-    if (panel.detail) {
-      svg.append(svgText(panel.detail, {
-        class: "dispatch-chart-detail",
-        x: 8,
-        y: panelTop + 51,
-      }));
-    }
-
     const tickValues = extent.minimum < 0 && extent.maximum > 0
       ? [extent.maximum, 0, extent.minimum]
       : [extent.maximum, (extent.maximum + extent.minimum) / 2, extent.minimum];
@@ -580,12 +530,6 @@ export function renderDispatchCharts(container, model) {
     }
 
     panel.series.forEach((item, seriesIndex) => {
-      if (item.areaToZero) {
-        svg.append(svgElement("path", {
-          class: `dispatch-chart-area ${item.className}`,
-          d: buildSeriesAreaPath(item.points, panel.interpolation, xScale, yScale),
-        }));
-      }
       svg.append(svgElement("path", {
         class: `dispatch-chart-series ${item.className}`,
         d: buildSeriesPath(item.points, panel.interpolation, xScale, yScale),

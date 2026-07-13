@@ -3,7 +3,6 @@ import test from "node:test";
 
 import {
   buildDispatchChartModel,
-  buildSeriesAreaPath,
   buildSeriesPath,
   extentForPanel,
 } from "./dispatch_charts.mjs";
@@ -27,9 +26,12 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
   const price = model.panels.find((panel) => panel.key === "price");
   assert.deepEqual(price.series[0].points.map((point) => point.value), [30, 60, 60]);
 
-  const controls = model.panels.find((panel) => panel.key === "controls");
-  const pump = controls.series.find((item) => item.key === "pump");
-  assert.deepEqual(pump.points.map((point) => point.value), [-10, 0, 0]);
+  assert.deepEqual(
+    model.panels.map((panel) => panel.key),
+    ["price", "inflow", "turbine", "pump", "spill", "reservoir", "profit"],
+  );
+  const pump = model.panels.find((panel) => panel.key === "pump");
+  assert.deepEqual(pump.series[0].points.map((point) => point.value), [10, 0, 0]);
 
   const reservoir = model.panels.find((panel) => panel.key === "reservoir");
   assert.deepEqual(reservoir.series[0].points.map((point) => point.value), [0, 10, 0]);
@@ -60,27 +62,26 @@ test("buildDispatchChartModel requires the current dispatch schema", () => {
 
 
 
-test("long runs show averaged hydraulic flows instead of every interval transition", () => {
-  const start = Date.parse("2027-01-01T00:00:00Z");
-  const rows = Array.from({ length: 8760 }, (_, index) => {
-    const timestamp = new Date(start + index * 3_600_000)
-      .toISOString()
-      .replace(".000Z", "Z");
-    const turbine = index % 2 === 0 ? 10 : 0;
-    const pump = index % 2 === 0 ? 0 : 8;
-    return `${index},${timestamp},50,4,300,${turbine},0,${pump},300,0,0,0`;
-  });
-  const model = buildDispatchChartModel(dispatchCsv(rows), 1);
-  const controls = model.panels.find((panel) => panel.key === "controls");
-  const turbine = controls.series.find((item) => item.key === "turbine");
-  const pump = controls.series.find((item) => item.key === "pump");
+test("hydraulic flows use separate raw positive panels", () => {
+  const model = buildDispatchChartModel(dispatchCsv([
+    "0,2027-01-04T00:00:00Z,30,4,300,12,0,0,292,10,100,100",
+    "1,2027-01-04T01:00:00Z,20,4,292,0,3,8,301,-8,-50,50",
+    "2,2027-01-04T02:00:00Z,40,4,301,0,0,0,305,0,0,50",
+  ]), 1);
 
-  assert.equal(controls.detail, "24 h averages");
-  assert.equal(turbine.points.length, 366);
-  assert.equal(turbine.points[0].value, 5);
-  assert.equal(pump.points[0].value, -4);
-  assert.equal(turbine.areaToZero, true);
-  assert.equal(pump.areaToZero, true);
+  const turbine = model.panels.find((panel) => panel.key === "turbine");
+  const pump = model.panels.find((panel) => panel.key === "pump");
+  const spill = model.panels.find((panel) => panel.key === "spill");
+
+  assert.equal(turbine.series.length, 1);
+  assert.equal(pump.series.length, 1);
+  assert.equal(spill.series.length, 1);
+  assert.deepEqual(turbine.series[0].points.map((point) => point.value), [12, 0, 0, 0]);
+  assert.deepEqual(pump.series[0].points.map((point) => point.value), [0, 8, 0, 0]);
+  assert.deepEqual(spill.series[0].points.map((point) => point.value), [0, 3, 0, 0]);
+  assert.equal(turbine.height, 72);
+  assert.equal(pump.height, 72);
+  assert.equal(spill.height, 72);
 });
 
 test("nonnegative panels keep zero as the lower axis bound", () => {
@@ -103,8 +104,4 @@ test("buildSeriesPath supports line and step interpolation", () => {
 
   assert.equal(buildSeriesPath(points, "line", xScale, yScale), "M 0 2 L 10 4");
   assert.equal(buildSeriesPath(points, "step", xScale, yScale), "M 0 2 H 10 V 4");
-  assert.equal(
-    buildSeriesAreaPath(points, "step", xScale, yScale),
-    "M 0 2 H 10 V 4 L 10 0 L 0 0 Z",
-  );
 });
