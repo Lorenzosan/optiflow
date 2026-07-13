@@ -4,7 +4,10 @@ import test from "node:test";
 import {
   buildDispatchChartModel,
   buildSeriesPath,
+  clampTimeDomain,
   extentForPanel,
+  panTimeDomain,
+  zoomTimeDomain,
 } from "./dispatch_charts.mjs";
 
 const HEADER = "time_index,timestamp_utc,price,natural_inflow,reservoir_volume,turbine_flow,spill_flow,pump_flow,next_reservoir_volume,net_power,reward,cumulative_profit";
@@ -92,6 +95,40 @@ test("nonnegative panels keep zero as the lower axis bound", () => {
   const inflow = model.panels.find((panel) => panel.key === "inflow");
 
   assert.equal(extentForPanel(inflow).minimum, 0);
+});
+
+
+test("zoomTimeDomain preserves the anchor and clamps to the minimum span", () => {
+  assert.deepEqual(
+    zoomTimeDomain(0, 100, 25, 0.5, 0, 100, 10),
+    { startMilliseconds: 12.5, endMilliseconds: 62.5 },
+  );
+  assert.deepEqual(
+    zoomTimeDomain(0, 100, 50, 0.01, 0, 100, 10),
+    { startMilliseconds: 45, endMilliseconds: 55 },
+  );
+});
+
+test("panTimeDomain keeps the shared window inside the full dispatch range", () => {
+  assert.deepEqual(
+    panTimeDomain(20, 60, 30, 0, 100),
+    { startMilliseconds: 50, endMilliseconds: 90 },
+  );
+  assert.deepEqual(
+    panTimeDomain(20, 60, 80, 0, 100),
+    { startMilliseconds: 60, endMilliseconds: 100 },
+  );
+  assert.deepEqual(
+    panTimeDomain(20, 60, -80, 0, 100),
+    { startMilliseconds: 0, endMilliseconds: 40 },
+  );
+});
+
+test("clampTimeDomain expands short windows without exceeding chart bounds", () => {
+  assert.deepEqual(
+    clampTimeDomain(96, 98, 0, 100, 10),
+    { startMilliseconds: 90, endMilliseconds: 100 },
+  );
 });
 
 test("buildSeriesPath supports line and step interpolation", () => {

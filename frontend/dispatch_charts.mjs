@@ -1,6 +1,7 @@
 const HOUR_MILLISECONDS = 3_600_000;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+let chartRenderSequence = 0;
 
 export const DISPATCH_CHART_TIME_ZONE = "Europe/Zurich";
 
@@ -354,6 +355,89 @@ function linearScale(domainMinimum, domainMaximum, rangeMinimum, rangeMaximum) {
     + ((value - domainMinimum) / domainSpan) * (rangeMaximum - rangeMinimum);
 }
 
+export function clampTimeDomain(
+  startMilliseconds,
+  endMilliseconds,
+  fullStartMilliseconds,
+  fullEndMilliseconds,
+  minimumSpanMilliseconds,
+) {
+  requireCondition(
+    [
+      startMilliseconds,
+      endMilliseconds,
+      fullStartMilliseconds,
+      fullEndMilliseconds,
+      minimumSpanMilliseconds,
+    ].every(Number.isFinite),
+    "Chart time-domain values must be finite.",
+  );
+  requireCondition(fullEndMilliseconds > fullStartMilliseconds, "Chart bounds are invalid.");
+  requireCondition(endMilliseconds > startMilliseconds, "Chart time domain is invalid.");
+  requireCondition(minimumSpanMilliseconds > 0, "Chart minimum span must be positive.");
+
+  const fullSpan = fullEndMilliseconds - fullStartMilliseconds;
+  const minimumSpan = Math.min(minimumSpanMilliseconds, fullSpan);
+  const span = Math.min(
+    fullSpan,
+    Math.max(minimumSpan, endMilliseconds - startMilliseconds),
+  );
+  let start = startMilliseconds;
+  let end = start + span;
+  if (start < fullStartMilliseconds) {
+    start = fullStartMilliseconds;
+    end = start + span;
+  }
+  if (end > fullEndMilliseconds) {
+    end = fullEndMilliseconds;
+    start = end - span;
+  }
+  return Object.freeze({ startMilliseconds: start, endMilliseconds: end });
+}
+
+export function zoomTimeDomain(
+  startMilliseconds,
+  endMilliseconds,
+  anchorMilliseconds,
+  factor,
+  fullStartMilliseconds,
+  fullEndMilliseconds,
+  minimumSpanMilliseconds,
+) {
+  requireCondition(Number.isFinite(anchorMilliseconds), "Chart zoom anchor must be finite.");
+  requireCondition(Number.isFinite(factor) && factor > 0, "Chart zoom factor must be positive.");
+  const anchor = Math.min(
+    endMilliseconds,
+    Math.max(startMilliseconds, anchorMilliseconds),
+  );
+  const currentSpan = endMilliseconds - startMilliseconds;
+  const effectiveFactor = Math.max(factor, minimumSpanMilliseconds / currentSpan);
+  return clampTimeDomain(
+    anchor - (anchor - startMilliseconds) * effectiveFactor,
+    anchor + (endMilliseconds - anchor) * effectiveFactor,
+    fullStartMilliseconds,
+    fullEndMilliseconds,
+    minimumSpanMilliseconds,
+  );
+}
+
+export function panTimeDomain(
+  startMilliseconds,
+  endMilliseconds,
+  deltaMilliseconds,
+  fullStartMilliseconds,
+  fullEndMilliseconds,
+) {
+  requireCondition(Number.isFinite(deltaMilliseconds), "Chart pan delta must be finite.");
+  return clampTimeDomain(
+    startMilliseconds + deltaMilliseconds,
+    endMilliseconds + deltaMilliseconds,
+    fullStartMilliseconds,
+    fullEndMilliseconds,
+    endMilliseconds - startMilliseconds,
+  );
+}
+
 export function buildSeriesPath(points, interpolation, xScale, yScale) {
   requireCondition(points.length > 0, "A chart series must contain at least one point.");
   const first = points[0];
@@ -394,8 +478,8 @@ function formatTooltipNumber(value, maximumFractionDigits = 2) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(value);
 }
 
-function timeFormatter(model) {
-  const durationDays = (model.endMilliseconds - model.startMilliseconds) / (24 * HOUR_MILLISECONDS);
+function timeFormatter(startMilliseconds, endMilliseconds) {
+  const durationDays = (endMilliseconds - startMilliseconds) / (24 * HOUR_MILLISECONDS);
   const options = durationDays > 370
     ? { timeZone: DISPATCH_CHART_TIME_ZONE, year: "numeric", month: "short" }
     : durationDays > 7
@@ -441,6 +525,12 @@ export function renderDispatchCharts(container, model) {
   const panelGap = 22;
   const bottomAxisHeight = 42;
   const plotWidth = plotRight - plotLeft;
+  const fullSpan = model.endMilliseconds - model.startMilliseconds;
+  const minimumSpan = Math.min(fullSpan, model.stepMilliseconds * 4);
+  let currentDomain = Object.freeze({
+    startMilliseconds: model.startMilliseconds,
+    endMilliseconds: model.endMilliseconds,
+  });
   let nextPanelTop = top;
   const panelLayouts = model.panels.map((panel) => {
     const panelHeight = panel.height ?? defaultPanelHeight;
@@ -456,25 +546,57 @@ export function renderDispatchCharts(container, model) {
     };
   });
   const viewHeight = panelLayouts.at(-1).panelBottom + bottomAxisHeight;
-  const xScale = linearScale(
+  const fullXScale = linearScale(
     model.startMilliseconds,
     model.endMilliseconds,
     plotLeft,
     plotRight,
   );
 
+  const toolbar = document.createElement("div");
+  toolbar.className = "dispatch-chart-toolbar";
+  const guidance = document.createElement("span");
+  guidance.className = "dispatch-chart-guidance";
+  guidance.textContent = "Scroll to zoom · drag to pan · double-click to reset";
+  const controls = document.createElement("div");
+  controls.className = "dispatch-chart-controls";
+  const rangeOutput = document.createElement("output");
+  rangeOutput.className = "dispatch-chart-range";
+  rangeOutput.setAttribute("aria-live", "polite");
+
+  function chartButton(label, accessibleLabel) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "dispatch-chart-control-button";
+    button.textContent = label;
+    button.setAttribute("aria-label", accessibleLabel);
+    button.title = accessibleLabel;
+    return button;
+  }
+
+  const zoomInButton = chartButton("+", "Zoom in");
+  const zoomOutButton = chartButton("−", "Zoom out");
+  const resetButton = chartButton("Reset", "Reset chart zoom");
+  controls.append(rangeOutput, zoomInButton, zoomOutButton, resetButton);
+  toolbar.append(guidance, controls);
+
+  const stage = document.createElement("div");
+  stage.className = "dispatch-chart-stage";
   const tooltip = document.createElement("div");
   tooltip.className = "dispatch-chart-tooltip";
   tooltip.hidden = true;
 
+  const renderId = ++chartRenderSequence;
   const svg = svgElement("svg", {
     class: "dispatch-chart-svg",
     viewBox: `0 0 ${viewWidth} ${viewHeight}`,
     role: "img",
     "aria-label": "Selected optimization dispatch charts",
   });
+  const definitions = svgElement("defs");
+  svg.append(definitions);
 
-  for (const layout of panelLayouts) {
+  for (const [layoutIndex, layout] of panelLayouts.entries()) {
     const { panel, panelTop, panelBottom, panelHeight, extent } = layout;
     const yScale = linearScale(extent.minimum, extent.maximum, panelBottom, panelTop);
     layout.yScale = yScale;
@@ -498,6 +620,7 @@ export function renderDispatchCharts(container, model) {
       x: 8,
       y: panelTop + 35,
     }));
+
     const tickValues = extent.minimum < 0 && extent.maximum > 0
       ? [extent.maximum, 0, extent.minimum]
       : [extent.maximum, (extent.maximum + extent.minimum) / 2, extent.minimum];
@@ -529,10 +652,26 @@ export function renderDispatchCharts(container, model) {
       }));
     }
 
+    const clipId = `dispatch-chart-clip-${renderId}-${layoutIndex}`;
+    const clipPath = svgElement("clipPath", { id: clipId });
+    clipPath.append(svgElement("rect", {
+      x: plotLeft,
+      y: panelTop,
+      width: plotWidth,
+      height: panelHeight,
+    }));
+    definitions.append(clipPath);
+
+    const clippedGroup = svgElement("g", { "clip-path": `url(#${clipId})` });
+    const transformedGroup = svgElement("g");
+    clippedGroup.append(transformedGroup);
+    svg.append(clippedGroup);
+    layout.transformedGroup = transformedGroup;
+
     panel.series.forEach((item, seriesIndex) => {
-      svg.append(svgElement("path", {
+      transformedGroup.append(svgElement("path", {
         class: `dispatch-chart-series ${item.className}`,
-        d: buildSeriesPath(item.points, panel.interpolation, xScale, yScale),
+        d: buildSeriesPath(item.points, panel.interpolation, fullXScale, yScale),
       }));
       if (panel.series.length > 1) {
         const legendX = plotLeft + 12 + seriesIndex * 132;
@@ -553,28 +692,9 @@ export function renderDispatchCharts(container, model) {
     });
   }
 
-  const xFormatter = timeFormatter(model);
-  const xTickCount = 6;
   const axisY = panelLayouts.at(-1).panelBottom;
-  for (let index = 0; index < xTickCount; index += 1) {
-    const fraction = index / (xTickCount - 1);
-    const timestamp = model.startMilliseconds
-      + fraction * (model.endMilliseconds - model.startMilliseconds);
-    const x = xScale(timestamp);
-    svg.append(svgElement("line", {
-      class: "dispatch-chart-axis-tick",
-      x1: x,
-      x2: x,
-      y1: axisY,
-      y2: axisY + 6,
-    }));
-    svg.append(svgText(xFormatter.format(new Date(timestamp)), {
-      class: "dispatch-chart-time-label",
-      x,
-      y: axisY + 23,
-      "text-anchor": index === 0 ? "start" : index === xTickCount - 1 ? "end" : "middle",
-    }));
-  }
+  const xAxisGroup = svgElement("g");
+  svg.append(xAxisGroup);
 
   const hoverLine = svgElement("line", {
     class: "dispatch-chart-hover-line",
@@ -592,23 +712,126 @@ export function renderDispatchCharts(container, model) {
     y: panelLayouts[0].panelTop,
     width: plotWidth,
     height: panelLayouts.at(-1).panelBottom - panelLayouts[0].panelTop,
+    tabindex: 0,
+    "aria-label": "Dispatch chart. Scroll to zoom, drag to pan, and double-click to reset.",
   });
   svg.append(overlay);
 
   const timestampFormatter = tooltipTimeFormatter();
-  overlay.addEventListener("pointermove", (event) => {
+  const rangeFormatter = new Intl.DateTimeFormat(undefined, {
+    timeZone: DISPATCH_CHART_TIME_ZONE,
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  function visibleXScale() {
+    return linearScale(
+      currentDomain.startMilliseconds,
+      currentDomain.endMilliseconds,
+      plotLeft,
+      plotRight,
+    );
+  }
+
+  function hideTooltip() {
+    hoverLine.setAttribute("visibility", "hidden");
+    tooltip.hidden = true;
+  }
+
+  function domainsEqual(first, second) {
+    return first.startMilliseconds === second.startMilliseconds
+      && first.endMilliseconds === second.endMilliseconds;
+  }
+
+  function updateXAxis() {
+    xAxisGroup.replaceChildren();
+    const xFormatter = timeFormatter(
+      currentDomain.startMilliseconds,
+      currentDomain.endMilliseconds,
+    );
+    const xScale = visibleXScale();
+    const xTickCount = 6;
+    for (let index = 0; index < xTickCount; index += 1) {
+      const fraction = index / (xTickCount - 1);
+      const timestamp = currentDomain.startMilliseconds
+        + fraction * (currentDomain.endMilliseconds - currentDomain.startMilliseconds);
+      const x = xScale(timestamp);
+      xAxisGroup.append(svgElement("line", {
+        class: "dispatch-chart-axis-tick",
+        x1: x,
+        x2: x,
+        y1: axisY,
+        y2: axisY + 6,
+      }));
+      xAxisGroup.append(svgText(xFormatter.format(new Date(timestamp)), {
+        class: "dispatch-chart-time-label",
+        x,
+        y: axisY + 23,
+        "text-anchor": index === 0 ? "start" : index === xTickCount - 1 ? "end" : "middle",
+      }));
+    }
+  }
+
+  function updateDomain(nextDomain) {
+    currentDomain = nextDomain;
+    const visibleSpan = currentDomain.endMilliseconds - currentDomain.startMilliseconds;
+    const scale = fullSpan / visibleSpan;
+    const offset = plotLeft - scale * fullXScale(currentDomain.startMilliseconds);
+    const transform = `matrix(${scale} 0 0 1 ${offset} 0)`;
+    for (const layout of panelLayouts) {
+      layout.transformedGroup.setAttribute("transform", transform);
+    }
+    updateXAxis();
+    rangeOutput.textContent = `${rangeFormatter.format(new Date(currentDomain.startMilliseconds))} – ${rangeFormatter.format(new Date(currentDomain.endMilliseconds))}`;
+    const fullDomain = {
+      startMilliseconds: model.startMilliseconds,
+      endMilliseconds: model.endMilliseconds,
+    };
+    resetButton.disabled = domainsEqual(currentDomain, fullDomain);
+    zoomOutButton.disabled = domainsEqual(currentDomain, fullDomain);
+    zoomInButton.disabled = visibleSpan <= minimumSpan;
+    hideTooltip();
+  }
+
+  function zoomAround(anchorMilliseconds, factor) {
+    updateDomain(zoomTimeDomain(
+      currentDomain.startMilliseconds,
+      currentDomain.endMilliseconds,
+      anchorMilliseconds,
+      factor,
+      model.startMilliseconds,
+      model.endMilliseconds,
+      minimumSpan,
+    ));
+  }
+
+  function resetZoom() {
+    updateDomain(Object.freeze({
+      startMilliseconds: model.startMilliseconds,
+      endMilliseconds: model.endMilliseconds,
+    }));
+  }
+
+  function timestampAtPointer(event) {
     const bounds = svg.getBoundingClientRect();
     const viewX = ((event.clientX - bounds.left) / bounds.width) * viewWidth;
     const clampedX = Math.min(plotRight, Math.max(plotLeft, viewX));
     const fraction = (clampedX - plotLeft) / plotWidth;
-    const timestamp = model.startMilliseconds
-      + fraction * (model.endMilliseconds - model.startMilliseconds);
+    return currentDomain.startMilliseconds
+      + fraction * (currentDomain.endMilliseconds - currentDomain.startMilliseconds);
+  }
+
+  function showTooltip(event) {
+    const timestamp = timestampAtPointer(event);
     const rowIndex = Math.min(
       model.rows.length - 1,
       Math.max(0, Math.floor((timestamp - model.startMilliseconds) / model.stepMilliseconds)),
     );
     const row = model.rows[rowIndex];
-    const rowX = xScale(row.timestampMilliseconds);
+    const rowX = Math.min(
+      plotRight,
+      Math.max(plotLeft, visibleXScale()(row.timestampMilliseconds)),
+    );
     hoverLine.setAttribute("x1", String(rowX));
     hoverLine.setAttribute("x2", String(rowX));
     hoverLine.setAttribute("visibility", "visible");
@@ -633,11 +856,112 @@ export function renderDispatchCharts(container, model) {
     const renderedWidth = svg.getBoundingClientRect().width;
     const tooltipX = (rowX / viewWidth) * renderedWidth;
     tooltip.style.left = `${Math.min(renderedWidth - 110, Math.max(110, tooltipX))}px`;
+  }
+
+  let panState = null;
+  overlay.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+    panState = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      startMilliseconds: currentDomain.startMilliseconds,
+      endMilliseconds: currentDomain.endMilliseconds,
+    };
+    overlay.setPointerCapture(event.pointerId);
+    overlay.classList.add("dispatch-chart-panning");
+    hideTooltip();
   });
-  overlay.addEventListener("pointerleave", () => {
-    hoverLine.setAttribute("visibility", "hidden");
-    tooltip.hidden = true;
+  overlay.addEventListener("pointermove", (event) => {
+    if (panState && panState.pointerId === event.pointerId) {
+      const bounds = svg.getBoundingClientRect();
+      const renderedPlotWidth = (plotWidth / viewWidth) * bounds.width;
+      const span = panState.endMilliseconds - panState.startMilliseconds;
+      const delta = -((event.clientX - panState.clientX) / renderedPlotWidth) * span;
+      updateDomain(panTimeDomain(
+        panState.startMilliseconds,
+        panState.endMilliseconds,
+        delta,
+        model.startMilliseconds,
+        model.endMilliseconds,
+      ));
+      event.preventDefault();
+      return;
+    }
+    showTooltip(event);
   });
 
-  container.append(svg, tooltip);
+  function finishPan(event) {
+    if (!panState || panState.pointerId !== event.pointerId) {
+      return;
+    }
+    if (overlay.hasPointerCapture(event.pointerId)) {
+      overlay.releasePointerCapture(event.pointerId);
+    }
+    panState = null;
+    overlay.classList.remove("dispatch-chart-panning");
+  }
+
+  overlay.addEventListener("pointerup", finishPan);
+  overlay.addEventListener("pointercancel", finishPan);
+  overlay.addEventListener("pointerleave", () => {
+    if (!panState) {
+      hideTooltip();
+    }
+  });
+  overlay.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const boundedDelta = Math.max(-300, Math.min(300, event.deltaY));
+    zoomAround(timestampAtPointer(event), Math.exp(boundedDelta * 0.002));
+  }, { passive: false });
+  overlay.addEventListener("dblclick", resetZoom);
+  overlay.addEventListener("keydown", (event) => {
+    const midpoint = (currentDomain.startMilliseconds + currentDomain.endMilliseconds) / 2;
+    const span = currentDomain.endMilliseconds - currentDomain.startMilliseconds;
+    if (event.key === "+" || event.key === "=") {
+      zoomAround(midpoint, 0.5);
+    } else if (event.key === "-") {
+      zoomAround(midpoint, 2);
+    } else if (event.key === "0" || event.key === "Home") {
+      resetZoom();
+    } else if (event.key === "ArrowLeft") {
+      updateDomain(panTimeDomain(
+        currentDomain.startMilliseconds,
+        currentDomain.endMilliseconds,
+        -span * 0.1,
+        model.startMilliseconds,
+        model.endMilliseconds,
+      ));
+    } else if (event.key === "ArrowRight") {
+      updateDomain(panTimeDomain(
+        currentDomain.startMilliseconds,
+        currentDomain.endMilliseconds,
+        span * 0.1,
+        model.startMilliseconds,
+        model.endMilliseconds,
+      ));
+    } else {
+      return;
+    }
+    event.preventDefault();
+  });
+
+  zoomInButton.addEventListener("click", () => {
+    zoomAround(
+      (currentDomain.startMilliseconds + currentDomain.endMilliseconds) / 2,
+      0.5,
+    );
+  });
+  zoomOutButton.addEventListener("click", () => {
+    zoomAround(
+      (currentDomain.startMilliseconds + currentDomain.endMilliseconds) / 2,
+      2,
+    );
+  });
+  resetButton.addEventListener("click", resetZoom);
+
+  stage.append(svg, tooltip);
+  container.append(toolbar, stage);
+  updateDomain(currentDomain);
 }

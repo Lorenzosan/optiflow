@@ -140,7 +140,12 @@
 
 .dispatch-chart-overlay {
   fill: transparent;
-  cursor: crosshair;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.dispatch-chart-overlay.dispatch-chart-panning {
+  cursor: grabbing;
 }
 
 .dispatch-chart-tooltip {
@@ -177,4 +182,65 @@
 
 .dispatch-chart-tooltip strong {
   font-variant-numeric: tabular-nums;
+}
+
+.dispatch-chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 760px;
+  border-bottom: 1px solid var(--border);
+  padding: 0.55rem 0.75rem;
+  background: #f7f9fa;
+}
+
+.dispatch-chart-guidance,
+.dispatch-chart-range {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.dispatch-chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.dispatch-chart-range {
+  margin-right: 0.35rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dispatch-chart-control-button {
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: #2b3a47;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.dispatch-chart-control-button:hover:not(:disabled) {
+  background: #eef3f5;
+}
+
+.dispatch-chart-stage {
+  position: relative;
+  min-width: 760px;
+}
+
+@media (max-width: 760px) {
+  .dispatch-chart-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dispatch-chart-controls {
+    justify-content: flex-start;
+  }
 }
