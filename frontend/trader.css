@@ -78,11 +78,17 @@
 }
 
 .dispatch-chart-unit,
+.dispatch-chart-detail,
 .dispatch-chart-axis-label,
 .dispatch-chart-time-label,
 .dispatch-chart-legend-label {
   fill: var(--muted);
   font-size: 10.5px;
+}
+
+.dispatch-chart-detail {
+  font-size: 9.5px;
+  font-weight: 650;
 }
 
 .dispatch-chart-series,
@@ -112,6 +118,22 @@
 
 .dispatch-series-spill {
   stroke: #687785;
+  stroke-dasharray: 5 4;
+}
+
+.dispatch-chart-area {
+  stroke: none;
+  pointer-events: none;
+}
+
+.dispatch-chart-area.dispatch-series-turbine {
+  fill: #247447;
+  fill-opacity: 0.2;
+}
+
+.dispatch-chart-area.dispatch-series-pump {
+  fill: #b13a3a;
+  fill-opacity: 0.2;
 }
 
 .dispatch-series-reservoir {
