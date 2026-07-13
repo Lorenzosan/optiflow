@@ -12,7 +12,8 @@ Run frontend checks from the repository root:
 node --check frontend/app.js
 node --check frontend/scenario.mjs
 node --check frontend/trader.mjs
-node --test frontend/scenario.test.mjs frontend/trader.test.mjs
+node --check frontend/dispatch_charts.mjs
+node --test frontend/scenario.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs
 ```
 
 Run the stack with:
@@ -22,3 +23,5 @@ docker compose up --build
 ```
 
 Then open `http://127.0.0.1:8080`.
+
+The selected-run panel also renders synchronized dependency-free SVG charts for price, natural inflow, turbine/pump/spill controls, reservoir volume, and cumulative profit. Chart timestamps are shown in Europe/Zurich, while the dispatch artifact remains UTC.

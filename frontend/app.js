@@ -6,6 +6,11 @@ import {
   validateSeriesPair,
 } from "./scenario.mjs";
 import {
+  DISPATCH_CHART_TIME_ZONE,
+  buildDispatchChartModel,
+  renderDispatchCharts,
+} from "./dispatch_charts.mjs";
+import {
   PEAK_END_HOUR,
   PEAK_START_HOUR,
   TRADER_TIME_ZONE,
@@ -56,6 +61,8 @@ const elements = {
   runCompleted: document.querySelector("#run-completed"),
   runError: document.querySelector("#run-error"),
   summaryGrid: document.querySelector("#summary-grid"),
+  dispatchCharts: document.querySelector("#dispatch-charts"),
+  dispatchChartsMessage: document.querySelector("#dispatch-charts-message"),
   traderCaption: document.querySelector("#trader-caption"),
   traderMessage: document.querySelector("#trader-message"),
   traderBody: document.querySelector("#trader-body"),
@@ -494,6 +501,13 @@ function renderPagination(page) {
   elements.nextButton.disabled = page.offset + page.limit >= page.total;
 }
 
+function clearDispatchCharts(message = "") {
+  elements.dispatchCharts.replaceChildren();
+  elements.dispatchCharts.hidden = true;
+  elements.dispatchChartsMessage.textContent = message;
+  elements.dispatchChartsMessage.classList.remove("error");
+}
+
 function clearTraderView(message = "") {
   elements.traderBody.replaceChildren();
   elements.traderMessage.textContent = message;
@@ -506,6 +520,7 @@ function clearRunDetails() {
   state.traderRequestId += 1;
   elements.detailsEmpty.hidden = false;
   elements.detailsContent.hidden = true;
+  clearDispatchCharts();
   clearTraderView();
 }
 
@@ -559,23 +574,31 @@ async function renderRunDetails(run) {
 
   const requestId = ++state.traderRequestId;
   if (!canDownload) {
+    clearDispatchCharts("Dispatch charts are available only for succeeded runs with a dispatch artifact.");
     clearTraderView("Trader view is available only for succeeded runs with a dispatch artifact.");
     return;
   }
 
   const scenario = state.scenarios.find((item) => item.id === run.scenario_id);
   if (!Number.isFinite(Number(scenario?.time_step_hours))) {
+    clearDispatchCharts("Dispatch charts unavailable: the scenario time step could not be read.");
     clearTraderView("Trader view unavailable: the scenario time step could not be read.");
     return;
   }
 
+  clearDispatchCharts("Loading selected dispatch charts…");
   clearTraderView("Loading the selected dispatch…");
   try {
     const dispatchText = await apiRequest(`/runs/${run.id}/dispatch.csv`);
+    const chartModel = buildDispatchChartModel(dispatchText, scenario.time_step_hours);
     const rows = buildTraderRows(dispatchText, scenario.time_step_hours);
     if (requestId !== state.traderRequestId) {
       return;
     }
+    renderDispatchCharts(elements.dispatchCharts, chartModel);
+    elements.dispatchCharts.hidden = false;
+    elements.dispatchChartsMessage.textContent =
+      `Times are shown in ${DISPATCH_CHART_TIME_ZONE}. Pump flow is plotted below zero. Hover for interval values.`;
     renderTraderTable(rows);
     elements.traderMessage.textContent = "";
     elements.traderCaption.textContent =
@@ -588,6 +611,8 @@ async function renderRunDetails(run) {
     if (requestId !== state.traderRequestId) {
       return;
     }
+    clearDispatchCharts(error.message);
+    elements.dispatchChartsMessage.classList.add("error");
     clearTraderView(error.message);
     elements.traderMessage.classList.add("error");
   }

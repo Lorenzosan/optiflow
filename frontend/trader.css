@@ -30,3 +30,143 @@
 .history-panel {
   grid-column: 1 / -1;
 }
+
+.dispatch-charts-heading {
+  margin-top: 1.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.dispatch-charts {
+  position: relative;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.dispatch-chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+}
+
+.dispatch-chart-panel-background {
+  fill: #ffffff;
+  stroke: #e3e8ed;
+}
+
+.dispatch-chart-grid-line {
+  stroke: #e7ebef;
+  stroke-width: 1;
+}
+
+.dispatch-chart-zero-line {
+  stroke: #aeb8c2;
+  stroke-width: 1.25;
+}
+
+.dispatch-chart-axis-tick {
+  stroke: #8d99a5;
+}
+
+.dispatch-chart-title {
+  fill: #263744;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.dispatch-chart-unit,
+.dispatch-chart-axis-label,
+.dispatch-chart-time-label,
+.dispatch-chart-legend-label {
+  fill: var(--muted);
+  font-size: 10.5px;
+}
+
+.dispatch-chart-series,
+.dispatch-chart-legend-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.dispatch-series-price {
+  stroke: #9a6412;
+}
+
+.dispatch-series-inflow {
+  stroke: #2f72a4;
+}
+
+.dispatch-series-turbine {
+  stroke: #247447;
+}
+
+.dispatch-series-pump {
+  stroke: #b13a3a;
+}
+
+.dispatch-series-spill {
+  stroke: #687785;
+}
+
+.dispatch-series-reservoir {
+  stroke: var(--accent);
+}
+
+.dispatch-series-profit {
+  stroke: #6c4aa1;
+}
+
+.dispatch-chart-hover-line {
+  stroke: #263744;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.dispatch-chart-overlay {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.dispatch-chart-tooltip {
+  position: absolute;
+  top: 0.75rem;
+  z-index: 2;
+  min-width: 205px;
+  transform: translateX(-50%);
+  border: 1px solid #cbd4dc;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(20, 34, 48, 0.16);
+  padding: 0.65rem 0.75rem;
+  pointer-events: none;
+  font-size: 0.76rem;
+}
+
+.dispatch-chart-tooltip-heading {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #263744;
+}
+
+.dispatch-chart-tooltip div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.18rem;
+}
+
+.dispatch-chart-tooltip span {
+  color: var(--muted);
+}
+
+.dispatch-chart-tooltip strong {
+  font-variant-numeric: tabular-nums;
+}
