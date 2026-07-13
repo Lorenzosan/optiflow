@@ -13,7 +13,7 @@ node --check frontend/app.js
 node --check frontend/scenario.mjs
 node --check frontend/trader.mjs
 node --check frontend/dispatch_charts.mjs
-node --test frontend/scenario.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs
+node --test frontend/scenario.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs frontend/container_assets.test.mjs
 ```
 
 Run the stack with:
