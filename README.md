@@ -116,7 +116,6 @@ pump_max_flow
 spill_max_flow
 turbine_efficiency
 pump_efficiency
-water_to_power_factor
 operating_cost_per_mwh
 initial_reservoir_volume
 terminal_reservoir_min_volume
@@ -130,7 +129,7 @@ pump_flow_steps
 discount_factor
 ```
 
-The model uses explicit engineering and economic units throughout: reservoir volumes are `10³ m³`, hydraulic flows are `10³ m³/h`, power is `MW`, energy is `MWh`, electricity prices and operating costs are `€/MWh`, and rewards/profit are `€`.
+The model uses explicit engineering and economic units throughout: reservoir volumes are `10³ m³`, hydraulic flows are `10³ m³/h`, power is `MW`, energy is `MWh`, electricity prices and operating costs are `€/MWh`, and rewards/profit are `€`. Hydraulic power uses a fixed 146.79 m head; scenarios configure turbine and pump efficiencies but not a separate conversion factor. Legacy scenario files containing `water_to_power_factor,0.4` remain accepted for migration; other values are rejected.
 
 Price and inflow files are separate timestamped series:
 

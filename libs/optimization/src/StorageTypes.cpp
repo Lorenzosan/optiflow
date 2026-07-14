@@ -93,7 +93,6 @@ ModelParameters::ModelParameters(double time_step_hours_value,
                                  double spill_max_flow_value,
                                  double turbine_efficiency_value,
                                  double pump_efficiency_value,
-                                 double water_to_power_factor_value,
                                  double operating_cost_per_mwh_value)
     : time_step_hours(time_step_hours_value),
       reservoir_min_volume(reservoir_min_volume_value),
@@ -103,7 +102,6 @@ ModelParameters::ModelParameters(double time_step_hours_value,
       spill_max_flow(spill_max_flow_value),
       turbine_efficiency(turbine_efficiency_value),
       pump_efficiency(pump_efficiency_value),
-      water_to_power_factor(water_to_power_factor_value),
       operating_cost_per_mwh(operating_cost_per_mwh_value) {}
 
 TerminalParameters::TerminalParameters(double reservoir_min_volume_value,
@@ -144,7 +142,6 @@ void validate_model_parameters(const ModelParameters& parameters) {
         throw std::invalid_argument("efficiencies must not exceed one");
     }
 
-    require_positive(parameters.water_to_power_factor, "water_to_power_factor");
     require_nonnegative(parameters.operating_cost_per_mwh, "operating_cost_per_mwh");
 }
 

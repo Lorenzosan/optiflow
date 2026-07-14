@@ -93,7 +93,6 @@ struct ModelParameters {
     double spill_max_flow;
     double turbine_efficiency;
     double pump_efficiency;
-    double water_to_power_factor;
     double operating_cost_per_mwh;
 
     ModelParameters(double time_step_hours,
@@ -104,7 +103,6 @@ struct ModelParameters {
                     double spill_max_flow,
                     double turbine_efficiency,
                     double pump_efficiency,
-                    double water_to_power_factor,
                     double operating_cost_per_mwh);
 };
 

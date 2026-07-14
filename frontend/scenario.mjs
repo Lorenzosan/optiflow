@@ -16,14 +16,13 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
     ]),
   }),
   Object.freeze({
-    title: "Hydraulic actions and conversion",
+    title: "Hydraulic actions and efficiencies",
     fields: Object.freeze([
       field("turbine_max_flow", "Maximum turbine flow [10³ m³/h]", 40, { min: 0 }),
       field("pump_max_flow", "Maximum pump flow [10³ m³/h]", 30, { min: 0 }),
       field("spill_max_flow", "Maximum spill flow [10³ m³/h]", 50, { min: 0 }),
       field("turbine_efficiency", "Turbine efficiency [fraction]", 0.9, { min: 0, max: 1, exclusiveMin: true }),
       field("pump_efficiency", "Pump efficiency [fraction]", 0.85, { min: 0, max: 1, exclusiveMin: true }),
-      field("water_to_power_factor", "Water-to-power factor [MW/(10³ m³/h)]", 0.4, { min: 0, exclusiveMin: true }),
     ]),
   }),
   Object.freeze({

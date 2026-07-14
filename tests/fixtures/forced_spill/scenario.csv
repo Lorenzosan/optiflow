@@ -8,7 +8,6 @@ pump_max_flow,0
 spill_max_flow,3
 turbine_efficiency,1
 pump_efficiency,1
-water_to_power_factor,1
 operating_cost_per_mwh,0
 initial_reservoir_volume,8
 terminal_reservoir_min_volume,10

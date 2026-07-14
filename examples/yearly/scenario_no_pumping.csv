@@ -8,7 +8,6 @@ pump_max_flow,0
 spill_max_flow,50
 turbine_efficiency,0.9
 pump_efficiency,0.85
-water_to_power_factor,0.4
 operating_cost_per_mwh,1
 initial_reservoir_volume,250
 terminal_reservoir_min_volume,187.5

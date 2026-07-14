@@ -20,7 +20,7 @@ void near(double actual, double expected, std::string_view message) { if (std::a
 
 core::ModelParameters parameters(double turbine_max, double pump_max, double operating_cost = 0.0) {
     return core::ModelParameters(1.0, 0.0, 10.0, turbine_max, pump_max, 0.0,
-                                 1.0, 1.0, 1.0, operating_cost);
+                                 1.0, 1.0, operating_cost);
 }
 
 std::vector<core::DispatchStep> solve(const core::Scenario& scenario,
@@ -47,7 +47,7 @@ void test_high_price_turbines() {
                                   core::TerminalParameters(0.0, 10.0, 0.0, 0.0));
     const auto trajectory = solve(scenario, core::SolverParameters(2, 2, 1, 1, 1.0));
     near(trajectory.front().action.turbine_flow, 10.0, "turbine action");
-    near(trajectory.front().net_power, 10.0, "generation");
+    near(trajectory.front().net_power, 4.0, "generation");
 }
 
 void test_terminal_inventory_forces_wait() {
@@ -64,7 +64,7 @@ void test_terminal_inventory_forces_pumping() {
                                   core::TerminalParameters(10.0, 10.0, 10.0, 0.0));
     const auto trajectory = solve(scenario, core::SolverParameters(2, 1, 1, 2, 1.0));
     near(trajectory.front().action.pump_flow, 10.0, "pump action");
-    near(trajectory.front().net_power, -10.0, "pump consumption");
+    near(trajectory.front().net_power, -4.0, "pump consumption");
 }
 
 }  // namespace

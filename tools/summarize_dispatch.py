@@ -11,6 +11,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from hydraulic_units import HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
+
 
 class SummaryError(RuntimeError):
     pass
@@ -155,7 +157,6 @@ def summarize(args: argparse.Namespace) -> None:
             if actual_seconds != rounded_interval_seconds:
                 fail(f"input timestamp spacing mismatch at index {index}")
 
-    water_to_power = numeric_param(params, "water_to_power_factor")
     turbine_efficiency = numeric_param(params, "turbine_efficiency")
     pump_efficiency = numeric_param(params, "pump_efficiency")
     operating_cost_rate = numeric_param(params, "operating_cost_per_mwh")
@@ -173,8 +174,16 @@ def summarize(args: argparse.Namespace) -> None:
         if not math.isclose(row["natural_inflow"], inflows[index], abs_tol=1e-9):
             fail(f"dispatch inflow mismatch at index {index}")
 
-        turbine_power = row["turbine_flow"] * water_to_power * turbine_efficiency
-        pump_power = row["pump_flow"] * water_to_power / pump_efficiency
+        turbine_power = (
+            row["turbine_flow"]
+            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
+            * turbine_efficiency
+        )
+        pump_power = (
+            row["pump_flow"]
+            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
+            / pump_efficiency
+        )
         exported = max(row["net_power"], 0.0) * dt
         imported = max(-row["net_power"], 0.0) * dt
         turbine_energy = turbine_power * dt

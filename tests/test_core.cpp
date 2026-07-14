@@ -46,7 +46,7 @@ void require_throws(Function&& function, std::string_view fragment) {
 
 core::ModelParameters model_parameters() {
     return core::ModelParameters(1.0, 0.0, 100.0, 20.0, 10.0, 20.0,
-                                 0.9, 0.85, 0.5, 1.0);
+                                 0.9, 0.85, 1.0);
 }
 core::TerminalParameters open_terminal() {
     return core::TerminalParameters(0.0, 100.0, 50.0, 0.0);
@@ -61,9 +61,9 @@ void test_transition_and_reward() {
         core::State(50.0), core::Action(10.0, 0.0, 0.0), core::Exogenous(100.0, 2.0));
     require(outcome.feasible, "transition feasible");
     near(outcome.next_state.reservoir_volume, 42.0, "next volume");
-    near(outcome.turbine_power, 4.5, "turbine power");
-    near(outcome.net_power, 4.5, "net power");
-    near(outcome.reward, 445.5, "reward");
+    near(outcome.turbine_power, 3.6, "turbine power");
+    near(outcome.net_power, 3.6, "net power");
+    near(outcome.reward, 356.4, "reward");
 }
 
 void test_zero_reward_is_canonical_positive_zero() {
@@ -95,7 +95,7 @@ void test_action_grid_contains_only_unique_feasible_controls() {
     }
 
     const core::ModelParameters no_pumping(
-        1.0, 0.0, 100.0, 20.0, 0.0, 0.0, 0.9, 0.85, 0.5, 1.0);
+        1.0, 0.0, 100.0, 20.0, 0.0, 0.0, 0.9, 0.85, 1.0);
     const numerics::ActionGrid zero_range_grid = numerics::ActionGrid::from_parameters(
         no_pumping, core::SolverParameters(11, 3, 1, 3, 1.0));
     require(zero_range_grid.size() == 3, "zero-range control axis is collapsed");
@@ -170,7 +170,6 @@ void write_valid_scenario(const std::filesystem::path& path, double time_step_ho
              << "spill_max_flow,20\n"
              << "turbine_efficiency,0.9\n"
              << "pump_efficiency,0.85\n"
-             << "water_to_power_factor,0.5\n"
              << "operating_cost_per_mwh,1\n"
              << "initial_reservoir_volume,50\n"
              << "terminal_reservoir_min_volume,0\n"
@@ -247,6 +246,34 @@ void test_csv_reader_preserves_and_validates_timestamps() {
     std::filesystem::remove(inflows_path);
 }
 
+void test_csv_reader_accepts_only_the_legacy_fixed_power_factor() {
+    const auto directory = std::filesystem::temp_directory_path();
+    const auto scenario_path = directory / "optiflow_legacy_power_factor.csv";
+    const auto prices_path = directory / "optiflow_legacy_power_factor_prices.csv";
+    const auto inflows_path = directory / "optiflow_legacy_power_factor_inflows.csv";
+    write_valid_scenario(scenario_path);
+    {
+        std::ofstream scenario(scenario_path, std::ios::app);
+        scenario << "water_to_power_factor,0.4\n";
+    }
+    write_series(prices_path, "price", {{"2027-01-01T00:00:00Z", 0.0}});
+    write_series(inflows_path, "natural_inflow", {{"2027-01-01T00:00:00Z", 0.0}});
+    static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
+
+    write_valid_scenario(scenario_path);
+    {
+        std::ofstream scenario(scenario_path, std::ios::app);
+        scenario << "water_to_power_factor,0.5\n";
+    }
+    require_throws<std::invalid_argument>([&] {
+        static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
+    }, "legacy water_to_power_factor must be 0.4 or removed");
+
+    std::filesystem::remove(scenario_path);
+    std::filesystem::remove(prices_path);
+    std::filesystem::remove(inflows_path);
+}
+
 void test_csv_reader_rejects_unsupported_key() {
     const auto directory = std::filesystem::temp_directory_path();
     const auto scenario_path = directory / "optiflow_removed_storage.csv";
@@ -277,6 +304,7 @@ int main() {
     test_scenario_validation();
     test_bellman_forward_and_runner();
     test_csv_reader_preserves_and_validates_timestamps();
+    test_csv_reader_accepts_only_the_legacy_fixed_power_factor();
     test_csv_reader_rejects_unsupported_key();
     return 0;
 }

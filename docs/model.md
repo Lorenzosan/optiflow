@@ -16,7 +16,7 @@ OptiFlow uses the following explicit conventions without rescaling the existing 
 * Power: `MW`; interval energy: `MWh`.
 * Electricity prices and operating costs: `€/MWh`.
 * Rewards, profit, and cash flows: `€`.
-* `water_to_power_factor`: `MW/(10³ m³/h)`.
+* Fixed hydraulic head: `146.79 m` (model constant).
 * `terminal_reservoir_target_penalty`: `€/(10³ m³)²`.
 
 ## State
@@ -57,8 +57,10 @@ Both current and next reservoir volume must remain within configured hard bounds
 ## Power and reward
 
 ```text
-turbine_power = turbine_flow * water_to_power_factor * turbine_efficiency
-pump_power = pump_flow * water_to_power_factor / pump_efficiency
+hydraulic_power_factor = ρ * g * fixed_hydraulic_head
+  * 1000 m³ per flow unit / 3600 s per hour / 10⁶ W per MW
+turbine_power = turbine_flow * hydraulic_power_factor * turbine_efficiency
+pump_power = pump_flow * hydraulic_power_factor / pump_efficiency
 net_power = turbine_power - pump_power
 ```
 
@@ -71,7 +73,7 @@ reward = price * net_power * time_step_hours
       * time_step_hours
 ```
 
-`water_to_power_factor` uses a fixed-head approximation. A calibrated hydraulic model would make the conversion depend on head and plant characteristics.
+The fixed head is 146.79 m, which gives a hydraulic power factor of 0.4 MW per `10³ m³/h`. It is derived internally rather than supplied by each scenario. A calibrated hydraulic model would make head depend on reservoir level and hydraulic losses. Legacy scenario files may still contain `water_to_power_factor,0.4`; the reader accepts that exact value but ignores it.
 
 ## Terminal inventory
 

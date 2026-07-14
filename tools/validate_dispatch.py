@@ -11,6 +11,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from hydraulic_units import HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
+
 DEFAULT_STATE_TOLERANCE = 1.0e-4
 DEFAULT_ECONOMIC_TOLERANCE = 1.0e-2
 DEFAULT_CUMULATIVE_RELATIVE_TOLERANCE = 2.0e-5
@@ -268,7 +270,6 @@ def validate(args: argparse.Namespace) -> None:
     spill_max = numeric_param(params, "spill_max_flow")
     turbine_efficiency = numeric_param(params, "turbine_efficiency")
     pump_efficiency = numeric_param(params, "pump_efficiency")
-    water_to_power = numeric_param(params, "water_to_power_factor")
     operating_cost = numeric_param(params, "operating_cost_per_mwh")
 
     reservoir_grid_points = integer_param(params, "reservoir_volume_grid_points")
@@ -328,8 +329,16 @@ def validate(args: argparse.Namespace) -> None:
         if not reservoir_min - args.state_tolerance <= row["next_reservoir_volume"] <= reservoir_max + args.state_tolerance:
             fail(f"next reservoir outside bounds at index {index}")
 
-        turbine_power = row["turbine_flow"] * water_to_power * turbine_efficiency
-        pump_power = row["pump_flow"] * water_to_power / pump_efficiency
+        turbine_power = (
+            row["turbine_flow"]
+            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
+            * turbine_efficiency
+        )
+        pump_power = (
+            row["pump_flow"]
+            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
+            / pump_efficiency
+        )
         expected_net_power = turbine_power - pump_power
         expected_reward = (
             row["price"] * expected_net_power * dt

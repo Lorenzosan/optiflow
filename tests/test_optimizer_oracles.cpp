@@ -20,7 +20,7 @@ void near(double actual, double expected, std::string_view message) { if (std::a
 
 core::ModelParameters parameters(double operating_cost = 0.0) {
     return core::ModelParameters(1.0, 0.0, 10.0, 10.0, 10.0, 0.0,
-                                 1.0, 1.0, 1.0, operating_cost);
+                                 1.0, 1.0, operating_cost);
 }
 std::vector<core::DispatchStep> solve(const core::Scenario& scenario) {
     const core::SolverParameters sp(2, 2, 1, 2, 1.0);
@@ -39,7 +39,7 @@ void test_high_price_now_generates() {
         {core::Exogenous(100.0, 0.0), core::Exogenous(0.0, 0.0)},
         parameters(), open_terminal()));
     near(trajectory[0].action.turbine_flow, 10.0, "generate now");
-    near(trajectory.back().cumulative_profit, 1000.0, "profit");
+    near(trajectory.back().cumulative_profit, 400.0, "profit");
 }
 
 void test_low_price_now_preserves_water() {
@@ -58,7 +58,7 @@ void test_negative_price_pumps_for_later_generation() {
         parameters(), open_terminal()));
     near(trajectory[0].action.pump_flow, 10.0, "pump at negative price");
     near(trajectory[1].action.turbine_flow, 10.0, "generate later");
-    near(trajectory.back().cumulative_profit, 1100.0, "arbitrage profit");
+    near(trajectory.back().cumulative_profit, 440.0, "arbitrage profit");
 }
 
 void test_high_operating_cost_avoids_cycle() {
