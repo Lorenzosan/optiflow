@@ -23,14 +23,25 @@ core::ModelParameters parameters(double turbine_max, double pump_max, double ope
                                  1.0, 1.0, operating_cost);
 }
 
-std::vector<core::DispatchStep> solve(const core::Scenario& scenario,
-                                      const core::SolverParameters& solver_parameters) {
-    const auto grid = numerics::StateGrid::from_parameters(scenario.model_parameters(), solver_parameters);
-    const auto actions = numerics::ActionGrid::from_parameters(scenario.model_parameters(), solver_parameters);
+std::vector<core::DispatchStep> solve_with_actions(
+    const core::Scenario& scenario,
+    const core::SolverParameters& solver_parameters,
+    const numerics::ActionGrid& actions) {
+    const auto grid =
+        numerics::StateGrid::from_parameters(scenario.model_parameters(), solver_parameters);
     const model::PumpedStorageModel pumped_storage(scenario.model_parameters());
-    const solver::BellmanResult result = solver::BellmanSolver(grid, actions, pumped_storage, solver_parameters).solve(scenario);
+    const solver::BellmanResult result =
+        solver::BellmanSolver(grid, actions, pumped_storage, solver_parameters).solve(scenario);
     return solver::ForwardSimulator(grid, actions, pumped_storage, solver_parameters)
         .simulate_from_value_function(scenario, result.value_function);
+}
+
+std::vector<core::DispatchStep> solve(const core::Scenario& scenario,
+                                      const core::SolverParameters& solver_parameters) {
+    return solve_with_actions(
+        scenario,
+        solver_parameters,
+        numerics::ActionGrid::from_parameters(scenario.model_parameters(), solver_parameters));
 }
 
 void test_zero_price_waits() {
@@ -67,6 +78,30 @@ void test_terminal_inventory_forces_pumping() {
     near(trajectory.front().net_power, -10.0, "pump consumption");
 }
 
+void test_equal_value_tie_break_prefers_turbine_over_spill() {
+    const core::ModelParameters model_parameters(
+        1.0, 0.0, 10.0, 10.0, 0.0, 10.0, 1.0, 1.0, 0.0);
+    const core::Scenario scenario(
+        "tie_break",
+        core::State(10.0),
+        {core::Exogenous(0.0, 0.0)},
+        model_parameters,
+        core::TerminalParameters(0.0, 0.0, 0.0, 0.0));
+    const core::SolverParameters solver_parameters(2, 2, 2, 1, 1.0);
+
+    const std::vector<numerics::ActionGrid> action_grids = {
+        numerics::ActionGrid({core::Action(0.0, 10.0, 0.0),
+                              core::Action(10.0, 0.0, 0.0)}),
+        numerics::ActionGrid({core::Action(10.0, 0.0, 0.0),
+                              core::Action(0.0, 10.0, 0.0)}),
+    };
+    for (const numerics::ActionGrid& actions : action_grids) {
+        const auto trajectory = solve_with_actions(scenario, solver_parameters, actions);
+        near(trajectory.front().action.turbine_flow, 10.0, "tie-break turbine action");
+        near(trajectory.front().action.spill_flow, 0.0, "tie-break avoids spill");
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -74,5 +109,6 @@ int main() {
     test_high_price_turbines();
     test_terminal_inventory_forces_wait();
     test_terminal_inventory_forces_pumping();
+    test_equal_value_tie_break_prefers_turbine_over_spill();
     return 0;
 }

@@ -66,3 +66,11 @@ reward = revenue - operating_cost
 terminal_penalty = terminal_reservoir_target_penalty
   * (final_reservoir_volume - terminal_target_reservoir_volume)^2
 ```
+
+## Numerical resolution and equal-value actions
+
+The Bellman solver evaluates a discrete hydraulic-action grid at every reservoir-grid state. Linear interpolation supplies continuation values for next states between reservoir grid points. Numerical results should therefore be checked across nested state and action resolutions rather than treated as independent of discretization.
+
+`tools/analyze_resolution.py` creates scenario variants with nested solver grids and reports each result relative to the finest listed case. The comparison is a sensitivity diagnostic. It does not assume that profit increases monotonically, because changing the reservoir grid also changes interpolation error.
+
+A strictly larger Bellman value always replaces the current action. Exactly equal values use an explicit deterministic tie-break: less spill, then less total controlled hydraulic throughput, then less pumping, then less turbine withdrawal. The same rule is used in backward induction and value-function forward simulation, so equal-value dispatch does not depend on action enumeration order.

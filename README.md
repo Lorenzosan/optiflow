@@ -11,7 +11,7 @@ The upper reservoir is the storage inventory. Electricity is consumed to pump wa
 * Explicit scenario, price, and inflow CSV inputs with no hidden optimizer defaults.
 * One-dimensional reservoir-volume state grid.
 * Turbine, pump, and spill action grid from explicit limits and step counts.
-* Deterministic Bellman dynamic programming with linear continuation-value interpolation.
+* Deterministic Bellman dynamic programming with linear continuation-value interpolation and explicit equal-value action tie-breaking.
 * Pumped-storage transition, power, cost, and reward accounting.
 * Terminal reservoir hard bounds and soft target penalty.
 * Value-function-based forward simulation and trajectory diagnostics.
@@ -27,7 +27,7 @@ cmake --build build -j
 ctest --test-dir build --output-on-failure
 ```
 
-The test gate includes core transition/grid/interpolation tests, hand-checkable dispatch behavior, economic oracle cases, CLI validation, the yearly synthetic scenario, dispatch validation, and scenario comparison.
+The test gate includes core transition/grid/interpolation tests, hand-checkable dispatch behavior, economic oracle cases, CLI validation, the yearly synthetic scenario, dispatch validation, scenario comparison, and resolution analysis.
 
 GitHub Actions runs the C++ test gate, backend and frontend tests, changed-line whitespace checks, and builds both Docker images for pushes to `main` and pull requests.
 
@@ -85,6 +85,24 @@ python3 tools/compare_scenarios.py \
 ```
 
 The synthetic inputs are intended for smoke tests and interview discussion, not calibrated trading conclusions.
+
+## Resolution sensitivity
+
+Run the same scenario on nested state and action grids:
+
+```bash
+python3 tools/analyze_resolution.py \
+  --solve ./build/apps/solve_cli/optiflow_solve \
+  --scenario examples/scenario.csv \
+  --prices examples/prices.csv \
+  --inflows examples/inflows.csv \
+  --output-dir build/resolution-analysis \
+  --summary-output build/resolution-analysis.csv
+```
+
+The default resolutions are `9,3,3,3`, `17,5,5,5`, and `33,9,9,9`, where each tuple is reservoir points, turbine steps, spill steps, and pump steps. Repeat `--resolution R,T,S,P` to use other genuinely nested grids. The report includes action count, profit, import/export energy, final reservoir content, runtime, and deltas against the finest listed case.
+
+This is a discretization sensitivity diagnostic, not a proof of convergence. Profit need not improve monotonically because changes to the state grid also change continuation-value interpolation.
 
 ## Web demo
 

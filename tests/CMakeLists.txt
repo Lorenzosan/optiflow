@@ -98,4 +98,12 @@ if(Python3_Interpreter_FOUND)
             -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
             -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/yearly-comparison
             -P ${CMAKE_CURRENT_SOURCE_DIR}/check_yearly_scenario_comparison.cmake)
+
+    add_test(NAME optiflow_resolution_analysis
+        COMMAND ${CMAKE_COMMAND}
+            -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+            -DOPTIFLOW_PYTHON=${Python3_EXECUTABLE}
+            -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+            -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/resolution-analysis
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/check_resolution_analysis.cmake)
 endif()
