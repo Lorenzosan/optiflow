@@ -1,5 +1,7 @@
 #include "optiflow/solver/BellmanSolver.h"
 
+#include "optiflow/solver/ActionSelection.h"
+
 #include "optiflow/numerics/Interpolator.h"
 
 #include <cmath>
@@ -70,7 +72,7 @@ BellmanResult BellmanSolver::solve(const core::Scenario& scenario) const {
                 }
                 const double candidate = outcome.reward +
                                          solver_parameters_.discount_factor * continuation;
-                if (candidate > best_value) {
+                if (better_action_candidate(candidate, action, best_value, best_action)) {
                     best_value = candidate;
                     best_action = &action;
                 }

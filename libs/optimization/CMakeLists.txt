@@ -1,5 +1,6 @@
 add_library(optiflow_optimization STATIC
     src/ActionGrid.cpp
+    src/ActionSelection.cpp
     src/GridTypes.cpp
     src/StorageTypes.cpp
     src/Scenario.cpp
