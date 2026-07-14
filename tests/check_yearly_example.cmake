@@ -51,7 +51,7 @@ set(required_output_patterns
     "Action count: 10"
     "Solve seconds: [0-9]"
     "Simulation seconds: [0-9]"
-    "Cumulative profit: ")
+    "Cumulative profit .€.: ")
 foreach(pattern IN LISTS required_output_patterns)
     string(REGEX MATCH "${pattern}" match_result "${command_output}")
     if(match_result STREQUAL "")

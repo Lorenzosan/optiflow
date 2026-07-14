@@ -598,7 +598,7 @@ async function renderRunDetails(run) {
     renderDispatchCharts(elements.dispatchCharts, chartModel);
     elements.dispatchCharts.hidden = false;
     elements.dispatchChartsMessage.textContent =
-      `Times are shown in ${DISPATCH_CHART_TIME_ZONE}. Pump flow is plotted below zero. Hover for interval values.`;
+      `Times are shown in ${DISPATCH_CHART_TIME_ZONE}. All hydraulic flows are shown as positive magnitudes. Hover for interval values.`;
     renderTraderTable(rows);
     elements.traderMessage.textContent = "";
     elements.traderCaption.textContent =
@@ -626,10 +626,10 @@ function renderSummary(summary) {
   }
 
   const metrics = [
-    ["Cumulative profit [currency]", formatNumber(summary.cumulative_profit)],
+    ["Cumulative profit [€]", formatNumber(summary.cumulative_profit)],
     ["Export energy [MWh]", formatNumber(summary.export_energy_mwh)],
     ["Import energy [MWh]", formatNumber(summary.import_energy_mwh)],
-    ["Final reservoir [volume units]", formatNumber(summary.final_reservoir_volume)],
+    ["Final reservoir [10³ m³]", formatNumber(summary.final_reservoir_volume)],
     ["Solve time [s]", formatNumber(summary.solve_seconds, 3)],
     ["Simulation time [s]", formatNumber(summary.simulation_seconds, 3)],
     ["Turbine steps [count]", formatNumber(summary.turbine_steps, 0)],

@@ -6,6 +6,19 @@ OptiFlow models one pumped-storage hydro plant. The stored-energy inventory is t
 
 The optimization horizon has `N` decisions indexed internally from `0` to `N - 1`. `time_step_hours` is the duration of one decision interval. Price and inflow files carry matching canonical UTC interval-start timestamps. Timestamps must be strictly increasing and spaced exactly by `time_step_hours`.
 
+
+## Units and currency
+
+OptiFlow uses the following explicit conventions without rescaling the existing numerical inputs:
+
+* Reservoir volumes: `10³ m³`.
+* Natural, turbine, pump, and spill flows: `10³ m³/h`.
+* Power: `MW`; interval energy: `MWh`.
+* Electricity prices and operating costs: `€/MWh`.
+* Rewards, profit, and cash flows: `€`.
+* `water_to_power_factor`: `MW/(10³ m³/h)`.
+* `terminal_reservoir_target_penalty`: `€/(10³ m³)²`.
+
 ## State
 
 The state is the upper-reservoir water inventory:
@@ -14,20 +27,20 @@ The state is the upper-reservoir water inventory:
 state = reservoir_volume
 ```
 
-`reservoir_volume` is measured in a consistent volume unit. With fixed hydraulic head, stored gravitational energy is proportional to this volume. For a closed-loop plant with a fixed total quantity of water, lower-reservoir volume is implied by water conservation and is not a second independent state.
+`reservoir_volume` is measured in thousands of cubic metres (`10³ m³`). With fixed hydraulic head, stored gravitational energy is proportional to this volume. For a closed-loop plant with a fixed total quantity of water, lower-reservoir volume is implied by water conservation and is not a second independent state.
 
 ## Actions
 
-* `turbine_flow`: average water flow through the turbine, in volume units per hour.
-* `pump_flow`: average water flow pumped into the upper reservoir, in volume units per hour.
-* `spill_flow`: average water flow released without generation, in volume units per hour.
+* `turbine_flow`: average water flow through the turbine, in `10³ m³/h`.
+* `pump_flow`: average water flow pumped into the upper reservoir, in `10³ m³/h`.
+* `spill_flow`: average water flow released without generation, in `10³ m³/h`.
 
 Actions are nonnegative. Turbine and pump operation cannot occur simultaneously.
 
 ## Exogenous inputs
 
-* `price`: electricity price in currency per MWh. Negative prices are allowed.
-* `natural_inflow`: average natural water inflow in volume units per hour. It must be nonnegative.
+* `price`: electricity price in euros per MWh (`€/MWh`). Negative prices are allowed.
+* `natural_inflow`: average natural water inflow in `10³ m³/h`. It must be nonnegative.
 
 ## State transition
 

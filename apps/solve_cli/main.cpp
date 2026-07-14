@@ -139,14 +139,14 @@ void print_summary(std::ostream& output,
     output << "Action count: " << diagnostics.action_count << '\n';
     output << "Solve seconds: " << diagnostics.solve_seconds << '\n';
     output << "Simulation seconds: " << diagnostics.simulation_seconds << '\n';
-    output << "Export energy MWh: " << diagnostics.export_energy_mwh << '\n';
-    output << "Import energy MWh: " << diagnostics.import_energy_mwh << '\n';
-    output << "Final reservoir volume: " << diagnostics.final_reservoir_volume << '\n';
+    output << "Export energy [MWh]: " << diagnostics.export_energy_mwh << '\n';
+    output << "Import energy [MWh]: " << diagnostics.import_energy_mwh << '\n';
+    output << "Final reservoir volume [10³ m³]: " << diagnostics.final_reservoir_volume << '\n';
     output << "Turbine steps: " << diagnostics.turbine_steps << '\n';
     output << "Pump steps: " << diagnostics.pump_steps << '\n';
     output << "Spill steps: " << diagnostics.spill_steps << '\n';
     output << "Wait steps: " << diagnostics.wait_steps << '\n';
-    output << "Cumulative profit: " << result.cumulative_profit << '\n';
+    output << "Cumulative profit [€]: " << result.cumulative_profit << '\n';
     output << "Dispatch written to: " << dispatch_path << '\n';
 }
 

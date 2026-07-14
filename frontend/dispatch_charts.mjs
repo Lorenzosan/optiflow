@@ -202,7 +202,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "price",
         title: "Electricity price",
-        unit: "currency per MWh",
+        unit: "€/MWh",
         interpolation: "step",
         includeZero: false,
         series: Object.freeze([
@@ -217,7 +217,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "inflow",
         title: "Natural inflow",
-        unit: "volume units per hour",
+        unit: "10³ m³/h",
         interpolation: "step",
         includeZero: true,
         series: Object.freeze([
@@ -232,7 +232,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "turbine",
         title: "Turbine flow",
-        unit: "volume units per hour",
+        unit: "10³ m³/h",
         height: 72,
         interpolation: "step",
         includeZero: true,
@@ -248,7 +248,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "pump",
         title: "Pump flow",
-        unit: "volume units per hour",
+        unit: "10³ m³/h",
         height: 72,
         interpolation: "step",
         includeZero: true,
@@ -264,7 +264,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "spill",
         title: "Spill flow",
-        unit: "volume units per hour",
+        unit: "10³ m³/h",
         height: 72,
         interpolation: "step",
         includeZero: true,
@@ -280,7 +280,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "reservoir",
         title: "Reservoir volume",
-        unit: "volume units",
+        unit: "10³ m³",
         interpolation: "line",
         includeZero: false,
         series: Object.freeze([
@@ -295,7 +295,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "profit",
         title: "Cumulative profit",
-        unit: "currency",
+        unit: "€",
         interpolation: "line",
         includeZero: true,
         series: Object.freeze([
@@ -842,16 +842,16 @@ export function renderDispatchCharts(container, model) {
     heading.textContent = timestampFormatter.format(new Date(row.timestampMilliseconds));
     tooltip.append(heading);
     appendTooltipLine(tooltip, "Mode", operatingMode(row));
-    appendTooltipLine(tooltip, "Price", formatTooltipNumber(row.price));
-    appendTooltipLine(tooltip, "Inflow", formatTooltipNumber(row.naturalInflow));
-    appendTooltipLine(tooltip, "Turbine", formatTooltipNumber(row.turbineFlow));
-    appendTooltipLine(tooltip, "Pump", formatTooltipNumber(row.pumpFlow));
-    appendTooltipLine(tooltip, "Spill", formatTooltipNumber(row.spillFlow));
-    appendTooltipLine(tooltip, "Reservoir", formatTooltipNumber(row.reservoirVolume));
-    appendTooltipLine(tooltip, "Next reservoir", formatTooltipNumber(row.nextReservoirVolume));
-    appendTooltipLine(tooltip, "Net power", formatTooltipNumber(row.netPower));
-    appendTooltipLine(tooltip, "Reward", formatTooltipNumber(row.reward));
-    appendTooltipLine(tooltip, "Cumulative profit", formatTooltipNumber(row.cumulativeProfit));
+    appendTooltipLine(tooltip, "Price [€/MWh]", formatTooltipNumber(row.price));
+    appendTooltipLine(tooltip, "Inflow [10³ m³/h]", formatTooltipNumber(row.naturalInflow));
+    appendTooltipLine(tooltip, "Turbine [10³ m³/h]", formatTooltipNumber(row.turbineFlow));
+    appendTooltipLine(tooltip, "Pump [10³ m³/h]", formatTooltipNumber(row.pumpFlow));
+    appendTooltipLine(tooltip, "Spill [10³ m³/h]", formatTooltipNumber(row.spillFlow));
+    appendTooltipLine(tooltip, "Reservoir [10³ m³]", formatTooltipNumber(row.reservoirVolume));
+    appendTooltipLine(tooltip, "Next reservoir [10³ m³]", formatTooltipNumber(row.nextReservoirVolume));
+    appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
+    appendTooltipLine(tooltip, "Reward [€]", formatTooltipNumber(row.reward));
+    appendTooltipLine(tooltip, "Cumulative profit [€]", formatTooltipNumber(row.cumulativeProfit));
     tooltip.hidden = false;
     const renderedWidth = svg.getBoundingClientRect().width;
     const tooltipX = (rowX / viewWidth) * renderedWidth;

@@ -29,6 +29,20 @@ const INFLOW_CSV = [
   "",
 ].join("\n");
 
+
+test("scenario editor exposes explicit hydro and euro units", () => {
+  const fields = Object.fromEntries(
+    SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
+      .map((definition) => [definition.key, definition.label]),
+  );
+
+  assert.equal(fields.reservoir_max_volume, "Reservoir maximum [10³ m³]");
+  assert.equal(fields.turbine_max_flow, "Maximum turbine flow [10³ m³/h]");
+  assert.equal(fields.water_to_power_factor, "Water-to-power factor [MW/(10³ m³/h)]");
+  assert.equal(fields.operating_cost_per_mwh, "Operating cost [€/MWh]");
+  assert.equal(fields.terminal_reservoir_target_penalty, "Reservoir target penalty [€/(10³ m³)²]");
+});
+
 test("buildScenarioCsv emits only the optimizer scalar schema", () => {
   const csv = buildScenarioCsv("custom_case", defaultValues());
   const lines = csv.trimEnd().split("\n");

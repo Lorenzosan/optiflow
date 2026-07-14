@@ -10,35 +10,35 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
     title: "Time, reservoir bounds, and initial inventory",
     fields: Object.freeze([
       field("time_step_hours", "Time step [h]", 1, { min: 0, exclusiveMin: true }),
-      field("reservoir_min_volume", "Reservoir minimum [volume units]", 0),
-      field("reservoir_max_volume", "Reservoir maximum [volume units]", 500),
-      field("initial_reservoir_volume", "Initial reservoir [volume units]", 250),
+      field("reservoir_min_volume", "Reservoir minimum [10³ m³]", 0),
+      field("reservoir_max_volume", "Reservoir maximum [10³ m³]", 500),
+      field("initial_reservoir_volume", "Initial reservoir [10³ m³]", 250),
     ]),
   }),
   Object.freeze({
     title: "Hydraulic actions and conversion",
     fields: Object.freeze([
-      field("turbine_max_flow", "Maximum turbine flow [volume units/h]", 40, { min: 0 }),
-      field("pump_max_flow", "Maximum pump flow [volume units/h]", 30, { min: 0 }),
-      field("spill_max_flow", "Maximum spill flow [volume units/h]", 50, { min: 0 }),
+      field("turbine_max_flow", "Maximum turbine flow [10³ m³/h]", 40, { min: 0 }),
+      field("pump_max_flow", "Maximum pump flow [10³ m³/h]", 30, { min: 0 }),
+      field("spill_max_flow", "Maximum spill flow [10³ m³/h]", 50, { min: 0 }),
       field("turbine_efficiency", "Turbine efficiency [fraction]", 0.9, { min: 0, max: 1, exclusiveMin: true }),
       field("pump_efficiency", "Pump efficiency [fraction]", 0.85, { min: 0, max: 1, exclusiveMin: true }),
-      field("water_to_power_factor", "Water-to-power factor [MW per volume unit/h]", 0.4, { min: 0, exclusiveMin: true }),
+      field("water_to_power_factor", "Water-to-power factor [MW/(10³ m³/h)]", 0.4, { min: 0, exclusiveMin: true }),
     ]),
   }),
   Object.freeze({
     title: "Economic parameters",
     fields: Object.freeze([
-      field("operating_cost_per_mwh", "Operating cost [currency/MWh]", 1, { min: 0 }),
+      field("operating_cost_per_mwh", "Operating cost [€/MWh]", 1, { min: 0 }),
     ]),
   }),
   Object.freeze({
     title: "Terminal reservoir constraints and target",
     fields: Object.freeze([
-      field("terminal_reservoir_min_volume", "Terminal reservoir minimum [volume units]", 187.5),
-      field("terminal_reservoir_max_volume", "Terminal reservoir maximum [volume units]", 312.5),
-      field("terminal_target_reservoir_volume", "Terminal reservoir target [volume units]", 250),
-      field("terminal_reservoir_target_penalty", "Reservoir target penalty [currency/volume unit²]", 20, { min: 0 }),
+      field("terminal_reservoir_min_volume", "Terminal reservoir minimum [10³ m³]", 187.5),
+      field("terminal_reservoir_max_volume", "Terminal reservoir maximum [10³ m³]", 312.5),
+      field("terminal_target_reservoir_volume", "Terminal reservoir target [10³ m³]", 250),
+      field("terminal_reservoir_target_penalty", "Reservoir target penalty [€/(10³ m³)²]", 20, { min: 0 }),
     ]),
   }),
   Object.freeze({

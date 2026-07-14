@@ -35,14 +35,14 @@ set(required_output_patterns
     "Action count: 12"
     "Solve seconds: [0-9]"
     "Simulation seconds: [0-9]"
-    "Export energy MWh: [0-9]"
-    "Import energy MWh: [0-9]"
-    "Final reservoir volume: [0-9]"
+    "Export energy .MWh.: [0-9]"
+    "Import energy .MWh.: [0-9]"
+    "Final reservoir volume .10³ m³.: [0-9]"
     "Turbine steps: [0-9]"
     "Pump steps: [0-9]"
     "Spill steps: [0-9]"
     "Wait steps: [0-9]"
-    "Cumulative profit: "
+    "Cumulative profit .€.: "
     "Dispatch written to: ")
 foreach(pattern IN LISTS required_output_patterns)
     string(REGEX MATCH "${pattern}" match_result "${command_output}")
