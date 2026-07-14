@@ -36,11 +36,13 @@ test("scenario editor exposes explicit hydro and euro units", () => {
       .map((definition) => [definition.key, definition.label]),
   );
 
-  assert.equal(fields.reservoir_max_volume, "Reservoir maximum [MWh hydraulic]");
+  assert.equal(fields.reservoir_max_volume, "Maximum storage content [MWh hydraulic]");
   assert.equal(fields.turbine_max_flow, "Maximum turbine withdrawal [MW hydraulic]");
+  assert.equal(fields.turbine_efficiency, "Turbine efficiency [%]");
+  assert.equal(fields.pump_efficiency, "Pump efficiency [%]");
   assert.equal(fields.water_to_power_factor, undefined);
   assert.equal(fields.operating_cost_per_mwh, "Operating cost [€/MWh]");
-  assert.equal(fields.terminal_reservoir_target_penalty, "Reservoir target penalty [€/MWh²]");
+  assert.equal(fields.terminal_reservoir_target_penalty, "Storage target penalty [€/MWh²]");
 });
 
 test("buildScenarioCsv emits only the optimizer scalar schema", () => {
@@ -53,11 +55,39 @@ test("buildScenarioCsv emits only the optimizer scalar schema", () => {
     2 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
   );
   assert.match(csv, /terminal_target_reservoir_volume,100/);
+  assert.match(csv, /turbine_efficiency,0\.9/);
+  assert.match(csv, /pump_efficiency,0\.85/);
   assert.match(csv, /discount_factor,1/);
   assert.doesNotMatch(csv, /market_|peak_|series_start|water_to_power_factor/);
   assert.deepEqual(
     lines.slice(2).map((line) => line.split(",", 1)[0]),
     SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => field.key),
+  );
+});
+
+test("buildScenarioCsv converts displayed efficiency percentages to fractions", () => {
+  const values = defaultValues();
+  values.turbine_efficiency = "87.5";
+  values.pump_efficiency = "92";
+  const csv = buildScenarioCsv("efficiency_case", values);
+
+  assert.match(csv, /turbine_efficiency,0\.875/);
+  assert.match(csv, /pump_efficiency,0\.92/);
+});
+
+test("buildScenarioCsv validates displayed efficiency percentages", () => {
+  const zeroEfficiency = defaultValues();
+  zeroEfficiency.turbine_efficiency = "0";
+  assert.throws(
+    () => buildScenarioCsv("zero_efficiency", zeroEfficiency),
+    /below its allowed minimum/,
+  );
+
+  const excessiveEfficiency = defaultValues();
+  excessiveEfficiency.pump_efficiency = "100.1";
+  assert.throws(
+    () => buildScenarioCsv("excessive_efficiency", excessiveEfficiency),
+    /exceeds its allowed maximum/,
   );
 });
 
@@ -68,7 +98,7 @@ test("buildScenarioCsv rejects unrepresentable names", () => {
 test("buildScenarioCsv validates reservoir bounds", () => {
   const values = defaultValues();
   values.initial_reservoir_volume = "900";
-  assert.throws(() => buildScenarioCsv("bad_initial", values), /Initial reservoir volume/);
+  assert.throws(() => buildScenarioCsv("bad_initial", values), /Initial storage content/);
 });
 
 test("buildScenarioCsv requires integer solver counts", () => {

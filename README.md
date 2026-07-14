@@ -9,7 +9,7 @@ The upper reservoir is the storage inventory. Electricity is consumed to pump wa
 ## What is implemented
 
 * Explicit scenario, price, and inflow CSV inputs with no hidden optimizer defaults.
-* One-dimensional reservoir-volume state grid.
+* One-dimensional hydraulic storage-content state grid.
 * Turbine, pump, and spill action grid from explicit limits and step counts.
 * Deterministic Bellman dynamic programming with linear continuation-value interpolation and explicit equal-value action tie-breaking.
 * Pumped-storage transition, power, cost, and reward accounting.
@@ -123,6 +123,8 @@ Endpoints:
 * `GET /runs/{run_id}/dispatch.csv`
 
 The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its timestamped dispatch into Baseload, Peak, and Off-peak columns. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich.
+
+The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. Selected runs expose their persisted horizon, grid configuration, schema version, and abbreviated SHA-256 provenance. Physical water volumes still require plant-specific conversion before optimization.
 
 ## Scenario schema
 

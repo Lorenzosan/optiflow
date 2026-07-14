@@ -2,18 +2,19 @@
 
 The frontend is a dependency-free browser application served by NGINX. It uses plain HTML, CSS, and ES modules and sends same-origin requests through `/api/`.
 
-The custom-scenario editor generates the reservoir-only `key,value` optimizer schema, validates separate timestamped price and inflow files, and submits immutable inputs for server-side C++ validation.
+The custom-scenario editor generates the hydraulic-energy `key,value` optimizer schema, validates separate timestamped price and inflow files, and submits immutable inputs for server-side C++ validation. Storage content is presented in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages; the generated scenario CSV converts efficiencies back to optimizer fractions.
 
-The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It shows one row per reporting period, with Baseload, Peak, and Off-peak columns for average power, energy, and P&L. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich. The first twelve calendar months are monthly and later periods are quarterly. Units are shown on scenario inputs, summaries, and trader outputs.
+The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It shows persisted run provenance, the optimization summary, synchronized dispatch charts, and one row per reporting period with Baseload, Peak, and Off-peak columns for average power, energy, and P&L. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich. The first twelve calendar months are monthly and later periods are quarterly. Units are shown on scenario inputs, summaries, and trader outputs.
 
 Run frontend checks from the repository root:
 
 ```bash
 node --check frontend/app.js
 node --check frontend/scenario.mjs
+node --check frontend/run_presentation.mjs
 node --check frontend/trader.mjs
 node --check frontend/dispatch_charts.mjs
-node --test frontend/scenario.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs frontend/container_assets.test.mjs
+node --test frontend/scenario.test.mjs frontend/run_presentation.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs frontend/container_assets.test.mjs
 ```
 
 Run the stack with:
@@ -24,4 +25,4 @@ docker compose up --build
 
 Then open `http://127.0.0.1:8080`.
 
-The selected-run panel also renders synchronized dependency-free SVG charts for price, natural inflow, turbine/pump/spill controls, reservoir volume, and cumulative profit. Chart timestamps are shown in Europe/Zurich, while the dispatch artifact remains UTC.
+The selected-run panel also renders synchronized dependency-free SVG charts for price, natural inflow, turbine/pump/spill controls, storage content, and cumulative profit. Chart timestamps are shown in Europe/Zurich, while the dispatch artifact remains UTC.

@@ -39,7 +39,9 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
   assert.deepEqual(pump.series[0].points.map((point) => point.value), [10, 0, 0]);
 
   const reservoir = model.panels.find((panel) => panel.key === "reservoir");
+  assert.equal(reservoir.title, "Storage content");
   assert.equal(reservoir.unit, "MWh hydraulic");
+  assert.equal(reservoir.series[0].label, "Storage content");
   assert.deepEqual(reservoir.series[0].points.map((point) => point.value), [0, 10, 0]);
 
   const profit = model.panels.find((panel) => panel.key === "profit");

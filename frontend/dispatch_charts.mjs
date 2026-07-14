@@ -279,14 +279,14 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       }),
       Object.freeze({
         key: "reservoir",
-        title: "Reservoir content",
+        title: "Storage content",
         unit: "MWh hydraulic",
         interpolation: "line",
         includeZero: false,
         series: Object.freeze([
           series(
             "reservoir",
-            "Reservoir",
+            "Storage content",
             reservoirWithEnd,
             "dispatch-series-reservoir",
           ),
@@ -847,8 +847,8 @@ export function renderDispatchCharts(container, model) {
     appendTooltipLine(tooltip, "Turbine withdrawal [MW hydraulic]", formatTooltipNumber(row.turbineFlow));
     appendTooltipLine(tooltip, "Pump addition [MW hydraulic]", formatTooltipNumber(row.pumpFlow));
     appendTooltipLine(tooltip, "Spill [MW hydraulic]", formatTooltipNumber(row.spillFlow));
-    appendTooltipLine(tooltip, "Reservoir [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
-    appendTooltipLine(tooltip, "Next reservoir [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
+    appendTooltipLine(tooltip, "Storage content [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
+    appendTooltipLine(tooltip, "Next storage content [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
     appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
     appendTooltipLine(tooltip, "Reward [€]", formatTooltipNumber(row.reward));
     appendTooltipLine(tooltip, "Cumulative profit [€]", formatTooltipNumber(row.cumulativeProfit));

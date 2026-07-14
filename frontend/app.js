@@ -5,6 +5,7 @@ import {
   buildScenarioCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
+import { provenanceItems } from "./run_presentation.mjs";
 import {
   DISPATCH_CHART_TIME_ZONE,
   buildDispatchChartModel,
@@ -61,6 +62,8 @@ const elements = {
   runCompleted: document.querySelector("#run-completed"),
   runError: document.querySelector("#run-error"),
   summaryGrid: document.querySelector("#summary-grid"),
+  runProvenance: document.querySelector("#run-provenance"),
+  provenanceGrid: document.querySelector("#provenance-grid"),
   dispatchCharts: document.querySelector("#dispatch-charts"),
   dispatchChartsMessage: document.querySelector("#dispatch-charts-message"),
   traderCaption: document.querySelector("#trader-caption"),
@@ -231,7 +234,7 @@ function createParameterInput(field) {
   input.id = inputId;
   input.name = field.key;
   input.type = "number";
-  input.step = field.integer ? "1" : "any";
+  input.step = String(field.step ?? (field.integer ? 1 : "any"));
   input.required = true;
   input.value = String(field.defaultValue);
   input.defaultValue = String(field.defaultValue);
@@ -520,6 +523,7 @@ function clearRunDetails() {
   state.traderRequestId += 1;
   elements.detailsEmpty.hidden = false;
   elements.detailsContent.hidden = true;
+  renderProvenance(null);
   clearDispatchCharts();
   clearTraderView();
 }
@@ -564,6 +568,7 @@ async function renderRunDetails(run) {
   elements.runError.hidden = !run.error_message;
   elements.runError.textContent = run.error_message ?? "";
 
+  renderProvenance(run.provenance);
   renderSummary(run.summary);
 
   const canDownload = run.status === "succeeded" && Boolean(run.output_dispatch_path);
@@ -598,7 +603,7 @@ async function renderRunDetails(run) {
     renderDispatchCharts(elements.dispatchCharts, chartModel);
     elements.dispatchCharts.hidden = false;
     elements.dispatchChartsMessage.textContent =
-      `Times are shown in ${DISPATCH_CHART_TIME_ZONE}. All hydraulic flows are shown as positive magnitudes. Hover for interval values.`;
+      `Times are shown in ${DISPATCH_CHART_TIME_ZONE}. Hydraulic inflow and controls are positive MW hydraulic magnitudes. Hover for interval values.`;
     renderTraderTable(rows);
     elements.traderMessage.textContent = "";
     elements.traderCaption.textContent =
@@ -618,6 +623,31 @@ async function renderRunDetails(run) {
   }
 }
 
+function renderProvenance(provenance) {
+  const items = provenanceItems(provenance);
+  elements.runProvenance.hidden = items.length === 0;
+  if (items.length === 0) {
+    elements.provenanceGrid.replaceChildren();
+    return;
+  }
+
+  const rows = items.map((item) => {
+    const wrapper = document.createElement("div");
+    const term = document.createElement("dt");
+    term.textContent = item.label;
+    const description = document.createElement("dd");
+    description.textContent = item.value;
+    if (item.fullValue) {
+      description.title = item.fullValue;
+      description.setAttribute("aria-label", `${item.label}: ${item.fullValue}`);
+      description.className = "hash-value";
+    }
+    wrapper.append(term, description);
+    return wrapper;
+  });
+  elements.provenanceGrid.replaceChildren(...rows);
+}
+
 function renderSummary(summary) {
   if (!summary) {
     const card = createSummaryCard("Summary", "Not available");
@@ -629,7 +659,7 @@ function renderSummary(summary) {
     ["Cumulative profit [€]", formatNumber(summary.cumulative_profit)],
     ["Export energy [MWh]", formatNumber(summary.export_energy_mwh)],
     ["Import energy [MWh]", formatNumber(summary.import_energy_mwh)],
-    ["Final reservoir [MWh hydraulic]", formatNumber(summary.final_reservoir_volume)],
+    ["Final storage content [MWh hydraulic]", formatNumber(summary.final_reservoir_volume)],
     ["Solve time [s]", formatNumber(summary.solve_seconds, 3)],
     ["Simulation time [s]", formatNumber(summary.simulation_seconds, 3)],
     ["Turbine steps [count]", formatNumber(summary.turbine_steps, 0)],

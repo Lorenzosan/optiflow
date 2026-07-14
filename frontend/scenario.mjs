@@ -7,22 +7,37 @@ function field(key, label, defaultValue, options = {}) {
 
 export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
-    title: "Time, hydraulic storage bounds, and initial inventory",
+    title: "Time and hydraulic storage content",
     fields: Object.freeze([
       field("time_step_hours", "Time step [h]", 1, { min: 0, exclusiveMin: true }),
-      field("reservoir_min_volume", "Reservoir minimum [MWh hydraulic]", 0),
-      field("reservoir_max_volume", "Reservoir maximum [MWh hydraulic]", 200),
-      field("initial_reservoir_volume", "Initial reservoir [MWh hydraulic]", 100),
+      field("reservoir_min_volume", "Minimum storage content [MWh hydraulic]", 0),
+      field("reservoir_max_volume", "Maximum storage content [MWh hydraulic]", 200),
+      field("initial_reservoir_volume", "Initial storage content [MWh hydraulic]", 100),
     ]),
   }),
   Object.freeze({
     title: "Hydraulic power limits and efficiencies",
+    note: "Efficiencies are entered as percentages; the generated optimizer CSV stores fractions between 0 and 1.",
     fields: Object.freeze([
       field("turbine_max_flow", "Maximum turbine withdrawal [MW hydraulic]", 16, { min: 0 }),
       field("pump_max_flow", "Maximum pump addition [MW hydraulic]", 12, { min: 0 }),
       field("spill_max_flow", "Maximum spill [MW hydraulic]", 20, { min: 0 }),
-      field("turbine_efficiency", "Turbine efficiency [fraction]", 0.9, { min: 0, max: 1, exclusiveMin: true }),
-      field("pump_efficiency", "Pump efficiency [fraction]", 0.85, { min: 0, max: 1, exclusiveMin: true }),
+      field("turbine_efficiency", "Turbine efficiency [%]", 90, {
+        min: 0,
+        max: 100,
+        exclusiveMin: true,
+        scenarioScale: 0.01,
+        step: 0.1,
+        help: "Electrical generation divided by hydraulic turbine withdrawal.",
+      }),
+      field("pump_efficiency", "Pump efficiency [%]", 85, {
+        min: 0,
+        max: 100,
+        exclusiveMin: true,
+        scenarioScale: 0.01,
+        step: 0.1,
+        help: "Hydraulic storage addition divided by electrical pumping consumption.",
+      }),
     ]),
   }),
   Object.freeze({
@@ -34,20 +49,20 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
     title: "Terminal hydraulic storage constraints and target",
     fields: Object.freeze([
-      field("terminal_reservoir_min_volume", "Terminal reservoir minimum [MWh hydraulic]", 75),
-      field("terminal_reservoir_max_volume", "Terminal reservoir maximum [MWh hydraulic]", 125),
-      field("terminal_target_reservoir_volume", "Terminal reservoir target [MWh hydraulic]", 100),
-      field("terminal_reservoir_target_penalty", "Reservoir target penalty [€/MWh²]", 125, { min: 0 }),
+      field("terminal_reservoir_min_volume", "Terminal minimum content [MWh hydraulic]", 75),
+      field("terminal_reservoir_max_volume", "Terminal maximum content [MWh hydraulic]", 125),
+      field("terminal_target_reservoir_volume", "Terminal target content [MWh hydraulic]", 100),
+      field("terminal_reservoir_target_penalty", "Storage target penalty [€/MWh²]", 125, { min: 0 }),
     ]),
   }),
   Object.freeze({
     title: "Solver resolution",
-    note: "Higher grid and action counts can increase solve time and memory use sharply.",
+    note: "More points and steps refine the discrete approximation but increase runtime and memory. Compare genuinely nested resolutions before treating a result as numerically stable.",
     fields: Object.freeze([
-      field("reservoir_volume_grid_points", "Reservoir grid points [count]", 9, { integer: true, min: 1 }),
-      field("turbine_flow_steps", "Turbine power steps [count]", 3, { integer: true, min: 1 }),
-      field("spill_flow_steps", "Spill power steps [count]", 2, { integer: true, min: 1 }),
-      field("pump_flow_steps", "Pump power steps [count]", 3, { integer: true, min: 1 }),
+      field("reservoir_volume_grid_points", "Storage grid points [count]", 9, { integer: true, min: 1 }),
+      field("turbine_flow_steps", "Turbine withdrawal steps [count]", 3, { integer: true, min: 1 }),
+      field("spill_flow_steps", "Spill steps [count]", 2, { integer: true, min: 1 }),
+      field("pump_flow_steps", "Pump addition steps [count]", 3, { integer: true, min: 1 }),
       field("discount_factor", "Discount factor [fraction]", 1, { min: 0, max: 1 }),
     ]),
   }),
@@ -84,34 +99,40 @@ function parseFieldValue(definition, rawValue) {
   if (definition.max !== undefined) {
     requireCondition(value <= definition.max, `${definition.label} exceeds its allowed maximum.`);
   }
-  return { text, value };
+  const scenarioValue = definition.scenarioScale === undefined
+    ? value
+    : value * definition.scenarioScale;
+  const scenarioText = Number.isInteger(scenarioValue)
+    ? String(scenarioValue)
+    : String(Number(scenarioValue.toPrecision(15)));
+  return { value, scenarioText };
 }
 
 function validateBounds(values) {
   requireCondition(
     values.reservoir_min_volume <= values.reservoir_max_volume,
-    "Reservoir minimum volume cannot exceed its maximum.",
+    "Minimum storage content cannot exceed maximum storage content.",
   );
   requireCondition(
     values.initial_reservoir_volume >= values.reservoir_min_volume
       && values.initial_reservoir_volume <= values.reservoir_max_volume,
-    "Initial reservoir volume must be inside the reservoir bounds.",
+    "Initial storage content must be inside the storage bounds.",
   );
   requireCondition(
     values.terminal_reservoir_min_volume >= values.reservoir_min_volume
       && values.terminal_reservoir_max_volume <= values.reservoir_max_volume
       && values.terminal_reservoir_min_volume <= values.terminal_reservoir_max_volume,
-    "Terminal reservoir bounds must be ordered and inside the model bounds.",
+    "Terminal storage bounds must be ordered and inside the model bounds.",
   );
   requireCondition(
     values.terminal_target_reservoir_volume >= values.terminal_reservoir_min_volume
       && values.terminal_target_reservoir_volume <= values.terminal_reservoir_max_volume,
-    "Terminal reservoir target must be inside the terminal bounds.",
+    "Terminal storage target must be inside the terminal bounds.",
   );
   if (values.reservoir_min_volume < values.reservoir_max_volume) {
     requireCondition(
       values.reservoir_volume_grid_points >= 2,
-      "Reservoir grid points must be at least two for a nonzero reservoir range.",
+      "Storage grid points must be at least two for a nonzero storage range.",
     );
   }
 }
@@ -123,7 +144,7 @@ export function buildScenarioCsv(name, values) {
   for (const definition of ALL_FIELDS) {
     const parsed = parseFieldValue(definition, values[definition.key]);
     parsedValues[definition.key] = parsed.value;
-    lines.push(`${definition.key},${parsed.text}`);
+    lines.push(`${definition.key},${parsed.scenarioText}`);
   }
   validateBounds(parsedValues);
   return `${lines.join("\n")}\n`;

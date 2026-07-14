@@ -55,7 +55,9 @@
         <div class="scenario-editor-content">
           <p class="supporting-text editor-intro">
             Start from the synthetic-year parameter template, upload price and inflow CSV files,
-            then save an immutable scenario. The C++ input reader performs the authoritative validation.
+            then save an immutable scenario. Storage content is MWh hydraulic; natural inflow and
+            hydraulic controls are MW hydraulic. Convert physical water data with plant-specific
+            head calibration before upload. The C++ input reader performs the authoritative validation.
           </p>
 
           <form id="scenario-form">
@@ -82,9 +84,9 @@
                   <small>Header: <code>timestamp_utc,price</code>; timestamps use <code>YYYY-MM-DDTHH:MM:SSZ</code>.</small>
                 </div>
                 <div class="form-field">
-                  <label for="inflows-file">Inflows CSV</label>
+                  <label for="inflows-file">Natural inflow CSV</label>
                   <input id="inflows-file" name="inflows" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>timestamp_utc,natural_inflow</code>; timestamps must match prices exactly.</small>
+                  <small>Header: <code>timestamp_utc,natural_inflow</code>; values are MW hydraulic and timestamps must match prices exactly.</small>
                 </div>
               </div>
               <p id="series-preview" class="message" role="status" aria-live="polite">
@@ -130,6 +132,15 @@
         </dl>
 
         <p id="run-error" class="error-box" hidden></p>
+
+        <details id="run-provenance" class="provenance-panel" open hidden>
+          <summary>Run provenance</summary>
+          <p class="provenance-note">
+            Configuration and abbreviated SHA-256 identifiers captured at execution time.
+            Hover over a hash to inspect the full value.
+          </p>
+          <dl id="provenance-grid" class="provenance-grid"></dl>
+        </details>
 
         <div id="summary-grid" class="summary-grid" aria-label="Optimization summary"></div>
 
