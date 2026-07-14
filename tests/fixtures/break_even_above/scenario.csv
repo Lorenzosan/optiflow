@@ -2,9 +2,9 @@ key,value
 scenario_name,break_even_above_oracle
 time_step_hours,1
 reservoir_min_volume,0
-reservoir_max_volume,10
-turbine_max_flow,10
-pump_max_flow,10
+reservoir_max_volume,4
+turbine_max_flow,4
+pump_max_flow,4
 spill_max_flow,0
 turbine_efficiency,0.8
 pump_efficiency,0.8

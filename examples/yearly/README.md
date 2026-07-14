@@ -16,8 +16,8 @@ The upper-reservoir volume is the only storage state. Pumping consumes electrici
 
 The base scenario uses:
 
-- target reservoir volume: `250` volume units;
-- hard terminal band: `187.5` to `312.5` volume units;
+- target reservoir content: `100 MWh hydraulic`;
+- hard terminal band: `75` to `125 MWh hydraulic`;
 - a soft quadratic penalty for deviation from the target.
 
 The wider hard band avoids requiring exact grid alignment while still controlling end-of-horizon inventory.

@@ -36,11 +36,11 @@ test("scenario editor exposes explicit hydro and euro units", () => {
       .map((definition) => [definition.key, definition.label]),
   );
 
-  assert.equal(fields.reservoir_max_volume, "Reservoir maximum [10³ m³]");
-  assert.equal(fields.turbine_max_flow, "Maximum turbine flow [10³ m³/h]");
+  assert.equal(fields.reservoir_max_volume, "Reservoir maximum [MWh hydraulic]");
+  assert.equal(fields.turbine_max_flow, "Maximum turbine withdrawal [MW hydraulic]");
   assert.equal(fields.water_to_power_factor, undefined);
   assert.equal(fields.operating_cost_per_mwh, "Operating cost [€/MWh]");
-  assert.equal(fields.terminal_reservoir_target_penalty, "Reservoir target penalty [€/(10³ m³)²]");
+  assert.equal(fields.terminal_reservoir_target_penalty, "Reservoir target penalty [€/MWh²]");
 });
 
 test("buildScenarioCsv emits only the optimizer scalar schema", () => {
@@ -52,7 +52,7 @@ test("buildScenarioCsv emits only the optimizer scalar schema", () => {
     lines.length,
     2 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
   );
-  assert.match(csv, /terminal_target_reservoir_volume,250/);
+  assert.match(csv, /terminal_target_reservoir_volume,100/);
   assert.match(csv, /discount_factor,1/);
   assert.doesNotMatch(csv, /market_|peak_|series_start|water_to_power_factor/);
   assert.deepEqual(

@@ -141,7 +141,7 @@ void print_summary(std::ostream& output,
     output << "Simulation seconds: " << diagnostics.simulation_seconds << '\n';
     output << "Export energy [MWh]: " << diagnostics.export_energy_mwh << '\n';
     output << "Import energy [MWh]: " << diagnostics.import_energy_mwh << '\n';
-    output << "Final reservoir volume [10³ m³]: " << diagnostics.final_reservoir_volume << '\n';
+    output << "Final reservoir content [MWh hydraulic]: " << diagnostics.final_reservoir_volume << '\n';
     output << "Turbine steps: " << diagnostics.turbine_steps << '\n';
     output << "Pump steps: " << diagnostics.pump_steps << '\n';
     output << "Spill steps: " << diagnostics.spill_steps << '\n';

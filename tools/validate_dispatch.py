@@ -11,7 +11,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from hydraulic_units import HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
 
 DEFAULT_STATE_TOLERANCE = 1.0e-4
 DEFAULT_ECONOMIC_TOLERANCE = 1.0e-2
@@ -330,14 +329,10 @@ def validate(args: argparse.Namespace) -> None:
             fail(f"next reservoir outside bounds at index {index}")
 
         turbine_power = (
-            row["turbine_flow"]
-            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
-            * turbine_efficiency
+            row["turbine_flow"] * turbine_efficiency
         )
         pump_power = (
-            row["pump_flow"]
-            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
-            / pump_efficiency
+            row["pump_flow"] / pump_efficiency
         )
         expected_net_power = turbine_power - pump_power
         expected_reward = (

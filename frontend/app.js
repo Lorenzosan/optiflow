@@ -629,7 +629,7 @@ function renderSummary(summary) {
     ["Cumulative profit [€]", formatNumber(summary.cumulative_profit)],
     ["Export energy [MWh]", formatNumber(summary.export_energy_mwh)],
     ["Import energy [MWh]", formatNumber(summary.import_energy_mwh)],
-    ["Final reservoir [10³ m³]", formatNumber(summary.final_reservoir_volume)],
+    ["Final reservoir [MWh hydraulic]", formatNumber(summary.final_reservoir_volume)],
     ["Solve time [s]", formatNumber(summary.solve_seconds, 3)],
     ["Simulation time [s]", formatNumber(summary.simulation_seconds, 3)],
     ["Turbine steps [count]", formatNumber(summary.turbine_steps, 0)],

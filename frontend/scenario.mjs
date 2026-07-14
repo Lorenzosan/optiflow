@@ -7,20 +7,20 @@ function field(key, label, defaultValue, options = {}) {
 
 export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
-    title: "Time, reservoir bounds, and initial inventory",
+    title: "Time, hydraulic storage bounds, and initial inventory",
     fields: Object.freeze([
       field("time_step_hours", "Time step [h]", 1, { min: 0, exclusiveMin: true }),
-      field("reservoir_min_volume", "Reservoir minimum [10³ m³]", 0),
-      field("reservoir_max_volume", "Reservoir maximum [10³ m³]", 500),
-      field("initial_reservoir_volume", "Initial reservoir [10³ m³]", 250),
+      field("reservoir_min_volume", "Reservoir minimum [MWh hydraulic]", 0),
+      field("reservoir_max_volume", "Reservoir maximum [MWh hydraulic]", 200),
+      field("initial_reservoir_volume", "Initial reservoir [MWh hydraulic]", 100),
     ]),
   }),
   Object.freeze({
-    title: "Hydraulic actions and efficiencies",
+    title: "Hydraulic power limits and efficiencies",
     fields: Object.freeze([
-      field("turbine_max_flow", "Maximum turbine flow [10³ m³/h]", 40, { min: 0 }),
-      field("pump_max_flow", "Maximum pump flow [10³ m³/h]", 30, { min: 0 }),
-      field("spill_max_flow", "Maximum spill flow [10³ m³/h]", 50, { min: 0 }),
+      field("turbine_max_flow", "Maximum turbine withdrawal [MW hydraulic]", 16, { min: 0 }),
+      field("pump_max_flow", "Maximum pump addition [MW hydraulic]", 12, { min: 0 }),
+      field("spill_max_flow", "Maximum spill [MW hydraulic]", 20, { min: 0 }),
       field("turbine_efficiency", "Turbine efficiency [fraction]", 0.9, { min: 0, max: 1, exclusiveMin: true }),
       field("pump_efficiency", "Pump efficiency [fraction]", 0.85, { min: 0, max: 1, exclusiveMin: true }),
     ]),
@@ -32,12 +32,12 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
     ]),
   }),
   Object.freeze({
-    title: "Terminal reservoir constraints and target",
+    title: "Terminal hydraulic storage constraints and target",
     fields: Object.freeze([
-      field("terminal_reservoir_min_volume", "Terminal reservoir minimum [10³ m³]", 187.5),
-      field("terminal_reservoir_max_volume", "Terminal reservoir maximum [10³ m³]", 312.5),
-      field("terminal_target_reservoir_volume", "Terminal reservoir target [10³ m³]", 250),
-      field("terminal_reservoir_target_penalty", "Reservoir target penalty [€/(10³ m³)²]", 20, { min: 0 }),
+      field("terminal_reservoir_min_volume", "Terminal reservoir minimum [MWh hydraulic]", 75),
+      field("terminal_reservoir_max_volume", "Terminal reservoir maximum [MWh hydraulic]", 125),
+      field("terminal_target_reservoir_volume", "Terminal reservoir target [MWh hydraulic]", 100),
+      field("terminal_reservoir_target_penalty", "Reservoir target penalty [€/MWh²]", 125, { min: 0 }),
     ]),
   }),
   Object.freeze({
@@ -45,9 +45,9 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
     note: "Higher grid and action counts can increase solve time and memory use sharply.",
     fields: Object.freeze([
       field("reservoir_volume_grid_points", "Reservoir grid points [count]", 9, { integer: true, min: 1 }),
-      field("turbine_flow_steps", "Turbine flow steps [count]", 3, { integer: true, min: 1 }),
-      field("spill_flow_steps", "Spill flow steps [count]", 2, { integer: true, min: 1 }),
-      field("pump_flow_steps", "Pump flow steps [count]", 3, { integer: true, min: 1 }),
+      field("turbine_flow_steps", "Turbine power steps [count]", 3, { integer: true, min: 1 }),
+      field("spill_flow_steps", "Spill power steps [count]", 2, { integer: true, min: 1 }),
+      field("pump_flow_steps", "Pump power steps [count]", 3, { integer: true, min: 1 }),
       field("discount_factor", "Discount factor [fraction]", 1, { min: 0, max: 1 }),
     ]),
   }),

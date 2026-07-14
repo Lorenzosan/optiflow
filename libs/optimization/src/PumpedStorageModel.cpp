@@ -1,7 +1,5 @@
 #include "optiflow/model/PumpedStorageModel.h"
 
-#include "optiflow/core/HydraulicConstants.h"
-
 #include <cmath>
 #include <string>
 
@@ -38,12 +36,8 @@ core::Outcome PumpedStorageModel::apply(core::State state,
     }
 
     const double dt = parameters_.time_step_hours;
-    const double turbine_power = action.turbine_flow *
-                                 core::hydraulic_power_factor_mw_per_flow_unit *
-                                 parameters_.turbine_efficiency;
-    const double pump_power = action.pump_flow *
-                              core::hydraulic_power_factor_mw_per_flow_unit /
-                              parameters_.pump_efficiency;
+    const double turbine_power = action.turbine_flow * parameters_.turbine_efficiency;
+    const double pump_power = action.pump_flow / parameters_.pump_efficiency;
     const double next_reservoir_volume = state.reservoir_volume + exogenous.natural_inflow * dt +
                                          action.pump_flow * dt - action.turbine_flow * dt -
                                          action.spill_flow * dt;

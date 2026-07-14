@@ -11,7 +11,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from hydraulic_units import HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
 
 
 class SummaryError(RuntimeError):
@@ -175,14 +174,10 @@ def summarize(args: argparse.Namespace) -> None:
             fail(f"dispatch inflow mismatch at index {index}")
 
         turbine_power = (
-            row["turbine_flow"]
-            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
-            * turbine_efficiency
+            row["turbine_flow"] * turbine_efficiency
         )
         pump_power = (
-            row["pump_flow"]
-            * HYDRAULIC_POWER_FACTOR_MW_PER_FLOW_UNIT
-            / pump_efficiency
+            row["pump_flow"] / pump_efficiency
         )
         exported = max(row["net_power"], 0.0) * dt
         imported = max(-row["net_power"], 0.0) * dt
@@ -247,10 +242,10 @@ def summarize(args: argparse.Namespace) -> None:
     metric("Spill steps", spill_steps)
     metric("Wait steps", wait_steps)
     print()
-    metric("Initial reservoir volume", rows[0]["reservoir_volume"], "10³ m³")
-    metric("Final reservoir volume", rows[-1]["next_reservoir_volume"], "10³ m³")
-    metric("Terminal reservoir target", terminal_target, "10³ m³")
-    metric("Terminal reservoir target deviation", rows[-1]["next_reservoir_volume"] - terminal_target, "10³ m³")
+    metric("Initial reservoir content", rows[0]["reservoir_volume"], "MWh hydraulic")
+    metric("Final reservoir content", rows[-1]["next_reservoir_volume"], "MWh hydraulic")
+    metric("Terminal reservoir target", terminal_target, "MWh hydraulic")
+    metric("Terminal reservoir target deviation", rows[-1]["next_reservoir_volume"] - terminal_target, "MWh hydraulic")
 
 
 def main() -> int:

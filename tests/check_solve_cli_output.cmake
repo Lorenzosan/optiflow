@@ -37,7 +37,7 @@ set(required_output_patterns
     "Simulation seconds: [0-9]"
     "Export energy .MWh.: [0-9]"
     "Import energy .MWh.: [0-9]"
-    "Final reservoir volume .10³ m³.: [0-9]"
+    "Final reservoir content .MWh hydraulic.: [0-9]"
     "Turbine steps: [0-9]"
     "Pump steps: [0-9]"
     "Spill steps: [0-9]"

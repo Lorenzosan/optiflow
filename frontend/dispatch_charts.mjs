@@ -217,7 +217,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       Object.freeze({
         key: "inflow",
         title: "Natural inflow",
-        unit: "10³ m³/h",
+        unit: "MW hydraulic",
         interpolation: "step",
         includeZero: true,
         series: Object.freeze([
@@ -231,8 +231,8 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       }),
       Object.freeze({
         key: "turbine",
-        title: "Turbine flow",
-        unit: "10³ m³/h",
+        title: "Turbine withdrawal",
+        unit: "MW hydraulic",
         height: 72,
         interpolation: "step",
         includeZero: true,
@@ -247,8 +247,8 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       }),
       Object.freeze({
         key: "pump",
-        title: "Pump flow",
-        unit: "10³ m³/h",
+        title: "Pump addition",
+        unit: "MW hydraulic",
         height: 72,
         interpolation: "step",
         includeZero: true,
@@ -263,8 +263,8 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       }),
       Object.freeze({
         key: "spill",
-        title: "Spill flow",
-        unit: "10³ m³/h",
+        title: "Spill",
+        unit: "MW hydraulic",
         height: 72,
         interpolation: "step",
         includeZero: true,
@@ -279,8 +279,8 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       }),
       Object.freeze({
         key: "reservoir",
-        title: "Reservoir volume",
-        unit: "10³ m³",
+        title: "Reservoir content",
+        unit: "MWh hydraulic",
         interpolation: "line",
         includeZero: false,
         series: Object.freeze([
@@ -843,12 +843,12 @@ export function renderDispatchCharts(container, model) {
     tooltip.append(heading);
     appendTooltipLine(tooltip, "Mode", operatingMode(row));
     appendTooltipLine(tooltip, "Price [€/MWh]", formatTooltipNumber(row.price));
-    appendTooltipLine(tooltip, "Inflow [10³ m³/h]", formatTooltipNumber(row.naturalInflow));
-    appendTooltipLine(tooltip, "Turbine [10³ m³/h]", formatTooltipNumber(row.turbineFlow));
-    appendTooltipLine(tooltip, "Pump [10³ m³/h]", formatTooltipNumber(row.pumpFlow));
-    appendTooltipLine(tooltip, "Spill [10³ m³/h]", formatTooltipNumber(row.spillFlow));
-    appendTooltipLine(tooltip, "Reservoir [10³ m³]", formatTooltipNumber(row.reservoirVolume));
-    appendTooltipLine(tooltip, "Next reservoir [10³ m³]", formatTooltipNumber(row.nextReservoirVolume));
+    appendTooltipLine(tooltip, "Inflow [MW hydraulic]", formatTooltipNumber(row.naturalInflow));
+    appendTooltipLine(tooltip, "Turbine withdrawal [MW hydraulic]", formatTooltipNumber(row.turbineFlow));
+    appendTooltipLine(tooltip, "Pump addition [MW hydraulic]", formatTooltipNumber(row.pumpFlow));
+    appendTooltipLine(tooltip, "Spill [MW hydraulic]", formatTooltipNumber(row.spillFlow));
+    appendTooltipLine(tooltip, "Reservoir [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
+    appendTooltipLine(tooltip, "Next reservoir [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
     appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
     appendTooltipLine(tooltip, "Reward [€]", formatTooltipNumber(row.reward));
     appendTooltipLine(tooltip, "Cumulative profit [€]", formatTooltipNumber(row.cumulativeProfit));

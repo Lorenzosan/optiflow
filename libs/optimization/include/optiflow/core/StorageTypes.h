@@ -6,10 +6,10 @@
 namespace optiflow::core {
 
 /**
- * @brief Stored water inventory in the upper reservoir.
+ * @brief Stored hydraulic-energy inventory in the upper reservoir.
  */
 struct State {
-    double reservoir_volume; ///< Upper-reservoir volume.
+    double reservoir_volume; ///< Upper-reservoir hydraulic energy in MWh.
 
     explicit State(double reservoir_volume);
 };
@@ -18,9 +18,9 @@ struct State {
  * @brief Pumped-storage control decision for one time step.
  */
 struct Action {
-    double turbine_flow; ///< Water released through the turbine.
-    double spill_flow; ///< Water released without generation.
-    double pump_flow; ///< Water pumped into the upper reservoir.
+    double turbine_flow; ///< Hydraulic power withdrawn through the turbine in MW.
+    double spill_flow; ///< Hydraulic power spilled without generation in MW.
+    double pump_flow; ///< Hydraulic power added to the upper reservoir in MW.
 
     Action(double turbine_flow, double spill_flow, double pump_flow);
 };
@@ -31,7 +31,7 @@ struct Action {
 struct Exogenous {
     std::string timestamp_utc; ///< Canonical UTC interval start, empty only for programmatic tests.
     double electricity_price; ///< Electricity price in currency per MWh.
-    double natural_inflow; ///< Natural inflow in reservoir-volume units per hour.
+    double natural_inflow; ///< Natural inflow as hydraulic power in MW.
 
     Exogenous(std::string timestamp_utc, double electricity_price, double natural_inflow);
     Exogenous(double electricity_price, double natural_inflow);

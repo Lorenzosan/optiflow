@@ -1,6 +1,5 @@
 #include "optiflow/core/CsvScenarioReader.h"
 
-#include "optiflow/core/HydraulicConstants.h"
 
 #include <chrono>
 #include <cmath>
@@ -48,7 +47,6 @@ const std::set<std::string> allowed_scenario_keys = {
     "spill_max_flow",
     "turbine_efficiency",
     "pump_efficiency",
-    "water_to_power_factor",  // Legacy: accepted only at the fixed value.
     "operating_cost_per_mwh",
     "initial_reservoir_volume",
     "terminal_reservoir_min_volume",
@@ -354,22 +352,6 @@ void reject_unsupported_parameters(const ScenarioParameterMap& values,
     }
 }
 
-void validate_legacy_water_to_power_factor(const ScenarioParameterMap& values,
-                                           const std::filesystem::path& path) {
-    const auto iterator = values.find("water_to_power_factor");
-    if (iterator == values.end()) {
-        return;
-    }
-    const double value = parse_double(iterator->second.value,
-                                      "water_to_power_factor",
-                                      location(path, iterator->second.line_number));
-    constexpr double tolerance = 1.0e-12;
-    if (std::abs(value - hydraulic_power_factor_mw_per_flow_unit) > tolerance) {
-        throw std::invalid_argument(
-            "legacy water_to_power_factor must be 0.4 or removed at " +
-            location(path, iterator->second.line_number));
-    }
-}
 
 template <typename Factory>
 auto scenario_value(const std::filesystem::path& path, Factory&& factory) {
@@ -387,7 +369,6 @@ ScenarioBundle CsvScenarioReader::read(const std::filesystem::path& scenario_pat
                                        const std::filesystem::path& inflows_path) {
     const ScenarioParameterMap values = read_parameters(scenario_path);
     reject_unsupported_parameters(values, scenario_path);
-    validate_legacy_water_to_power_factor(values, scenario_path);
 
     const ModelParameters model_parameters = scenario_value(scenario_path, [&]() {
         return ModelParameters(

@@ -39,7 +39,7 @@ void test_high_price_now_generates() {
         {core::Exogenous(100.0, 0.0), core::Exogenous(0.0, 0.0)},
         parameters(), open_terminal()));
     near(trajectory[0].action.turbine_flow, 10.0, "generate now");
-    near(trajectory.back().cumulative_profit, 400.0, "profit");
+    near(trajectory.back().cumulative_profit, 1000.0, "profit");
 }
 
 void test_low_price_now_preserves_water() {
@@ -58,7 +58,7 @@ void test_negative_price_pumps_for_later_generation() {
         parameters(), open_terminal()));
     near(trajectory[0].action.pump_flow, 10.0, "pump at negative price");
     near(trajectory[1].action.turbine_flow, 10.0, "generate later");
-    near(trajectory.back().cumulative_profit, 440.0, "arbitrage profit");
+    near(trajectory.back().cumulative_profit, 1100.0, "arbitrage profit");
 }
 
 void test_high_operating_cost_avoids_cycle() {

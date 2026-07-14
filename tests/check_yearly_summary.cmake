@@ -40,7 +40,7 @@ set(required_output_patterns
     "Import energy:"
     "Average export price:"
     "Average import price:"
-    "Final reservoir volume:"
+    "Final reservoir content:"
     "Terminal reservoir target deviation:")
 foreach(pattern IN LISTS required_output_patterns)
     string(FIND "${summary_output}" "${pattern}" match_position)

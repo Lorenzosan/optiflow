@@ -61,9 +61,9 @@ void test_transition_and_reward() {
         core::State(50.0), core::Action(10.0, 0.0, 0.0), core::Exogenous(100.0, 2.0));
     require(outcome.feasible, "transition feasible");
     near(outcome.next_state.reservoir_volume, 42.0, "next volume");
-    near(outcome.turbine_power, 3.6, "turbine power");
-    near(outcome.net_power, 3.6, "net power");
-    near(outcome.reward, 356.4, "reward");
+    near(outcome.turbine_power, 9.0, "turbine power");
+    near(outcome.net_power, 9.0, "net power");
+    near(outcome.reward, 891.0, "reward");
 }
 
 void test_zero_reward_is_canonical_positive_zero() {
@@ -246,11 +246,11 @@ void test_csv_reader_preserves_and_validates_timestamps() {
     std::filesystem::remove(inflows_path);
 }
 
-void test_csv_reader_accepts_only_the_legacy_fixed_power_factor() {
+void test_csv_reader_rejects_removed_water_to_power_factor() {
     const auto directory = std::filesystem::temp_directory_path();
-    const auto scenario_path = directory / "optiflow_legacy_power_factor.csv";
-    const auto prices_path = directory / "optiflow_legacy_power_factor_prices.csv";
-    const auto inflows_path = directory / "optiflow_legacy_power_factor_inflows.csv";
+    const auto scenario_path = directory / "optiflow_removed_power_factor.csv";
+    const auto prices_path = directory / "optiflow_removed_power_factor_prices.csv";
+    const auto inflows_path = directory / "optiflow_removed_power_factor_inflows.csv";
     write_valid_scenario(scenario_path);
     {
         std::ofstream scenario(scenario_path, std::ios::app);
@@ -258,16 +258,9 @@ void test_csv_reader_accepts_only_the_legacy_fixed_power_factor() {
     }
     write_series(prices_path, "price", {{"2027-01-01T00:00:00Z", 0.0}});
     write_series(inflows_path, "natural_inflow", {{"2027-01-01T00:00:00Z", 0.0}});
-    static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
-
-    write_valid_scenario(scenario_path);
-    {
-        std::ofstream scenario(scenario_path, std::ios::app);
-        scenario << "water_to_power_factor,0.5\n";
-    }
     require_throws<std::invalid_argument>([&] {
         static_cast<void>(core::CsvScenarioReader::read(scenario_path, prices_path, inflows_path));
-    }, "legacy water_to_power_factor must be 0.4 or removed");
+    }, "unsupported scenario key");
 
     std::filesystem::remove(scenario_path);
     std::filesystem::remove(prices_path);
@@ -304,7 +297,7 @@ int main() {
     test_scenario_validation();
     test_bellman_forward_and_runner();
     test_csv_reader_preserves_and_validates_timestamps();
-    test_csv_reader_accepts_only_the_legacy_fixed_power_factor();
+    test_csv_reader_rejects_removed_water_to_power_factor();
     test_csv_reader_rejects_unsupported_key();
     return 0;
 }
