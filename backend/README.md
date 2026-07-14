@@ -44,6 +44,8 @@ Uploaded inputs are staged, validated through the C++ CLI with `--validate-only`
 * `RunSummary`: profit, import/export energy, final reservoir inventory, timings, and hydraulic action counters.
 * `RunProvenance`: SHA-256 hashes for the three inputs, solver executable, and successful dispatch; horizon and grid configuration; and the result-schema version.
 
+Database timestamp columns store naive values with an explicit UTC contract for compatibility with the existing PostgreSQL schema. The API serializes run timestamps as timezone-aware UTC values ending in `Z`.
+
 Existing runs created before the provenance migration remain valid and return `provenance: null`. New failed runs retain input and solver provenance when those execution inputs were readable; only successful runs have a dispatch hash. Dispatch trajectories remain CSV artifacts rather than relational rows.
 
 ## Migration

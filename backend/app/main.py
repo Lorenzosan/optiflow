@@ -24,6 +24,7 @@ from backend.app.scenario_uploads import (
     store_validated_scenario,
 )
 from backend.app.seed import seed_scenarios
+from backend.app.timestamps import as_utc, utc_now_naive
 
 
 logger = logging.getLogger(__name__)
@@ -313,8 +314,10 @@ def run_response(run: OptimizationRun) -> RunResponse:
         scenario_id=run.scenario_id,
         scenario_name=run.scenario.name,
         status=run.status,
-        started_at=run.started_at,
-        completed_at=run.completed_at,
+        started_at=as_utc(run.started_at),
+        completed_at=(
+            as_utc(run.completed_at) if run.completed_at is not None else None
+        ),
         output_dispatch_path=run.output_dispatch_path,
         error_message=run.error_message,
         summary=summary_response(run.summary),
@@ -331,7 +334,7 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
     run = OptimizationRun(
         scenario_id=scenario.id,
         status="running",
-        started_at=datetime.utcnow(),
+        started_at=utc_now_naive(),
     )
     db.add(run)
     db.commit()
@@ -360,7 +363,7 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
     except Exception:
         logger.exception("Unexpected error while executing optimization run %s", run.id)
         run.status = "failed"
-        run.completed_at = datetime.utcnow()
+        run.completed_at = utc_now_naive()
         run.output_dispatch_path = None
         run.error_message = "Unexpected solver execution error. See service logs for details."
         db.commit()
@@ -370,7 +373,7 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
         )
 
     run.status = result.status
-    run.completed_at = datetime.utcnow()
+    run.completed_at = utc_now_naive()
     run.output_dispatch_path = result.output_dispatch_path
     run.error_message = result.error_message
     if result.summary is not None:

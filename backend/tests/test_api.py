@@ -249,6 +249,7 @@ def test_list_runs_returns_newest_first(api: ApiFixture) -> None:
     payload = response.json()
     assert payload["total"] == 4
     assert [item["id"] for item in payload["items"]] == [run_ids[2], run_ids[1]]
+    assert all(item["started_at"].endswith("Z") for item in payload["items"])
     assert all(item["provenance"] is None for item in payload["items"])
 
 
@@ -301,6 +302,8 @@ def test_create_run_persists_success(
     response = client.post("/runs", json={"scenario_id": scenario.id})
     assert response.status_code == 201
     payload = response.json()
+    assert payload["started_at"].endswith("Z")
+    assert payload["completed_at"].endswith("Z")
     assert payload["summary"] == {
         "cumulative_profit": 1234.5,
         "export_energy_mwh": 456.0,
@@ -329,6 +332,9 @@ def test_create_run_persists_success(
     with testing_session() as db:
         persisted = db.get(OptimizationRun, payload["id"])
         assert persisted is not None
+        assert persisted.started_at.tzinfo is None
+        assert persisted.completed_at is not None
+        assert persisted.completed_at.tzinfo is None
         assert persisted.summary is not None
         assert persisted.summary.final_reservoir_volume == 52.5
         assert persisted.provenance is not None

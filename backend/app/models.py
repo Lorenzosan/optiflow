@@ -5,6 +5,8 @@ from datetime import datetime
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from backend.app.timestamps import utc_now_naive
+
 
 class Base(DeclarativeBase):
     pass
@@ -21,7 +23,7 @@ class Scenario(Base):
     inflows_path: Mapped[str] = mapped_column(String(512), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
-        default=datetime.utcnow,
+        default=utc_now_naive,
         nullable=False,
     )
 
@@ -48,7 +50,7 @@ class OptimizationRun(Base):
     )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
-        default=datetime.utcnow,
+        default=utc_now_naive,
         nullable=False,
     )
     completed_at: Mapped[datetime | None] = mapped_column(
