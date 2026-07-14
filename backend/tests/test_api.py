@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from backend.app.database import get_db
 from backend.app.main import app
 from backend.app.models import Base, OptimizationRun, Scenario
+from backend.app.provenance import RunProvenanceData
 from backend.app.runner import RunSummaryData, SolverResult
 from backend.app.scenario_uploads import ScenarioUploadError
 
@@ -31,6 +32,22 @@ def sample_summary() -> RunSummaryData:
         pump_steps=3,
         spill_steps=1,
         wait_steps=2,
+    )
+
+
+def sample_provenance(*, dispatch_sha256: str | None = "d" * 64) -> RunProvenanceData:
+    return RunProvenanceData(
+        result_schema_version=1,
+        scenario_sha256="a" * 64,
+        prices_sha256="b" * 64,
+        inflows_sha256="c" * 64,
+        solver_sha256="e" * 64,
+        dispatch_sha256=dispatch_sha256,
+        horizon_steps=24,
+        reservoir_volume_grid_points=21,
+        turbine_flow_steps=4,
+        pump_flow_steps=3,
+        spill_flow_steps=2,
     )
 
 
@@ -232,6 +249,7 @@ def test_list_runs_returns_newest_first(api: ApiFixture) -> None:
     payload = response.json()
     assert payload["total"] == 4
     assert [item["id"] for item in payload["items"]] == [run_ids[2], run_ids[1]]
+    assert all(item["provenance"] is None for item in payload["items"])
 
 
 @pytest.mark.parametrize(
@@ -276,6 +294,7 @@ def test_create_run_persists_success(
             output_dispatch_path=f"build/api-runs/run_{run_id:06d}_dispatch.csv",
             error_message=None,
             summary=sample_summary(),
+            provenance=sample_provenance(),
         )
 
     monkeypatch.setattr("backend.app.main.run_solver", fake_run_solver)
@@ -294,11 +313,57 @@ def test_create_run_persists_success(
         "spill_steps": 1,
         "wait_steps": 2,
     }
+    assert payload["provenance"] == {
+        "result_schema_version": 1,
+        "scenario_sha256": "a" * 64,
+        "prices_sha256": "b" * 64,
+        "inflows_sha256": "c" * 64,
+        "solver_sha256": "e" * 64,
+        "dispatch_sha256": "d" * 64,
+        "horizon_steps": 24,
+        "reservoir_volume_grid_points": 21,
+        "turbine_flow_steps": 4,
+        "pump_flow_steps": 3,
+        "spill_flow_steps": 2,
+    }
     with testing_session() as db:
         persisted = db.get(OptimizationRun, payload["id"])
         assert persisted is not None
         assert persisted.summary is not None
         assert persisted.summary.final_reservoir_volume == 52.5
+        assert persisted.provenance is not None
+        assert persisted.provenance.scenario_sha256 == "a" * 64
+        assert persisted.provenance.dispatch_sha256 == "d" * 64
+
+
+def test_create_run_persists_failed_run_provenance(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, scenario, _, _ = api
+
+    def fake_run_solver(_root: Path, _scenario: Scenario, _run_id: int) -> SolverResult:
+        return SolverResult(
+            status="failed",
+            output_dispatch_path=None,
+            error_message="Solver rejected the inputs.",
+            summary=None,
+            provenance=sample_provenance(dispatch_sha256=None),
+        )
+
+    monkeypatch.setattr("backend.app.main.run_solver", fake_run_solver)
+    response = client.post("/runs", json={"scenario_id": scenario.id})
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["summary"] is None
+    assert payload["provenance"]["dispatch_sha256"] is None
+    with testing_session() as db:
+        persisted = db.get(OptimizationRun, payload["id"])
+        assert persisted is not None
+        assert persisted.provenance is not None
+        assert persisted.provenance.horizon_steps == 24
+        assert persisted.provenance.dispatch_sha256 is None
 
 
 def test_dispatch_download_returns_csv(api: ApiFixture) -> None:

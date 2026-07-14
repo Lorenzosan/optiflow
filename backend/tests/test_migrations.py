@@ -36,6 +36,7 @@ def test_migrations_upgrade_and_downgrade_sqlite(tmp_path: Path) -> None:
     assert set(inspector.get_table_names()) == {
         "alembic_version",
         "optimization_runs",
+        "run_provenance",
         "run_summaries",
         "scenarios",
     }
@@ -51,6 +52,20 @@ def test_migrations_upgrade_and_downgrade_sqlite(tmp_path: Path) -> None:
         "pump_steps",
         "spill_steps",
         "wait_steps",
+    }
+    assert {column["name"] for column in inspector.get_columns("run_provenance")} == {
+        "run_id",
+        "result_schema_version",
+        "scenario_sha256",
+        "prices_sha256",
+        "inflows_sha256",
+        "solver_sha256",
+        "dispatch_sha256",
+        "horizon_steps",
+        "reservoir_volume_grid_points",
+        "turbine_flow_steps",
+        "pump_flow_steps",
+        "spill_flow_steps",
     }
     engine.dispose()
 
@@ -76,7 +91,8 @@ def test_pre_alembic_schema_can_be_adopted_and_upgraded(tmp_path: Path) -> None:
     engine = create_engine(database_url)
     inspector = inspect(engine)
     assert "run_summaries" in inspector.get_table_names()
+    assert "run_provenance" in inspector.get_table_names()
     with engine.connect() as connection:
         revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert revision == "20260710_0002"
+    assert revision == "20260714_0003"
     engine.dispose()
