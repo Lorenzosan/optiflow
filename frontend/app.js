@@ -43,6 +43,7 @@ const elements = {
   scenarioFields: document.querySelector("#scenario-fields"),
   pricesFile: document.querySelector("#prices-file"),
   inflowsFile: document.querySelector("#inflows-file"),
+  overwriteScenario: document.querySelector("#overwrite-scenario"),
   seriesPreview: document.querySelector("#series-preview"),
   saveScenarioButton: document.querySelector("#save-scenario-button"),
   scenarioSaveMessage: document.querySelector("#scenario-save-message"),
@@ -298,8 +299,7 @@ async function validateSelectedSeries() {
     pricesFile.text(),
     inflowsFile.text(),
   ]);
-  const timeStepInput = elements.scenarioForm.elements.namedItem("time_step_hours");
-  const summary = validateSeriesPair(pricesText, inflowsText, timeStepInput?.value);
+  const summary = validateSeriesPair(pricesText, inflowsText);
   return { pricesFile, inflowsFile, summary };
 }
 
@@ -312,7 +312,7 @@ async function updateSeriesPreview() {
 
   try {
     const { summary } = await validateSelectedSeries();
-    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching timestamped steps detected.`;
+    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching timestamped steps detected; time step ${formatNumber(summary.timeStepHours, 6)} h.`;
     elements.seriesPreview.classList.remove("error");
     elements.seriesPreview.classList.add("success");
   } catch (error) {
@@ -328,19 +328,23 @@ async function createScenario(event) {
   elements.saveScenarioButton.disabled = true;
 
   try {
+    const { pricesFile, inflowsFile, summary } = await validateSelectedSeries();
     const values = Object.fromEntries(new FormData(elements.scenarioForm).entries());
-    const scenarioCsv = buildScenarioCsv(elements.scenarioName.value, values);
+    const scenarioName = elements.scenarioName.value.trim();
+    const scenarioCsv = buildScenarioCsv(scenarioName, values, summary.timeStepHours);
     const scenarioFile = new File([scenarioCsv], "scenario.csv", { type: "text/csv" });
     if (scenarioFile.size > SCENARIO_FILE_LIMIT_BYTES) {
       throw new Error("Generated scenario CSV exceeds the 256 KiB upload limit.");
     }
 
-    const { pricesFile, inflowsFile, summary } = await validateSelectedSeries();
+    const replacing = elements.overwriteScenario.checked
+      && state.scenarios.some((scenario) => scenario.name === scenarioName);
     const payload = new FormData();
     payload.append("description", elements.scenarioDescriptionInput.value.trim());
     payload.append("scenario", scenarioFile);
     payload.append("prices", pricesFile, pricesFile.name);
     payload.append("inflows", inflowsFile, inflowsFile.name);
+    payload.append("overwrite", String(elements.overwriteScenario.checked));
 
     const scenario = await apiRequest("/scenarios", {
       method: "POST",
@@ -349,7 +353,7 @@ async function createScenario(event) {
 
     await loadScenarios({ selectedScenarioId: scenario.id });
     setScenarioMessage(
-      `Saved ${scenario.name} with ${summary.rowCount.toLocaleString()} time steps. It is selected for optimization.`,
+      `${replacing ? "Replaced" : "Saved"} ${scenario.name} with ${summary.rowCount.toLocaleString()} time steps at ${formatNumber(summary.timeStepHours, 6)} h. It is selected for optimization.`,
     );
     setOperationMessage(`Custom scenario ${scenario.name} is ready to run.`);
   } catch (error) {
@@ -691,9 +695,6 @@ function resetAndLoadRuns() {
 }
 
 renderScenarioFields();
-
-const timeStepInput = elements.scenarioForm.elements.namedItem("time_step_hours");
-timeStepInput?.addEventListener("change", () => updateSeriesPreview());
 
 elements.scenarioForm.addEventListener("submit", createScenario);
 elements.scenarioForm.addEventListener("reset", () => {

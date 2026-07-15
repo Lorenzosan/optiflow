@@ -2,7 +2,7 @@
 
 The frontend is a dependency-free browser application served by NGINX. It uses plain HTML, CSS, and ES modules and sends same-origin requests through `/api/`.
 
-The custom-scenario editor generates the hydraulic-energy `key,value` optimizer schema, validates separate timestamped price and inflow files, and submits immutable inputs for server-side C++ validation. Storage content is presented in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages; the generated scenario CSV converts efficiencies back to optimizer fractions.
+The custom-scenario editor generates the hydraulic-energy `key,value` optimizer schema, validates separate timestamped price and inflow files, derives `time_step_hours` from their constant timestamp spacing, and submits managed inputs for server-side C++ validation. Storage content is presented in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages; the generated scenario CSV converts efficiencies back to optimizer fractions. Existing custom scenarios can be replaced by name, which deletes their prior runs and dispatch artifacts. Bundled scenarios remain read-only.
 
 The selected-result panel loads the newest succeeded run by default, or the historical run selected by the user. It shows the optimization summary, synchronized dispatch charts, and one row per reporting period with Baseload, Peak, and Off-peak columns for average power, energy, and P&L. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich. The first twelve calendar months are monthly and later periods are quarterly. Units are shown on scenario inputs, summaries, and trader outputs.
 

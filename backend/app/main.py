@@ -19,6 +19,7 @@ from backend.app.scenario_parameters import ScenarioParameterError, load_time_st
 from backend.app.scenario_uploads import (
     ScenarioUploadError,
     ScenarioValidatorError,
+    managed_scenario_directory,
     remove_scenario_directory,
     store_validated_scenario,
 )
@@ -169,6 +170,7 @@ async def create_scenario(
     scenario_file: Annotated[UploadFile, File(alias="scenario")],
     prices_file: Annotated[UploadFile, File(alias="prices")],
     inflows_file: Annotated[UploadFile, File(alias="inflows")],
+    overwrite: Annotated[bool, Form()] = False,
     db: Session = Depends(get_db),
 ) -> ScenarioResponse:
     normalized_description = description.strip()
@@ -197,8 +199,52 @@ async def create_scenario(
 
     existing = db.query(Scenario).filter(Scenario.name == stored.name).one_or_none()
     if existing is not None:
-        remove_scenario_directory(stored.directory)
-        raise HTTPException(status_code=409, detail="Scenario name already exists")
+        if not overwrite:
+            remove_scenario_directory(stored.directory)
+            raise HTTPException(status_code=409, detail="Scenario name already exists")
+
+        previous_directory = managed_scenario_directory(
+            root,
+            existing.scenario_path,
+            existing.prices_path,
+            existing.inflows_path,
+        )
+        if previous_directory is None:
+            remove_scenario_directory(stored.directory)
+            raise HTTPException(
+                status_code=409,
+                detail="Bundled scenarios cannot be overwritten",
+            )
+
+        dispatch_artifacts: list[Path] = []
+        for run in list(existing.runs):
+            if run.output_dispatch_path:
+                artifact = resolve_dispatch_path(root, run.output_dispatch_path)
+                if artifact is not None:
+                    dispatch_artifacts.append(artifact)
+            db.delete(run)
+
+        existing.description = normalized_description
+        existing.scenario_path = stored.scenario_path
+        existing.prices_path = stored.prices_path
+        existing.inflows_path = stored.inflows_path
+        existing.created_at = utc_now_naive()
+        try:
+            db.commit()
+            db.refresh(existing)
+        except Exception:
+            db.rollback()
+            remove_scenario_directory(stored.directory)
+            logger.exception("Failed to overwrite uploaded scenario %s", stored.name)
+            raise
+
+        remove_scenario_directory(previous_directory)
+        for artifact in dispatch_artifacts:
+            try:
+                artifact.unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Could not remove obsolete dispatch artifact %s", artifact)
+        return scenario_response(root, existing)
 
     scenario = Scenario(
         name=stored.name,

@@ -30,12 +30,13 @@ const INFLOW_CSV = [
 ].join("\n");
 
 
-test("scenario editor exposes explicit hydro and euro units", () => {
+test("scenario editor exposes explicit hydro and euro units without a time-step input", () => {
   const fields = Object.fromEntries(
     SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields)
       .map((definition) => [definition.key, definition.label]),
   );
 
+  assert.equal(fields.time_step_hours, undefined);
   assert.equal(fields.reservoir_max_volume, "Maximum storage content [MWh hydraulic]");
   assert.equal(fields.turbine_max_flow, "Maximum turbine withdrawal [MW hydraulic]");
   assert.equal(fields.turbine_efficiency, "Turbine efficiency [%]");
@@ -45,14 +46,15 @@ test("scenario editor exposes explicit hydro and euro units", () => {
   assert.equal(fields.terminal_reservoir_target_penalty, "Storage target penalty [€/MWh²]");
 });
 
-test("buildScenarioCsv emits only the optimizer scalar schema", () => {
-  const csv = buildScenarioCsv("custom_case", defaultValues());
+test("buildScenarioCsv emits the derived time step and optimizer scalar schema", () => {
+  const csv = buildScenarioCsv("custom_case", defaultValues(), 0.5);
   const lines = csv.trimEnd().split("\n");
   assert.equal(lines[0], "key,value");
   assert.equal(lines[1], "scenario_name,custom_case");
+  assert.equal(lines[2], "time_step_hours,0.5");
   assert.equal(
     lines.length,
-    2 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
+    3 + SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).length,
   );
   assert.match(csv, /terminal_target_reservoir_volume,100/);
   assert.match(csv, /turbine_efficiency,0\.9/);
@@ -60,7 +62,7 @@ test("buildScenarioCsv emits only the optimizer scalar schema", () => {
   assert.match(csv, /discount_factor,1/);
   assert.doesNotMatch(csv, /market_|peak_|series_start|water_to_power_factor/);
   assert.deepEqual(
-    lines.slice(2).map((line) => line.split(",", 1)[0]),
+    lines.slice(3).map((line) => line.split(",", 1)[0]),
     SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => field.key),
   );
 });
@@ -69,7 +71,7 @@ test("buildScenarioCsv converts displayed efficiency percentages to fractions", 
   const values = defaultValues();
   values.turbine_efficiency = "87.5";
   values.pump_efficiency = "92";
-  const csv = buildScenarioCsv("efficiency_case", values);
+  const csv = buildScenarioCsv("efficiency_case", values, 1);
 
   assert.match(csv, /turbine_efficiency,0\.875/);
   assert.match(csv, /pump_efficiency,0\.92/);
@@ -79,32 +81,48 @@ test("buildScenarioCsv validates displayed efficiency percentages", () => {
   const zeroEfficiency = defaultValues();
   zeroEfficiency.turbine_efficiency = "0";
   assert.throws(
-    () => buildScenarioCsv("zero_efficiency", zeroEfficiency),
+    () => buildScenarioCsv("zero_efficiency", zeroEfficiency, 1),
     /below its allowed minimum/,
   );
 
   const excessiveEfficiency = defaultValues();
   excessiveEfficiency.pump_efficiency = "100.1";
   assert.throws(
-    () => buildScenarioCsv("excessive_efficiency", excessiveEfficiency),
+    () => buildScenarioCsv("excessive_efficiency", excessiveEfficiency, 1),
     /exceeds its allowed maximum/,
   );
 });
 
+test("buildScenarioCsv rejects invalid derived time steps", () => {
+  assert.throws(
+    () => buildScenarioCsv("bad_time_step", defaultValues(), 0),
+    /Derived time step/,
+  );
+});
+
 test("buildScenarioCsv rejects unrepresentable names", () => {
-  assert.throws(() => buildScenarioCsv("bad,name", defaultValues()), /cannot contain commas/);
+  assert.throws(
+    () => buildScenarioCsv("bad,name", defaultValues(), 1),
+    /cannot contain commas/,
+  );
 });
 
 test("buildScenarioCsv validates reservoir bounds", () => {
   const values = defaultValues();
   values.initial_reservoir_volume = "900";
-  assert.throws(() => buildScenarioCsv("bad_initial", values), /Initial storage content/);
+  assert.throws(
+    () => buildScenarioCsv("bad_initial", values, 1),
+    /Initial storage content/,
+  );
 });
 
 test("buildScenarioCsv requires integer solver counts", () => {
   const values = defaultValues();
   values.turbine_flow_steps = "2.5";
-  assert.throws(() => buildScenarioCsv("bad_steps", values), /must be an integer/);
+  assert.throws(
+    () => buildScenarioCsv("bad_steps", values, 1),
+    /must be an integer/,
+  );
 });
 
 test("validateSeriesCsv accepts canonical UTC timestamps and negative prices", () => {
@@ -155,20 +173,41 @@ test("validateSeriesPair requires identical timestamps", () => {
     () => validateSeriesPair(
       PRICE_CSV,
       "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,3\n2027-01-01T02:00:00Z,1\n",
-      1,
     ),
     /timestamps differ/,
   );
 });
 
-test("validateSeriesPair enforces spacing from time_step_hours", () => {
+test("validateSeriesPair derives a constant time step from timestamps", () => {
+  const oneHour = validateSeriesPair(PRICE_CSV, INFLOW_CSV);
+  assert.equal(oneHour.rowCount, 2);
+  assert.equal(oneHour.timeStepHours, 1);
+
   const twoHourPrices = PRICE_CSV.replace("T01:00:00Z", "T02:00:00Z");
   const twoHourInflows = INFLOW_CSV.replace("T01:00:00Z", "T02:00:00Z");
+  assert.equal(validateSeriesPair(twoHourPrices, twoHourInflows).timeStepHours, 2);
+});
+
+test("validateSeriesPair rejects irregular spacing", () => {
+  const prices = [
+    "timestamp_utc,price",
+    "2027-01-01T00:00:00Z,1",
+    "2027-01-01T01:00:00Z,2",
+    "2027-01-01T03:00:00Z,3",
+    "",
+  ].join("\n");
+  const inflows = prices.replace("price", "natural_inflow");
+  assert.throws(() => validateSeriesPair(prices, inflows), /not constant/);
+});
+
+test("validateSeriesPair requires two rows to infer the time step", () => {
   assert.throws(
-    () => validateSeriesPair(twoHourPrices, twoHourInflows, 1),
-    /must equal time_step_hours/,
+    () => validateSeriesPair(
+      "timestamp_utc,price\n2027-01-01T00:00:00Z,1\n",
+      "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,1\n",
+    ),
+    /At least two/,
   );
-  assert.equal(validateSeriesPair(twoHourPrices, twoHourInflows, 2).rowCount, 2);
 });
 
 test("validateSeriesPair rejects mismatched horizons", () => {
@@ -176,7 +215,6 @@ test("validateSeriesPair rejects mismatched horizons", () => {
     () => validateSeriesPair(
       PRICE_CSV,
       "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,3\n",
-      1,
     ),
     /horizons differ/,
   );

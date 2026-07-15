@@ -7,9 +7,8 @@ function field(key, label, defaultValue, options = {}) {
 
 export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
-    title: "Time and hydraulic storage content",
+    title: "Hydraulic storage content",
     fields: Object.freeze([
-      field("time_step_hours", "Time step [h]", 1, { min: 0, exclusiveMin: true }),
       field("reservoir_min_volume", "Minimum storage content [MWh hydraulic]", 0),
       field("reservoir_max_volume", "Maximum storage content [MWh hydraulic]", 200),
       field("initial_reservoir_volume", "Initial storage content [MWh hydraulic]", 100),
@@ -84,6 +83,10 @@ function normalizeScenarioName(name) {
   return normalized;
 }
 
+function numberText(value) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(15)));
+}
+
 function parseFieldValue(definition, rawValue) {
   const text = String(rawValue ?? "").trim();
   requireCondition(text.length > 0, `${definition.label} is required.`);
@@ -102,10 +105,7 @@ function parseFieldValue(definition, rawValue) {
   const scenarioValue = definition.scenarioScale === undefined
     ? value
     : value * definition.scenarioScale;
-  const scenarioText = Number.isInteger(scenarioValue)
-    ? String(scenarioValue)
-    : String(Number(scenarioValue.toPrecision(15)));
-  return { value, scenarioText };
+  return { value, scenarioText: numberText(scenarioValue) };
 }
 
 function validateBounds(values) {
@@ -137,10 +137,26 @@ function validateBounds(values) {
   }
 }
 
-export function buildScenarioCsv(name, values) {
+function validateTimeStepHours(value) {
+  const parsed = Number(value);
+  requireCondition(Number.isFinite(parsed) && parsed > 0, "Derived time step must be finite and positive.");
+  const seconds = parsed * 3600;
+  requireCondition(
+    Math.abs(seconds - Math.round(seconds)) <= 1e-9,
+    "Derived time step must resolve to a whole number of seconds.",
+  );
+  return parsed;
+}
+
+export function buildScenarioCsv(name, values, timeStepHours) {
   const normalizedName = normalizeScenarioName(name);
+  const parsedTimeStepHours = validateTimeStepHours(timeStepHours);
   const parsedValues = {};
-  const lines = ["key,value", `scenario_name,${normalizedName}`];
+  const lines = [
+    "key,value",
+    `scenario_name,${normalizedName}`,
+    `time_step_hours,${numberText(parsedTimeStepHours)}`,
+  ];
   for (const definition of ALL_FIELDS) {
     const parsed = parseFieldValue(definition, values[definition.key]);
     parsedValues[definition.key] = parsed.value;
@@ -203,26 +219,20 @@ export function validateSeriesCsv(text, valueColumn) {
   return Object.freeze({ rowCount: timestamps.length, timestamps: Object.freeze(timestamps) });
 }
 
-export function validateSeriesPair(pricesText, inflowsText, timeStepHours) {
+export function validateSeriesPair(pricesText, inflowsText) {
   const prices = validateSeriesCsv(pricesText, "price");
   const inflows = validateSeriesCsv(inflowsText, "natural_inflow");
   requireCondition(
     prices.rowCount === inflows.rowCount,
     `Price and inflow horizons differ: ${prices.rowCount} versus ${inflows.rowCount}.`,
   );
+  requireCondition(
+    prices.rowCount >= 2,
+    "At least two timestamped rows are required to derive the time step.",
+  );
 
-  const parsedTimeStepHours = Number(timeStepHours);
-  requireCondition(
-    Number.isFinite(parsedTimeStepHours) && parsedTimeStepHours > 0,
-    "Time step must be finite and positive before validating the series.",
-  );
-  const intervalSeconds = parsedTimeStepHours * 3600;
-  const roundedIntervalSeconds = Math.round(intervalSeconds);
-  requireCondition(
-    Math.abs(intervalSeconds - roundedIntervalSeconds) <= 1e-9,
-    "Time step must resolve to a whole number of seconds for timestamped series.",
-  );
-  const intervalMilliseconds = roundedIntervalSeconds * 1000;
+  const intervalMilliseconds = prices.timestamps[1].milliseconds - prices.timestamps[0].milliseconds;
+  requireCondition(intervalMilliseconds > 0, "Timestamp spacing must be positive.");
 
   for (let index = 0; index < prices.rowCount; index += 1) {
     const priceTimestamp = prices.timestamps[index];
@@ -235,14 +245,16 @@ export function validateSeriesPair(pricesText, inflowsText, timeStepHours) {
       requireCondition(
         priceTimestamp.milliseconds - prices.timestamps[index - 1].milliseconds
           === intervalMilliseconds,
-        `Timestamp spacing at row ${index + 2} must equal time_step_hours.`,
+        `Timestamp spacing is not constant at row ${index + 2}.`,
       );
     }
   }
 
+  const timeStepHours = validateTimeStepHours(intervalMilliseconds / 3_600_000);
   return Object.freeze({
     rowCount: prices.rowCount,
     startTimestampUtc: prices.timestamps[0].text,
     endTimestampUtc: prices.timestamps.at(-1).text,
+    timeStepHours,
   });
 }

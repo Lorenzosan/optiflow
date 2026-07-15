@@ -1,6 +1,6 @@
 # OptiFlow backend
 
-The backend is a thin FastAPI orchestration layer around the C++ pumped-storage optimizer. It provides scenario discovery and validated immutable uploads, synchronous run execution, persisted run summaries, history queries, and guarded dispatch downloads.
+The backend is a thin FastAPI orchestration layer around the C++ pumped-storage optimizer. It provides scenario discovery and validated managed uploads, synchronous run execution, persisted run summaries, history queries, and guarded dispatch downloads.
 
 The optimizer remains transport-independent under `libs/optimization`; the CLI is the service execution boundary.
 
@@ -29,17 +29,17 @@ The stack starts PostgreSQL, applies Alembic migrations, seeds the yearly hydro 
 
 * `GET /health`
 * `GET /scenarios`
-* `POST /scenarios` with multipart `description`, `scenario`, `prices`, and `inflows`
+* `POST /scenarios` with multipart `description`, `scenario`, `prices`, `inflows`, and optional `overwrite`
 * `POST /runs`
 * `GET /runs` with bounded pagination and optional scenario/status filters
 * `GET /runs/{run_id}`
 * `GET /runs/{run_id}/dispatch.csv`
 
-Uploaded inputs are staged, validated through the C++ CLI with `--validate-only`, and moved to an immutable server-generated directory only after successful validation.
+Uploaded inputs are staged, validated through the C++ CLI with `--validate-only`, and moved to a server-generated directory only after successful validation. With `overwrite=true`, an existing custom scenario with the same name is replaced in place and its prior runs, summaries, dispatch artifacts, and previous input directory are deleted. Bundled scenarios cannot be overwritten.
 
 ## Persistence
 
-* `Scenario`: metadata and immutable input paths.
+* `Scenario`: metadata and current managed input paths.
 * `OptimizationRun`: status, timestamps, artifact path, and errors.
 * `RunSummary`: profit, import/export energy, final reservoir inventory, timings, and hydraulic action counters.
 
@@ -56,4 +56,4 @@ python -m alembic upgrade head
 python -m alembic check
 ```
 
-The migration chain upgrades fresh and existing databases to the current schema.
+The migration chain creates the current schema through revision `20260710_0002`. This development repository assumes a fresh database after migration-history changes; recreate the database instead of preserving obsolete revisions.

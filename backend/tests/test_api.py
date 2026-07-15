@@ -172,7 +172,7 @@ def test_create_scenario_validates_stores_and_persists_uploads(
         assert "scenario_name,custom_case\n" in (root / persisted.scenario_path).read_text()
 
 
-def test_create_scenario_rejects_duplicate_name(
+def test_create_scenario_rejects_duplicate_name_without_overwrite(
     api: ApiFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -192,6 +192,75 @@ def test_create_scenario_rejects_duplicate_name(
     assert second.status_code == 409
     with testing_session() as db:
         assert db.query(Scenario).filter(Scenario.name == "custom_case").count() == 1
+
+
+def test_create_scenario_overwrites_custom_inputs_and_deletes_prior_runs(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, _, root, output_dir = api
+    monkeypatch.setattr("backend.app.scenario_uploads.validate_scenario_inputs", lambda *_: None)
+    first = client.post(
+        "/scenarios",
+        data={"description": "First"},
+        files=scenario_upload_files(),
+    )
+    assert first.status_code == 201
+    scenario_id = first.json()["id"]
+
+    with testing_session() as db:
+        original = db.get(Scenario, scenario_id)
+        assert original is not None
+        original_directory = (root / original.scenario_path).parent
+
+    artifact = output_dir / "old-custom-dispatch.csv"
+    artifact.write_text("old dispatch")
+    run_id = add_run(
+        testing_session,
+        scenario_id,
+        run_status="succeeded",
+        output_dispatch_path=artifact.relative_to(root).as_posix(),
+    )
+
+    replaced = client.post(
+        "/scenarios",
+        data={"description": "Second", "overwrite": "true"},
+        files=scenario_upload_files(),
+    )
+    assert replaced.status_code == 201
+    payload = replaced.json()
+    assert payload["id"] == scenario_id
+    assert payload["description"] == "Second"
+
+    with testing_session() as db:
+        persisted = db.get(Scenario, scenario_id)
+        assert persisted is not None
+        assert (root / persisted.scenario_path).parent != original_directory
+        assert db.get(OptimizationRun, run_id) is None
+        assert db.query(Scenario).filter(Scenario.name == "custom_case").count() == 1
+
+    assert not original_directory.exists()
+    assert not artifact.exists()
+
+
+def test_create_scenario_does_not_overwrite_bundled_scenario(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, testing_session, scenario, _, _ = api
+    monkeypatch.setattr("backend.app.scenario_uploads.validate_scenario_inputs", lambda *_: None)
+    response = client.post(
+        "/scenarios",
+        data={"description": "Replacement", "overwrite": "true"},
+        files=scenario_upload_files(name=scenario.name),
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Bundled scenarios cannot be overwritten"
+    with testing_session() as db:
+        persisted = db.get(Scenario, scenario.id)
+        assert persisted is not None
+        assert persisted.description == "Test scenario"
+        assert persisted.scenario_path == "examples/scenario.csv"
 
 
 def test_create_scenario_rejects_invalid_inputs(

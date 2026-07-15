@@ -45,6 +45,38 @@ def scenario_storage_dir(root: Path) -> Path:
     return root / storage_dir
 
 
+def managed_scenario_directory(
+    root: Path,
+    scenario_path: str,
+    prices_path: str,
+    inflows_path: str,
+) -> Path | None:
+    storage_root = scenario_storage_dir(root).resolve()
+    expected_names = ("scenario.csv", "prices.csv", "inflows.csv")
+    resolved_paths: list[Path] = []
+    for stored_path, expected_name in zip(
+        (scenario_path, prices_path, inflows_path),
+        expected_names,
+        strict=True,
+    ):
+        candidate = Path(stored_path)
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(storage_root)
+        except ValueError:
+            return None
+        if resolved.name != expected_name:
+            return None
+        resolved_paths.append(resolved)
+
+    directory = resolved_paths[0].parent
+    if directory == storage_root or any(path.parent != directory for path in resolved_paths):
+        return None
+    return directory
+
+
 async def write_upload(
     upload: UploadFile,
     target: Path,

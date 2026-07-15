@@ -116,7 +116,7 @@ Endpoints:
 
 * `GET /health`
 * `GET /scenarios`
-* `POST /scenarios`
+* `POST /scenarios` with optional destructive custom-scenario overwrite
 * `POST /runs`
 * `GET /runs`
 * `GET /runs/{run_id}`
@@ -124,7 +124,7 @@ Endpoints:
 
 The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its timestamped dispatch into Baseload, Peak, and Off-peak columns. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich.
 
-The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. Physical water volumes still require plant-specific conversion before optimization.
+The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. It derives `time_step_hours` from constant timestamp spacing rather than asking for it separately. A custom scenario can be replaced by name; replacement deletes that scenario's prior runs and dispatch artifacts. Bundled examples remain read-only. Physical water volumes still require plant-specific conversion before optimization.
 
 ## Scenario schema
 
@@ -167,7 +167,7 @@ timestamp_utc,natural_inflow
 2027-01-01T00:00:00Z,4
 ```
 
-Timestamps use canonical UTC `YYYY-MM-DDTHH:MM:SSZ`, must match row by row, and must be spaced exactly by `time_step_hours`. The dispatch retains `time_index` and adds the authoritative `timestamp_utc`.
+Timestamps use canonical UTC `YYYY-MM-DDTHH:MM:SSZ`, must match row by row, and must have constant spacing. The browser editor derives `time_step_hours` from that spacing and writes it into the generated scenario CSV. The dispatch retains `time_index` and adds the authoritative `timestamp_utc`.
 
 
 Model units and equations are documented in [`docs/model.md`](docs/model.md).
