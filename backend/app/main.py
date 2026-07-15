@@ -13,8 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.database import SessionLocal, get_db
-from backend.app.models import OptimizationRun, RunProvenance, RunSummary, Scenario
-from backend.app.provenance import RunProvenanceData
+from backend.app.models import OptimizationRun, RunSummary, Scenario
 from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
 from backend.app.scenario_parameters import ScenarioParameterError, load_time_step_hours
 from backend.app.scenario_uploads import (
@@ -70,20 +69,6 @@ class RunSummaryResponse(BaseModel):
     wait_steps: int
 
 
-class RunProvenanceResponse(BaseModel):
-    result_schema_version: int
-    scenario_sha256: str
-    prices_sha256: str
-    inflows_sha256: str
-    solver_sha256: str
-    dispatch_sha256: str | None
-    horizon_steps: int
-    reservoir_volume_grid_points: int
-    turbine_flow_steps: int
-    pump_flow_steps: int
-    spill_flow_steps: int
-
-
 class RunResponse(BaseModel):
     id: int
     scenario_id: int
@@ -94,7 +79,6 @@ class RunResponse(BaseModel):
     output_dispatch_path: str | None
     error_message: str | None
     summary: RunSummaryResponse | None
-    provenance: RunProvenanceResponse | None
 
 
 class RunListResponse(BaseModel):
@@ -272,42 +256,6 @@ def attach_summary(run: OptimizationRun, summary: RunSummaryData) -> None:
     )
 
 
-def provenance_response(
-    provenance: RunProvenance | None,
-) -> RunProvenanceResponse | None:
-    if provenance is None:
-        return None
-    return RunProvenanceResponse(
-        result_schema_version=provenance.result_schema_version,
-        scenario_sha256=provenance.scenario_sha256,
-        prices_sha256=provenance.prices_sha256,
-        inflows_sha256=provenance.inflows_sha256,
-        solver_sha256=provenance.solver_sha256,
-        dispatch_sha256=provenance.dispatch_sha256,
-        horizon_steps=provenance.horizon_steps,
-        reservoir_volume_grid_points=provenance.reservoir_volume_grid_points,
-        turbine_flow_steps=provenance.turbine_flow_steps,
-        pump_flow_steps=provenance.pump_flow_steps,
-        spill_flow_steps=provenance.spill_flow_steps,
-    )
-
-
-def attach_provenance(run: OptimizationRun, provenance: RunProvenanceData) -> None:
-    run.provenance = RunProvenance(
-        result_schema_version=provenance.result_schema_version,
-        scenario_sha256=provenance.scenario_sha256,
-        prices_sha256=provenance.prices_sha256,
-        inflows_sha256=provenance.inflows_sha256,
-        solver_sha256=provenance.solver_sha256,
-        dispatch_sha256=provenance.dispatch_sha256,
-        horizon_steps=provenance.horizon_steps,
-        reservoir_volume_grid_points=provenance.reservoir_volume_grid_points,
-        turbine_flow_steps=provenance.turbine_flow_steps,
-        pump_flow_steps=provenance.pump_flow_steps,
-        spill_flow_steps=provenance.spill_flow_steps,
-    )
-
-
 def run_response(run: OptimizationRun) -> RunResponse:
     return RunResponse(
         id=run.id,
@@ -321,7 +269,6 @@ def run_response(run: OptimizationRun) -> RunResponse:
         output_dispatch_path=run.output_dispatch_path,
         error_message=run.error_message,
         summary=summary_response(run.summary),
-        provenance=provenance_response(run.provenance),
     )
 
 
@@ -344,22 +291,8 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
         result = run_solver(repository_root(), scenario, run.id)
         if result.status == "succeeded" and result.summary is None:
             raise RuntimeError("successful solver result did not include a run summary")
-        if result.status == "succeeded" and result.provenance is None:
-            raise RuntimeError("successful solver result did not include run provenance")
-        if (
-            result.status == "succeeded"
-            and result.provenance is not None
-            and result.provenance.dispatch_sha256 is None
-        ):
-            raise RuntimeError("successful solver provenance did not include a dispatch hash")
         if result.status != "succeeded" and result.summary is not None:
             raise RuntimeError("failed solver result included a run summary")
-        if (
-            result.status != "succeeded"
-            and result.provenance is not None
-            and result.provenance.dispatch_sha256 is not None
-        ):
-            raise RuntimeError("failed solver provenance included a dispatch hash")
     except Exception:
         logger.exception("Unexpected error while executing optimization run %s", run.id)
         run.status = "failed"
@@ -378,8 +311,6 @@ def create_run(request: RunCreate, db: Session = Depends(get_db)) -> RunResponse
     run.error_message = result.error_message
     if result.summary is not None:
         attach_summary(run, result.summary)
-    if result.provenance is not None:
-        attach_provenance(run, result.provenance)
     db.commit()
     db.refresh(run)
     return run_response(run)
@@ -404,7 +335,6 @@ def list_runs(
         query.options(
             joinedload(OptimizationRun.scenario),
             joinedload(OptimizationRun.summary),
-            joinedload(OptimizationRun.provenance),
         )
         .order_by(OptimizationRun.started_at.desc(), OptimizationRun.id.desc())
         .offset(offset)

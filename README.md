@@ -124,7 +124,7 @@ Endpoints:
 
 The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its timestamped dispatch into Baseload, Peak, and Off-peak columns. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich.
 
-The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. Selected runs expose their persisted horizon, grid configuration, schema version, and abbreviated SHA-256 provenance. Physical water volumes still require plant-specific conversion before optimization.
+The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. Physical water volumes still require plant-specific conversion before optimization.
 
 ## Scenario schema
 

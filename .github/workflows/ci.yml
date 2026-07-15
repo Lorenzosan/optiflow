@@ -111,7 +111,6 @@ jobs:
         run: |
           node --check frontend/app.js
           node --check frontend/scenario.mjs
-          node --check frontend/run_presentation.mjs
           node --check frontend/trader.mjs
           node --check frontend/dispatch_charts.mjs
 
@@ -119,7 +118,6 @@ jobs:
         run: |
           node --test --test-reporter spec \
             frontend/scenario.test.mjs \
-            frontend/run_presentation.test.mjs \
             frontend/trader.test.mjs \
             frontend/dispatch_charts.test.mjs \
             frontend/container_assets.test.mjs

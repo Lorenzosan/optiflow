@@ -69,11 +69,6 @@ class OptimizationRun(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
-    provenance: Mapped[RunProvenance | None] = relationship(
-        back_populates="run",
-        cascade="all, delete-orphan",
-        uselist=False,
-    )
 
 
 class RunSummary(Base):
@@ -95,25 +90,3 @@ class RunSummary(Base):
     wait_steps: Mapped[int] = mapped_column(Integer, nullable=False)
 
     run: Mapped[OptimizationRun] = relationship(back_populates="summary")
-
-
-class RunProvenance(Base):
-    __tablename__ = "run_provenance"
-
-    run_id: Mapped[int] = mapped_column(
-        ForeignKey("optimization_runs.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    result_schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
-    scenario_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    prices_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    inflows_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    solver_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    dispatch_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    horizon_steps: Mapped[int] = mapped_column(Integer, nullable=False)
-    reservoir_volume_grid_points: Mapped[int] = mapped_column(Integer, nullable=False)
-    turbine_flow_steps: Mapped[int] = mapped_column(Integer, nullable=False)
-    pump_flow_steps: Mapped[int] = mapped_column(Integer, nullable=False)
-    spill_flow_steps: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    run: Mapped[OptimizationRun] = relationship(back_populates="provenance")

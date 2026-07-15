@@ -10,12 +10,6 @@ import subprocess
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from backend.app.models import Scenario
-from backend.app.provenance import (
-    ProvenanceError,
-    RunProvenanceData,
-    collect_run_provenance,
-    sha256_file,
-)
 
 
 RUN_OUTPUT_DIR_ENV = "OPTIFLOW_RUN_OUTPUT_DIR"
@@ -47,7 +41,6 @@ class SolverResult:
     output_dispatch_path: str | None
     error_message: str | None
     summary: RunSummaryData | None
-    provenance: RunProvenanceData | None
 
 
 def display_path(root: Path, path: Path) -> str:
@@ -88,20 +81,8 @@ def run_solver(root: Path, scenario: Scenario, run_id: int) -> SolverResult:
     dispatch_path.unlink(missing_ok=True)
     summary_path.unlink(missing_ok=True)
 
-    solver_path = solve_executable(root)
-    try:
-        provenance = collect_run_provenance(root, scenario, solver_path)
-    except ProvenanceError as error:
-        return SolverResult(
-            status="failed",
-            output_dispatch_path=None,
-            error_message=truncate_error(f"Run provenance is unavailable: {error}"),
-            summary=None,
-            provenance=None,
-        )
-
     command = [
-        str(solver_path),
+        str(solve_executable(root)),
         "--scenario", str(root / scenario.scenario_path),
         "--prices", str(root / scenario.prices_path),
         "--inflows", str(root / scenario.inflows_path),
@@ -120,64 +101,37 @@ def run_solver(root: Path, scenario: Scenario, run_id: int) -> SolverResult:
     except subprocess.TimeoutExpired:
         dispatch_path.unlink(missing_ok=True)
         summary_path.unlink(missing_ok=True)
-        return SolverResult(
-            status="failed",
-            output_dispatch_path=None,
-            error_message="Solver timed out.",
-            summary=None,
-            provenance=provenance,
-        )
+        return SolverResult("failed", None, "Solver timed out.", None)
     except OSError as error:
         dispatch_path.unlink(missing_ok=True)
         summary_path.unlink(missing_ok=True)
-        return SolverResult(
-            status="failed",
-            output_dispatch_path=None,
-            error_message=truncate_error(str(error)),
-            summary=None,
-            provenance=provenance,
-        )
+        return SolverResult("failed", None, truncate_error(str(error)), None)
 
     if completed.returncode != 0:
         dispatch_path.unlink(missing_ok=True)
         summary_path.unlink(missing_ok=True)
         return SolverResult(
-            status="failed",
-            output_dispatch_path=None,
-            error_message=truncate_error(completed.stderr or completed.stdout),
-            summary=None,
-            provenance=provenance,
+            "failed",
+            None,
+            truncate_error(completed.stderr or completed.stdout),
+            None,
         )
     if not dispatch_path.is_file():
         summary_path.unlink(missing_ok=True)
-        return SolverResult(
-            status="failed",
-            output_dispatch_path=None,
-            error_message="Solver did not create a dispatch artifact.",
-            summary=None,
-            provenance=provenance,
-        )
+        return SolverResult("failed", None, "Solver did not create a dispatch artifact.", None)
 
     try:
         summary = read_summary(summary_path)
-        dispatch_sha256 = sha256_file(dispatch_path)
-    except (ValueError, ProvenanceError) as error:
+    except ValueError as error:
         dispatch_path.unlink(missing_ok=True)
         summary_path.unlink(missing_ok=True)
-        return SolverResult(
-            status="failed",
-            output_dispatch_path=None,
-            error_message=truncate_error(str(error)),
-            summary=None,
-            provenance=provenance,
-        )
+        return SolverResult("failed", None, truncate_error(str(error)), None)
     summary_path.unlink(missing_ok=True)
     return SolverResult(
-        status="succeeded",
-        output_dispatch_path=display_path(root, dispatch_path),
-        error_message=None,
-        summary=summary,
-        provenance=provenance.with_dispatch_sha256(dispatch_sha256),
+        "succeeded",
+        display_path(root, dispatch_path),
+        None,
+        summary,
     )
 
 

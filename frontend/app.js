@@ -5,7 +5,6 @@ import {
   buildScenarioCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
-import { provenanceItems } from "./run_presentation.mjs";
 import {
   DISPATCH_CHART_TIME_ZONE,
   buildDispatchChartModel,
@@ -62,8 +61,6 @@ const elements = {
   runCompleted: document.querySelector("#run-completed"),
   runError: document.querySelector("#run-error"),
   summaryGrid: document.querySelector("#summary-grid"),
-  runProvenance: document.querySelector("#run-provenance"),
-  provenanceGrid: document.querySelector("#provenance-grid"),
   dispatchCharts: document.querySelector("#dispatch-charts"),
   dispatchChartsMessage: document.querySelector("#dispatch-charts-message"),
   traderCaption: document.querySelector("#trader-caption"),
@@ -523,7 +520,6 @@ function clearRunDetails() {
   state.traderRequestId += 1;
   elements.detailsEmpty.hidden = false;
   elements.detailsContent.hidden = true;
-  renderProvenance(null);
   clearDispatchCharts();
   clearTraderView();
 }
@@ -568,7 +564,6 @@ async function renderRunDetails(run) {
   elements.runError.hidden = !run.error_message;
   elements.runError.textContent = run.error_message ?? "";
 
-  renderProvenance(run.provenance);
   renderSummary(run.summary);
 
   const canDownload = run.status === "succeeded" && Boolean(run.output_dispatch_path);
@@ -621,31 +616,6 @@ async function renderRunDetails(run) {
     clearTraderView(error.message);
     elements.traderMessage.classList.add("error");
   }
-}
-
-function renderProvenance(provenance) {
-  const items = provenanceItems(provenance);
-  elements.runProvenance.hidden = items.length === 0;
-  if (items.length === 0) {
-    elements.provenanceGrid.replaceChildren();
-    return;
-  }
-
-  const rows = items.map((item) => {
-    const wrapper = document.createElement("div");
-    const term = document.createElement("dt");
-    term.textContent = item.label;
-    const description = document.createElement("dd");
-    description.textContent = item.value;
-    if (item.fullValue) {
-      description.title = item.fullValue;
-      description.setAttribute("aria-label", `${item.label}: ${item.fullValue}`);
-      description.className = "hash-value";
-    }
-    wrapper.append(term, description);
-    return wrapper;
-  });
-  elements.provenanceGrid.replaceChildren(...rows);
 }
 
 function renderSummary(summary) {

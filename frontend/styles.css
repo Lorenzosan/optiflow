@@ -479,8 +479,7 @@ tbody tr:hover {
 }
 
 .metadata-grid,
-.summary-grid,
-.provenance-grid {
+.summary-grid {
   display: grid;
   gap: 0.75rem;
 }
@@ -498,7 +497,6 @@ tbody tr:hover {
 }
 
 .metadata-grid dt,
-.provenance-grid dt,
 .summary-label {
   color: var(--muted);
   font-size: 0.72rem;
@@ -516,51 +514,6 @@ tbody tr:hover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-
-.provenance-panel {
-  margin: 0 0 1rem;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: #fbfcfd;
-  padding: 0.75rem;
-}
-
-.provenance-panel summary {
-  cursor: pointer;
-  color: var(--accent-strong);
-  font-size: 0.88rem;
-  font-weight: 750;
-}
-
-.provenance-note {
-  margin: 0.65rem 0 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.provenance-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0.75rem 0 0;
-}
-
-.provenance-grid div {
-  min-width: 0;
-  border-top: 1px solid #e8edf1;
-  padding-top: 0.6rem;
-}
-
-.provenance-grid dd {
-  margin: 0.25rem 0 0;
-  font-size: 0.82rem;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-
-.hash-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.76rem !important;
-}
 
 
 .summary-value {
@@ -646,7 +599,6 @@ footer p {
   .filters,
   .metadata-grid,
   .summary-grid,
-  .provenance-grid,
   .form-grid,
   .parameter-grid {
     grid-template-columns: 1fr;
