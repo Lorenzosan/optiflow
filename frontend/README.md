@@ -25,4 +25,4 @@ docker compose up --build
 
 Then open `http://127.0.0.1:8080`.
 
-The selected-run panel also renders synchronized dependency-free SVG charts for price, natural inflow, turbine/pump/spill controls, storage content, and interval economics. The economics panel separates gross market cashflow, operating cost, and net operating cashflow. Chart timestamps are shown in Europe/Zurich, while the dispatch artifact remains UTC.
+The selected-run panel also renders synchronized dependency-free SVG charts for price, natural inflow, turbine/pump/spill controls, storage content, net operating cashflow, and operating cost. Cashflow and cost use separate interval panels so zero-cost runs do not hide overlapping series; gross market settlement remains available in the tooltip. Chart timestamps are shown in Europe/Zurich, while the dispatch artifact remains UTC.

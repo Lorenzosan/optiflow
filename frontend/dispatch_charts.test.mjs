@@ -32,7 +32,7 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
 
   assert.deepEqual(
     model.panels.map((panel) => panel.key),
-    ["price", "inflow", "turbine", "pump", "spill", "reservoir", "economics"],
+    ["price", "inflow", "turbine", "pump", "spill", "reservoir", "cashflow", "operating-cost"],
   );
   const pump = model.panels.find((panel) => panel.key === "pump");
   assert.equal(pump.unit, "MW hydraulic");
@@ -44,19 +44,30 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
   assert.equal(reservoir.series[0].label, "Storage content");
   assert.deepEqual(reservoir.series[0].points.map((point) => point.value), [0, 10, 0]);
 
-  const economics = model.panels.find((panel) => panel.key === "economics");
-  assert.equal(economics.unit, "€ / interval");
-  assert.deepEqual(economics.series.map((item) => item.label), [
-    "Market cashflow",
-    "Operating cost",
-    "Net operating cashflow",
-  ]);
-  assert.deepEqual(
-    economics.series[0].points.map((point) => point.value),
-    [-375, 480, 480],
-  );
-  assert.deepEqual(economics.series[1].points.map((point) => point.value), [25, 16, 16]);
-  assert.deepEqual(economics.series[2].points.map((point) => point.value), [-400, 464, 464]);
+  const cashflow = model.panels.find((panel) => panel.key === "cashflow");
+  assert.equal(cashflow.unit, "€ / interval");
+  assert.equal(cashflow.series.length, 1);
+  assert.equal(cashflow.series[0].label, "Net operating cashflow");
+  assert.deepEqual(cashflow.series[0].points.map((point) => point.value), [-400, 464, 464]);
+
+  const operatingCost = model.panels.find((panel) => panel.key === "operating-cost");
+  assert.equal(operatingCost.unit, "€ / interval");
+  assert.equal(operatingCost.series.length, 1);
+  assert.equal(operatingCost.series[0].label, "Operating cost");
+  assert.deepEqual(operatingCost.series[0].points.map((point) => point.value), [25, 16, 16]);
+});
+
+test("zero operating cost does not hide interval cashflow", () => {
+  const model = buildDispatchChartModel(dispatchCsv([
+    "0,2027-01-04T00:00:00Z,0,0,16,0,0,0,16,0,0,0",
+    "1,2027-01-04T01:00:00Z,1,0,16,16,0,0,0,14.4,14.4,14.4",
+  ]), 1);
+
+  const cashflow = model.panels.find((panel) => panel.key === "cashflow");
+  const operatingCost = model.panels.find((panel) => panel.key === "operating-cost");
+  assert.deepEqual(cashflow.series[0].points.map((point) => point.value), [0, 14.4, 14.4]);
+  assert.deepEqual(operatingCost.series[0].points.map((point) => point.value), [0, 0, 0]);
+  assert.notEqual(cashflow, operatingCost);
 });
 
 test("buildDispatchChartModel rejects timestamp spacing inconsistent with the scenario", () => {

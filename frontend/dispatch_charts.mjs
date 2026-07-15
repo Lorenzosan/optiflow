@@ -292,30 +292,34 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
         ]),
       }),
       Object.freeze({
-        key: "economics",
-        title: "Interval economics",
+        key: "cashflow",
+        title: "Net operating cashflow",
         unit: "€ / interval",
-        height: 96,
+        height: 72,
         interpolation: "step",
         includeZero: true,
         series: Object.freeze([
-          series(
-            "market-cashflow",
-            "Market cashflow",
-            stepPoints(rows, (row) => row.marketCashflow, stepMilliseconds),
-            "dispatch-series-market-cashflow",
-          ),
-          series(
-            "operating-cost",
-            "Operating cost",
-            stepPoints(rows, (row) => row.operatingCost, stepMilliseconds),
-            "dispatch-series-operating-cost",
-          ),
           series(
             "net-cashflow",
             "Net operating cashflow",
             stepPoints(rows, (row) => row.netOperatingCashflow, stepMilliseconds),
             "dispatch-series-net-cashflow",
+          ),
+        ]),
+      }),
+      Object.freeze({
+        key: "operating-cost",
+        title: "Operating cost",
+        unit: "€ / interval",
+        height: 72,
+        interpolation: "step",
+        includeZero: true,
+        series: Object.freeze([
+          series(
+            "operating-cost",
+            "Operating cost",
+            stepPoints(rows, (row) => row.operatingCost, stepMilliseconds),
+            "dispatch-series-operating-cost",
           ),
         ]),
       }),
@@ -862,7 +866,7 @@ export function renderDispatchCharts(container, model) {
     appendTooltipLine(tooltip, "Storage content [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
     appendTooltipLine(tooltip, "Next storage content [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
     appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
-    appendTooltipLine(tooltip, "Market cashflow [€]", formatTooltipNumber(row.marketCashflow));
+    appendTooltipLine(tooltip, "Market settlement [€]", formatTooltipNumber(row.marketCashflow));
     appendTooltipLine(tooltip, "Operating cost [€]", formatTooltipNumber(row.operatingCost));
     appendTooltipLine(tooltip, "Net operating cashflow [€]", formatTooltipNumber(row.netOperatingCashflow));
     tooltip.hidden = false;
