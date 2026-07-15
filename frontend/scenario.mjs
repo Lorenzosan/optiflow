@@ -166,6 +166,76 @@ export function buildScenarioCsv(name, values, timeStepHours) {
   return `${lines.join("\n")}\n`;
 }
 
+export function parseScenarioCsv(text) {
+  requireCondition(!String(text).includes("\uFFFD"), "Scenario CSV is not valid UTF-8.");
+  const lines = String(text).split(/\r?\n/);
+  const header = (lines.shift() ?? "").split(",").map((item) => item.trim());
+  requireCondition(
+    header.length === 2 && header[0] === "key" && header[1] === "value",
+    "Expected scenario header key,value.",
+  );
+
+  const supportedKeys = new Set([
+    "scenario_name",
+    "time_step_hours",
+    ...ALL_FIELDS.map((definition) => definition.key),
+  ]);
+  const parameters = new Map();
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex].trim();
+    if (!line) continue;
+    const columns = line.split(",").map((item) => item.trim());
+    const rowNumber = lineIndex + 2;
+    requireCondition(columns.length === 2, `Scenario row ${rowNumber} must contain two columns.`);
+    const [key, value] = columns;
+    requireCondition(key.length > 0, `Scenario row ${rowNumber} has an empty key.`);
+    requireCondition(supportedKeys.has(key), `Scenario row ${rowNumber} has unsupported key ${key}.`);
+    requireCondition(!parameters.has(key), `Scenario row ${rowNumber} duplicates key ${key}.`);
+    parameters.set(key, value);
+  }
+
+  const missing = [...supportedKeys].filter((key) => !parameters.has(key));
+  requireCondition(missing.length === 0, `Scenario CSV is missing: ${missing.join(", ")}.`);
+
+  const name = normalizeScenarioName(parameters.get("scenario_name"));
+  const timeStepHours = validateTimeStepHours(parameters.get("time_step_hours"));
+  const values = {};
+  const validationValues = {};
+  for (const definition of ALL_FIELDS) {
+    const scenarioValue = Number(parameters.get(definition.key));
+    requireCondition(
+      Number.isFinite(scenarioValue),
+      `${definition.label} must be a finite number in the scenario CSV.`,
+    );
+    const editorValue = definition.scenarioScale === undefined
+      ? scenarioValue
+      : scenarioValue / definition.scenarioScale;
+    const parsed = parseFieldValue(definition, editorValue);
+    values[definition.key] = parsed.value;
+    validationValues[definition.key] = parsed.value;
+  }
+  validateBounds(validationValues);
+
+  return Object.freeze({
+    name,
+    timeStepHours,
+    values: Object.freeze(values),
+  });
+}
+
+export function suggestScenarioCopyName(name, existingNames) {
+  const sourceName = normalizeScenarioName(name);
+  const occupied = new Set([...existingNames].map((value) => String(value)));
+  for (let copyNumber = 1; copyNumber < 10_000; copyNumber += 1) {
+    const suffix = copyNumber === 1 ? "_copy" : `_copy_${copyNumber}`;
+    const candidate = `${sourceName.slice(0, 128 - suffix.length)}${suffix}`;
+    if (!occupied.has(candidate)) {
+      return candidate;
+    }
+  }
+  throw new Error("Could not create a unique scenario copy name.");
+}
+
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 
 function parseTimestampUtc(value, rowNumber) {

@@ -29,13 +29,14 @@ The stack starts PostgreSQL, applies Alembic migrations, seeds the yearly hydro 
 
 * `GET /health`
 * `GET /scenarios`
+* `GET /scenarios/{scenario_id}/inputs` for guarded editor hydration
 * `POST /scenarios` with multipart `scenario`, `prices`, `inflows`, optional `description`, and optional `overwrite`
 * `POST /runs`
 * `GET /runs` with bounded pagination and optional scenario/status filters
 * `GET /runs/{run_id}`
 * `GET /runs/{run_id}/dispatch.csv`
 
-Uploaded inputs are staged, validated through the C++ CLI with `--validate-only`, and moved to a server-generated directory only after successful validation. With `overwrite=true`, an existing custom scenario with the same name is replaced in place and its prior runs, summaries, dispatch artifacts, and previous input directory are deleted. Bundled scenarios cannot be overwritten.
+Stored scenario inputs can be read through the guarded scenario-input endpoint for browser editing; paths outside the repository or configured scenario storage are rejected. Uploaded inputs are staged, validated through the C++ CLI with `--validate-only`, and moved to a server-generated directory only after successful validation. With `overwrite=true`, an existing custom scenario with the same name is replaced in place and its prior runs, summaries, dispatch artifacts, and previous input directory are deleted. Bundled scenarios cannot be overwritten.
 
 ## Persistence
 

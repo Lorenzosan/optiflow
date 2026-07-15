@@ -199,6 +199,11 @@ input[type="file"] {
   max-width: 34rem;
 }
 
+.control-row .secondary-button {
+  min-height: 2.8rem;
+  white-space: nowrap;
+}
+
 button,
 .download-link {
   min-height: 2.8rem;

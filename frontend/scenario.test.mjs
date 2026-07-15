@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   SCENARIO_PARAMETER_GROUPS,
   buildScenarioCsv,
+  parseScenarioCsv,
+  suggestScenarioCopyName,
   validateSeriesCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
@@ -65,6 +67,37 @@ test("buildScenarioCsv emits the derived time step and optimizer scalar schema",
     lines.slice(3).map((line) => line.split(",", 1)[0]),
     SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => field.key),
   );
+});
+
+test("parseScenarioCsv hydrates editor values and restores efficiency percentages", () => {
+  const csv = buildScenarioCsv("loaded_case", defaultValues(), 0.5);
+  const parsed = parseScenarioCsv(csv);
+
+  assert.equal(parsed.name, "loaded_case");
+  assert.equal(parsed.timeStepHours, 0.5);
+  assert.equal(parsed.values.turbine_efficiency, 90);
+  assert.equal(parsed.values.pump_efficiency, 85);
+  assert.equal(parsed.values.reservoir_max_volume, 200);
+});
+
+test("parseScenarioCsv rejects incomplete or unsupported stored inputs", () => {
+  assert.throws(
+    () => parseScenarioCsv("key,value\nscenario_name,incomplete\ntime_step_hours,1\n"),
+    /missing:/,
+  );
+  assert.throws(
+    () => parseScenarioCsv(`${buildScenarioCsv("extra", defaultValues(), 1)}unknown_key,2\n`),
+    /unsupported key/,
+  );
+});
+
+test("suggestScenarioCopyName avoids existing scenario names", () => {
+  assert.equal(suggestScenarioCopyName("sample", []), "sample_copy");
+  assert.equal(
+    suggestScenarioCopyName("sample", ["sample_copy", "sample_copy_2"]),
+    "sample_copy_3",
+  );
+  assert.equal(suggestScenarioCopyName("x".repeat(128), []).length, 128);
 });
 
 test("buildScenarioCsv converts displayed efficiency percentages to fractions", () => {

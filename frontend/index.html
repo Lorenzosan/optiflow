@@ -33,6 +33,7 @@
           <select id="scenario-select" name="scenario_id" required disabled>
             <option value="">Loading scenarios…</option>
           </select>
+          <button id="edit-scenario-button" class="secondary-button" type="button" disabled>Open in editor</button>
           <button id="run-button" type="submit" disabled>Run optimization</button>
         </div>
         <p id="scenario-description" class="supporting-text">Scenario data is loaded from the API.</p>
@@ -54,9 +55,10 @@
 
         <div class="scenario-editor-content">
           <p class="supporting-text editor-intro">
-            Start from the synthetic-year parameter template, upload price and inflow CSV files,
-            then create or replace a custom scenario. The time step is derived from the uploaded
-            timestamps. Storage content is MWh hydraulic; natural inflow and
+            Start from the template, upload price and inflow CSV files, or open an existing scenario
+            from the selector above. The time step is derived from the timestamp spacing. Loaded
+            series are reused unless replacement files are selected. You can then create or replace
+            a custom scenario. Storage content is MWh hydraulic; natural inflow and
             hydraulic controls are MW hydraulic. Convert physical water data with plant-specific
             head calibration before upload. The C++ input reader performs the authoritative validation.
           </p>
@@ -81,13 +83,13 @@
               <div class="form-grid file-grid">
                 <div class="form-field">
                   <label for="prices-file">Prices CSV</label>
-                  <input id="prices-file" name="prices" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>timestamp_utc,price</code>; timestamps use <code>YYYY-MM-DDTHH:MM:SSZ</code>.</small>
+                  <input id="prices-file" name="prices" type="file" accept=".csv,text/csv">
+                  <small>Required for a new scenario; optional when editing loaded inputs. Header: <code>timestamp_utc,price</code>.</small>
                 </div>
                 <div class="form-field">
                   <label for="inflows-file">Natural inflow CSV</label>
-                  <input id="inflows-file" name="inflows" type="file" accept=".csv,text/csv" required>
-                  <small>Header: <code>timestamp_utc,natural_inflow</code>; values are MW hydraulic and timestamps must match prices exactly.</small>
+                  <input id="inflows-file" name="inflows" type="file" accept=".csv,text/csv">
+                  <small>Required for a new scenario; optional when editing loaded inputs. Values are MW hydraulic and timestamps must match prices.</small>
                 </div>
               </div>
               <p id="series-preview" class="message" role="status" aria-live="polite">

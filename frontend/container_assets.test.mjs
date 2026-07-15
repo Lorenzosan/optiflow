@@ -36,3 +36,13 @@ test("scenario description is optional", () => {
   assert.match(indexHtml, /<label for="scenario-description-input">Description \(optional\)<\/label>/);
   assert.match(indexHtml, /<textarea id="scenario-description-input" name="description" maxlength="2000"><\/textarea>/);
 });
+
+
+test("selected scenarios can be opened with retained CSV inputs", () => {
+  assert.match(indexHtml, /id="edit-scenario-button"[^>]*>Open in editor<\/button>/);
+  assert.doesNotMatch(indexHtml, /id="prices-file"[^>]*required/);
+  assert.doesNotMatch(indexHtml, /id="inflows-file"[^>]*required/);
+  assert.match(appSource, /\/scenarios\/\$\{scenarioId\}\/inputs/);
+  assert.match(appSource, /state\.editorSource/);
+  assert.match(appSource, /suggestScenarioCopyName/);
+});

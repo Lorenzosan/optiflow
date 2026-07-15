@@ -3,6 +3,8 @@ import {
   SCENARIO_PARAMETER_GROUPS,
   SERIES_FILE_LIMIT_BYTES,
   buildScenarioCsv,
+  parseScenarioCsv,
+  suggestScenarioCopyName,
   validateSeriesPair,
 } from "./scenario.mjs";
 import { formatNumber } from "./number_format.mjs";
@@ -29,15 +31,18 @@ const state = {
   offset: 0,
   selectedRunId: null,
   traderRequestId: 0,
+  editorSource: null,
 };
 
 const elements = {
   runForm: document.querySelector("#run-form"),
   scenarioSelect: document.querySelector("#scenario-select"),
   scenarioDescription: document.querySelector("#scenario-description"),
+  editScenarioButton: document.querySelector("#edit-scenario-button"),
   runButton: document.querySelector("#run-button"),
   operationMessage: document.querySelector("#operation-message"),
   scenarioEditor: document.querySelector("#scenario-editor"),
+  scenarioEditorTitle: document.querySelector("#scenario-editor-title"),
   scenarioForm: document.querySelector("#scenario-form"),
   scenarioName: document.querySelector("#scenario-name"),
   scenarioDescriptionInput: document.querySelector("#scenario-description-input"),
@@ -196,6 +201,7 @@ function updateScenarioDescription() {
     ? scenario.description
     : "Choose a bundled or custom scenario to run the optimizer.";
   elements.runButton.disabled = !scenario || !scenario.available;
+  elements.editScenarioButton.disabled = !scenario || !scenario.available;
 }
 
 async function loadScenarios({ selectedScenarioId = null } = {}) {
@@ -269,41 +275,66 @@ function renderScenarioFields() {
   elements.scenarioFields.replaceChildren(...groups);
 }
 
-function requireSeriesFile(input, label) {
-  const file = input.files?.[0];
-  if (!file) {
-    throw new Error(`${label} CSV is required.`);
-  }
+function validateSeriesFile(file, label) {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     throw new Error(`${label} must be a .csv file.`);
   }
   if (file.size > SERIES_FILE_LIMIT_BYTES) {
     throw new Error(`${label} exceeds the 8 MiB upload limit.`);
   }
-  return file;
+}
+
+async function readSeriesInput(input, label, sourceKey, filename) {
+  const selected = input.files?.[0];
+  if (selected) {
+    validateSeriesFile(selected, label);
+    return { file: selected, text: await selected.text(), loaded: false };
+  }
+
+  const loadedText = state.editorSource?.[sourceKey];
+  if (loadedText !== null && loadedText !== undefined) {
+    const file = new File([loadedText], filename, { type: "text/csv" });
+    return { file, text: loadedText, loaded: true };
+  }
+
+  throw new Error(`${label} CSV is required.`);
 }
 
 async function validateSelectedSeries() {
-  const pricesFile = requireSeriesFile(elements.pricesFile, "Prices");
-  const inflowsFile = requireSeriesFile(elements.inflowsFile, "Inflows");
-  const [pricesText, inflowsText] = await Promise.all([
-    pricesFile.text(),
-    inflowsFile.text(),
+  const [prices, inflows] = await Promise.all([
+    readSeriesInput(elements.pricesFile, "Prices", "pricesText", "prices.csv"),
+    readSeriesInput(elements.inflowsFile, "Inflows", "inflowsText", "inflows.csv"),
   ]);
-  const summary = validateSeriesPair(pricesText, inflowsText);
-  return { pricesFile, inflowsFile, summary };
+  const summary = validateSeriesPair(prices.text, inflows.text);
+  return {
+    pricesFile: prices.file,
+    inflowsFile: inflows.file,
+    pricesText: prices.text,
+    inflowsText: inflows.text,
+    loadedPrices: prices.loaded,
+    loadedInflows: inflows.loaded,
+    summary,
+  };
+}
+
+function hasSeriesInput(input, sourceKey) {
+  return Boolean(input.files?.[0]) || state.editorSource?.[sourceKey] !== undefined;
 }
 
 async function updateSeriesPreview() {
-  if (!elements.pricesFile.files?.[0] || !elements.inflowsFile.files?.[0]) {
+  if (!hasSeriesInput(elements.pricesFile, "pricesText")
+      || !hasSeriesInput(elements.inflowsFile, "inflowsText")) {
     elements.seriesPreview.textContent = "Select both series files to validate their headers and horizon.";
     elements.seriesPreview.classList.remove("error", "success");
     return;
   }
 
   try {
-    const { summary } = await validateSelectedSeries();
-    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching timestamped steps detected; time step ${formatNumber(summary.timeStepHours, 6)} h.`;
+    const { summary, loadedPrices, loadedInflows } = await validateSelectedSeries();
+    const sourceNote = loadedPrices || loadedInflows
+      ? ` Loaded values are retained unless replacement files are selected.`
+      : "";
+    elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching timestamped steps detected; time step ${formatNumber(summary.timeStepHours, 6)} h.${sourceNote}`;
     elements.seriesPreview.classList.remove("error");
     elements.seriesPreview.classList.add("success");
   } catch (error) {
@@ -313,13 +344,84 @@ async function updateSeriesPreview() {
   }
 }
 
+function setScenarioFieldValues(values) {
+  for (const group of SCENARIO_PARAMETER_GROUPS) {
+    for (const field of group.fields) {
+      const input = elements.scenarioForm.elements.namedItem(field.key);
+      if (input) {
+        input.value = String(values[field.key]);
+      }
+    }
+  }
+}
+
+async function openSelectedScenarioInEditor() {
+  const scenarioId = Number(elements.scenarioSelect.value);
+  const selectedScenario = state.scenarios.find((scenario) => scenario.id === scenarioId);
+  if (!selectedScenario) {
+    return;
+  }
+
+  elements.editScenarioButton.disabled = true;
+  setOperationMessage(`Loading ${selectedScenario.name} into the editor.`);
+  try {
+    const inputs = await apiRequest(`/scenarios/${scenarioId}/inputs`);
+    const parsed = parseScenarioCsv(inputs.scenario_csv);
+    const seriesSummary = validateSeriesPair(inputs.prices_csv, inputs.inflows_csv);
+    if (inputs.id !== scenarioId || inputs.name !== parsed.name) {
+      throw new Error("Stored scenario metadata does not match its scenario CSV.");
+    }
+    if (Math.abs(parsed.timeStepHours - seriesSummary.timeStepHours) > 1e-9) {
+      throw new Error("Stored scenario time step does not match its series timestamps.");
+    }
+
+    elements.scenarioForm.reset();
+    state.editorSource = {
+      scenarioId: inputs.id,
+      sourceName: inputs.name,
+      editable: inputs.editable,
+      pricesText: inputs.prices_csv,
+      inflowsText: inputs.inflows_csv,
+    };
+    elements.scenarioName.value = inputs.editable
+      ? parsed.name
+      : suggestScenarioCopyName(parsed.name, state.scenarios.map((scenario) => scenario.name));
+    elements.scenarioDescriptionInput.value = inputs.description;
+    setScenarioFieldValues(parsed.values);
+    elements.pricesFile.value = "";
+    elements.inflowsFile.value = "";
+    elements.scenarioEditorTitle.textContent = inputs.editable
+      ? `Edit ${inputs.name}`
+      : `Create from ${inputs.name}`;
+    elements.scenarioEditor.open = true;
+    await updateSeriesPreview();
+
+    const mode = inputs.editable
+      ? "Saving with the same name will ask before replacing it."
+      : `Bundled inputs were opened as ${elements.scenarioName.value}.`;
+    setScenarioMessage(`${inputs.name} loaded. ${mode}`);
+    setOperationMessage(`${inputs.name} is open in the scenario editor.`);
+    elements.scenarioEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    setOperationMessage(error.message, true);
+  } finally {
+    updateScenarioDescription();
+  }
+}
+
 async function createScenario(event) {
   event.preventDefault();
   setScenarioMessage("");
   elements.saveScenarioButton.disabled = true;
 
   try {
-    const { pricesFile, inflowsFile, summary } = await validateSelectedSeries();
+    const {
+      pricesFile,
+      inflowsFile,
+      pricesText,
+      inflowsText,
+      summary,
+    } = await validateSelectedSeries();
     const values = Object.fromEntries(new FormData(elements.scenarioForm).entries());
     const scenarioName = elements.scenarioName.value.trim();
     const scenarioCsv = buildScenarioCsv(scenarioName, values, summary.timeStepHours);
@@ -331,8 +433,7 @@ async function createScenario(event) {
     const existingScenario = state.scenarios.find((scenario) => scenario.name === scenarioName);
     let replacing = false;
     if (existingScenario) {
-      const isCustomScenario = existingScenario.files.scenario.startsWith("data/scenarios/");
-      if (!isCustomScenario) {
+      if (!existingScenario.editable) {
         throw new Error(`Bundled scenario ${scenarioName} is read-only. Choose another name.`);
       }
       replacing = window.confirm(
@@ -357,6 +458,17 @@ async function createScenario(event) {
     });
 
     await loadScenarios({ selectedScenarioId: scenario.id });
+    state.editorSource = {
+      scenarioId: scenario.id,
+      sourceName: scenario.name,
+      editable: true,
+      pricesText,
+      inflowsText,
+    };
+    elements.pricesFile.value = "";
+    elements.inflowsFile.value = "";
+    elements.scenarioEditorTitle.textContent = `Edit ${scenario.name}`;
+    await updateSeriesPreview();
     setScenarioMessage(
       `${replacing ? "Replaced" : "Saved"} ${scenario.name} with ${summary.rowCount.toLocaleString()} time steps at ${formatNumber(summary.timeStepHours, 6)} h. It is selected for optimization.`,
     );
@@ -703,12 +815,15 @@ renderScenarioFields();
 
 elements.scenarioForm.addEventListener("submit", createScenario);
 elements.scenarioForm.addEventListener("reset", () => {
+  state.editorSource = null;
+  elements.scenarioEditorTitle.textContent = "Create a custom scenario";
   setScenarioMessage("");
   window.setTimeout(() => updateSeriesPreview(), 0);
 });
 elements.pricesFile.addEventListener("change", () => updateSeriesPreview());
 elements.inflowsFile.addEventListener("change", () => updateSeriesPreview());
 elements.runForm.addEventListener("submit", createRun);
+elements.editScenarioButton.addEventListener("click", openSelectedScenarioInEditor);
 elements.scenarioSelect.addEventListener("change", updateScenarioDescription);
 elements.refreshButton.addEventListener("click", () => loadRuns());
 elements.filterScenario.addEventListener("change", resetAndLoadRuns);

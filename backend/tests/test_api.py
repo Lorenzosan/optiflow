@@ -42,6 +42,20 @@ def api(
     root = tmp_path / "repository"
     output_dir = root / "build" / "api-runs"
     output_dir.mkdir(parents=True)
+    examples_dir = root / "examples"
+    examples_dir.mkdir()
+    (examples_dir / "scenario.csv").write_text(
+        "key,value\nscenario_name,test_scenario\ntime_step_hours,1\n",
+        encoding="utf-8",
+    )
+    (examples_dir / "prices.csv").write_text(
+        "timestamp_utc,price\n2027-01-01T00:00:00Z,10\n2027-01-01T01:00:00Z,20\n",
+        encoding="utf-8",
+    )
+    (examples_dir / "inflows.csv").write_text(
+        "timestamp_utc,natural_inflow\n2027-01-01T00:00:00Z,0\n2027-01-01T01:00:00Z,1\n",
+        encoding="utf-8",
+    )
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -133,6 +147,51 @@ def scenario_upload_files(
     }
 
 
+def test_get_scenario_inputs_returns_bundled_files(api: ApiFixture) -> None:
+    client, _, scenario, _, _ = api
+
+    response = client.get(f"/scenarios/{scenario.id}/inputs")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload == {
+        "id": scenario.id,
+        "name": "test_scenario",
+        "description": "Test scenario",
+        "editable": False,
+        "scenario_csv": "key,value\nscenario_name,test_scenario\ntime_step_hours,1\n",
+        "prices_csv": (
+            "timestamp_utc,price\n"
+            "2027-01-01T00:00:00Z,10\n"
+            "2027-01-01T01:00:00Z,20\n"
+        ),
+        "inflows_csv": (
+            "timestamp_utc,natural_inflow\n"
+            "2027-01-01T00:00:00Z,0\n"
+            "2027-01-01T01:00:00Z,1\n"
+        ),
+    }
+
+def test_get_scenario_inputs_rejects_unmanaged_paths(api: ApiFixture, tmp_path: Path) -> None:
+    client, testing_session, scenario, _, _ = api
+    outside = tmp_path / "outside.csv"
+    outside.write_text("private", encoding="utf-8")
+    with testing_session() as db:
+        persisted = db.get(Scenario, scenario.id)
+        assert persisted is not None
+        persisted.scenario_path = str(outside)
+        db.commit()
+
+    response = client.get(f"/scenarios/{scenario.id}/inputs")
+
+    assert response.status_code == 409
+    assert "outside managed storage" in response.json()["detail"]
+
+def test_get_scenario_inputs_returns_not_found(api: ApiFixture) -> None:
+    client, _, _, _, _ = api
+    assert client.get("/scenarios/999/inputs").status_code == 404
+
+
 def test_create_scenario_validates_stores_and_persists_uploads(
     api: ApiFixture,
     monkeypatch: pytest.MonkeyPatch,
@@ -163,7 +222,13 @@ def test_create_scenario_validates_stores_and_persists_uploads(
     assert payload["name"] == "custom_case"
     assert payload["description"] == "Custom uploaded scenario"
     assert payload["available"] is True
+    assert payload["editable"] is True
     assert payload["time_step_hours"] == 1
+
+    inputs_response = client.get(f"/scenarios/{payload['id']}/inputs")
+    assert inputs_response.status_code == 200
+    assert inputs_response.json()["editable"] is True
+    assert "scenario_name,custom_case" in inputs_response.json()["scenario_csv"]
 
     with testing_session() as db:
         persisted = db.get(Scenario, payload["id"])

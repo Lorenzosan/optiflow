@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.database import SessionLocal, get_db
 from backend.app.models import OptimizationRun, RunSummary, Scenario
 from backend.app.runner import RunSummaryData, resolve_dispatch_path, run_solver
+from backend.app.scenario_inputs import ScenarioInputError, read_scenario_inputs
 from backend.app.scenario_parameters import ScenarioParameterError, load_time_step_hours
 from backend.app.scenario_uploads import (
     ScenarioUploadError,
@@ -42,7 +43,18 @@ class ScenarioResponse(BaseModel):
     description: str
     files: ScenarioFiles
     available: bool
+    editable: bool
     time_step_hours: float | None
+
+
+class ScenarioInputsResponse(BaseModel):
+    id: int
+    name: str
+    description: str
+    editable: bool
+    scenario_csv: str
+    prices_csv: str
+    inflows_csv: str
 
 
 class HealthResponse(BaseModel):
@@ -129,6 +141,13 @@ def scenario_response(root: Path, scenario: Scenario) -> ScenarioResponse:
         description=scenario.description,
         files=files,
         available=available,
+        editable=managed_scenario_directory(
+            root,
+            scenario.scenario_path,
+            scenario.prices_path,
+            scenario.inflows_path,
+        )
+        is not None,
         time_step_hours=time_step_hours,
     )
 
@@ -158,6 +177,34 @@ def list_scenarios(db: Session = Depends(get_db)) -> list[ScenarioResponse]:
     root = repository_root()
     scenarios = db.query(Scenario).order_by(Scenario.id).all()
     return [scenario_response(root, scenario) for scenario in scenarios]
+
+
+@app.get("/scenarios/{scenario_id}/inputs", response_model=ScenarioInputsResponse)
+def get_scenario_inputs(
+    scenario_id: int,
+    db: Session = Depends(get_db),
+) -> ScenarioInputsResponse:
+    scenario = db.get(Scenario, scenario_id)
+    if scenario is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+
+    try:
+        inputs = read_scenario_inputs(repository_root(), scenario)
+    except ScenarioInputError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+
+    return ScenarioInputsResponse(
+        id=scenario.id,
+        name=scenario.name,
+        description=scenario.description,
+        editable=inputs.editable,
+        scenario_csv=inputs.scenario_csv,
+        prices_csv=inputs.prices_csv,
+        inflows_csv=inputs.inflows_csv,
+    )
 
 
 @app.post(

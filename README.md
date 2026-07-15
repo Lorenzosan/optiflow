@@ -116,6 +116,7 @@ Endpoints:
 
 * `GET /health`
 * `GET /scenarios`
+* `GET /scenarios/{scenario_id}/inputs`
 * `POST /scenarios` with optional destructive custom-scenario overwrite
 * `POST /runs`
 * `GET /runs`
@@ -124,7 +125,7 @@ Endpoints:
 
 The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its timestamped dispatch into Baseload, Peak, and Off-peak columns. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich.
 
-The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. It derives `time_step_hours` from constant timestamp spacing rather than asking for it separately. A custom scenario can be replaced by name; replacement deletes that scenario's prior runs and dispatch artifacts. Bundled examples remain read-only. Physical water volumes still require plant-specific conversion before optimization.
+The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. It derives `time_step_hours` from constant timestamp spacing rather than asking for it separately. The selected scenario can be opened in the editor. Custom scenarios retain their name and can be replaced after confirmation; bundled examples open under a unique copy name because they remain read-only. Loaded price and inflow series are reused unless replacement files are selected. Replacement deletes that custom scenario's prior runs and dispatch artifacts. Physical water volumes still require plant-specific conversion before optimization.
 
 ## Scenario schema
 
