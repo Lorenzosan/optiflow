@@ -4,7 +4,6 @@ import {
   SERIES_FILE_LIMIT_BYTES,
   buildScenarioCsv,
   parseScenarioCsv,
-  storageGridDiagnostics,
   suggestScenarioCopyName,
   validateSeriesPair,
 } from "./scenario.mjs";
@@ -33,7 +32,6 @@ const state = {
   selectedRunId: null,
   traderRequestId: 0,
   editorSource: null,
-  seriesSummary: null,
 };
 
 const elements = {
@@ -271,84 +269,10 @@ function renderScenarioFields() {
     } else {
       fieldset.append(legend, grid);
     }
-    if (group.title === "Solver resolution") {
-      const diagnostics = document.createElement("p");
-      diagnostics.id = "storage-grid-diagnostics";
-      diagnostics.className = "grid-diagnostics";
-      diagnostics.setAttribute("role", "status");
-      diagnostics.setAttribute("aria-live", "polite");
-      fieldset.append(diagnostics);
-    }
     return fieldset;
   });
 
   elements.scenarioFields.replaceChildren(...groups);
-}
-
-function scenarioEditorValues() {
-  return Object.fromEntries(
-    SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields).map((field) => {
-      const input = elements.scenarioForm.elements.namedItem(field.key);
-      return [field.key, input?.value ?? ""];
-    }),
-  );
-}
-
-function updateStorageGridDiagnostics() {
-  const output = document.querySelector("#storage-grid-diagnostics");
-  if (!output) {
-    return;
-  }
-  try {
-    const diagnostics = storageGridDiagnostics(
-      scenarioEditorValues(),
-      state.seriesSummary?.timeStepHours ?? null,
-      state.seriesSummary?.minimumPrice ?? null,
-      state.seriesSummary?.maximumPrice ?? null,
-      state.seriesSummary?.minimumAbsolutePrice ?? null,
-    );
-    const parts = [
-      `${formatNumber(diagnostics.intervals, 0)} intervals create ${formatNumber(diagnostics.points, 0)} optimizer grid points`,
-      `spacing ${formatNumber(diagnostics.spacing, 6)} MWh hydraulic.`,
-    ];
-    let warning = false;
-    if (diagnostics.actionIncrements.length > 0) {
-      if (diagnostics.aligned) {
-        parts.push("Discrete action increments align with this grid.");
-      } else {
-        warning = true;
-        parts.push("Discrete action increments do not align with this grid, so interpolation can change dispatch timing.");
-      }
-    }
-    if (diagnostics.terminalInterpolationScaleEuro > 0) {
-      parts.push(
-        `Terminal quadratic interpolation scale is about €${formatNumber(diagnostics.terminalInterpolationScaleEuro, 2)} per grid cell.`,
-      );
-      if (diagnostics.maximumTurbineCashflowEuro !== null
-          && diagnostics.terminalInterpolationScaleEuro > diagnostics.maximumTurbineCashflowEuro) {
-        warning = true;
-        parts.push(
-          `That exceeds one maximum-turbine interval at the highest uploaded price (€${formatNumber(diagnostics.maximumTurbineCashflowEuro, 2)}).`,
-        );
-      }
-    }
-    if (diagnostics.suggestedIntervals !== null) {
-      parts.push(
-        `Try ${formatNumber(diagnostics.suggestedIntervals, 0)} intervals (${formatNumber(diagnostics.suggestedIntervals + 1, 0)} points).`,
-      );
-    }
-    if (diagnostics.freeCyclingRisk) {
-      warning = true;
-      parts.push(
-        "Zero-price intervals with zero operating cost permit costless pump/generate cycling to dispose of hydraulic energy. Add operating or switching costs, or relax the terminal target, if that behavior is unwanted.",
-      );
-    }
-    output.textContent = parts.join(" ");
-    output.classList.toggle("warning", warning);
-  } catch (error) {
-    output.textContent = "Complete the storage and solver fields to inspect grid spacing.";
-    output.classList.remove("warning");
-  }
 }
 
 function validateSeriesFile(file, label) {
@@ -400,29 +324,23 @@ function hasSeriesInput(input, sourceKey) {
 async function updateSeriesPreview() {
   if (!hasSeriesInput(elements.pricesFile, "pricesText")
       || !hasSeriesInput(elements.inflowsFile, "inflowsText")) {
-    state.seriesSummary = null;
     elements.seriesPreview.textContent = "Select both series files to validate their headers and horizon.";
     elements.seriesPreview.classList.remove("error", "success");
-    updateStorageGridDiagnostics();
     return;
   }
 
   try {
     const { summary, loadedPrices, loadedInflows } = await validateSelectedSeries();
-    state.seriesSummary = summary;
     const sourceNote = loadedPrices || loadedInflows
       ? ` Loaded values are retained unless replacement files are selected.`
       : "";
     elements.seriesPreview.textContent = `${summary.rowCount.toLocaleString()} matching timestamped steps detected; time step ${formatNumber(summary.timeStepHours, 6)} h.${sourceNote}`;
     elements.seriesPreview.classList.remove("error");
     elements.seriesPreview.classList.add("success");
-    updateStorageGridDiagnostics();
   } catch (error) {
-    state.seriesSummary = null;
     elements.seriesPreview.textContent = error.message;
     elements.seriesPreview.classList.add("error");
     elements.seriesPreview.classList.remove("success");
-    updateStorageGridDiagnostics();
   }
 }
 
@@ -894,13 +812,9 @@ function resetAndLoadRuns() {
 }
 
 renderScenarioFields();
-updateStorageGridDiagnostics();
-
 elements.scenarioForm.addEventListener("submit", createScenario);
-elements.scenarioForm.addEventListener("input", updateStorageGridDiagnostics);
 elements.scenarioForm.addEventListener("reset", () => {
   state.editorSource = null;
-  state.seriesSummary = null;
   elements.scenarioEditorTitle.textContent = "Create a custom scenario";
   setScenarioMessage("");
   window.setTimeout(() => updateSeriesPreview(), 0);

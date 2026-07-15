@@ -529,6 +529,22 @@ function appendTooltipLine(tooltip, label, value) {
   tooltip.append(line);
 }
 
+export function tooltipSelectionAtTimestamp(model, timestampMilliseconds) {
+  requireCondition(Number.isFinite(timestampMilliseconds), "Tooltip timestamp must be finite.");
+  if (timestampMilliseconds >= model.endMilliseconds) {
+    return Object.freeze({
+      kind: "terminal",
+      timestampMilliseconds: model.endMilliseconds,
+      storageContent: model.rows.at(-1).nextReservoirVolume,
+    });
+  }
+  const rowIndex = Math.min(
+    model.rows.length - 1,
+    Math.max(0, Math.floor((timestampMilliseconds - model.startMilliseconds) / model.stepMilliseconds)),
+  );
+  return Object.freeze({ kind: "interval", row: model.rows[rowIndex] });
+}
+
 export function renderDispatchCharts(container, model) {
   requireCondition(container, "A chart container is required.");
   container.replaceChildren();
@@ -722,14 +738,15 @@ export function renderDispatchCharts(container, model) {
   hoverLine.setAttribute("visibility", "hidden");
   svg.append(hoverLine);
 
+  const terminalHoverExtension = Math.min(12, viewWidth - plotRight);
   const overlay = svgElement("rect", {
     class: "dispatch-chart-overlay",
     x: plotLeft,
     y: panelLayouts[0].panelTop,
-    width: plotWidth,
+    width: plotWidth + terminalHoverExtension,
     height: panelLayouts.at(-1).panelBottom - panelLayouts[0].panelTop,
     tabindex: 0,
-    "aria-label": "Dispatch chart. Scroll to zoom, drag to pan, and double-click to reset.",
+    "aria-label": "Dispatch chart. Scroll to zoom, drag to pan, double-click to reset, and hover the right endpoint for the terminal state.",
   });
   svg.append(overlay);
 
@@ -838,40 +855,50 @@ export function renderDispatchCharts(container, model) {
   }
 
   function showTooltip(event) {
-    const timestamp = timestampAtPointer(event);
-    const rowIndex = Math.min(
-      model.rows.length - 1,
-      Math.max(0, Math.floor((timestamp - model.startMilliseconds) / model.stepMilliseconds)),
-    );
-    const row = model.rows[rowIndex];
-    const rowX = Math.min(
-      plotRight,
-      Math.max(plotLeft, visibleXScale()(row.timestampMilliseconds)),
-    );
-    hoverLine.setAttribute("x1", String(rowX));
-    hoverLine.setAttribute("x2", String(rowX));
+    const selection = tooltipSelectionAtTimestamp(model, timestampAtPointer(event));
+    const selectionTimestamp = selection.kind === "terminal"
+      ? selection.timestampMilliseconds
+      : selection.row.timestampMilliseconds;
+    const selectionX = selection.kind === "terminal"
+      ? plotRight
+      : Math.min(
+        plotRight,
+        Math.max(plotLeft, visibleXScale()(selectionTimestamp)),
+      );
+    hoverLine.setAttribute("x1", String(selectionX));
+    hoverLine.setAttribute("x2", String(selectionX));
     hoverLine.setAttribute("visibility", "visible");
 
     tooltip.replaceChildren();
     const heading = document.createElement("strong");
     heading.className = "dispatch-chart-tooltip-heading";
-    heading.textContent = timestampFormatter.format(new Date(row.timestampMilliseconds));
+    heading.textContent = timestampFormatter.format(new Date(selectionTimestamp));
     tooltip.append(heading);
-    appendTooltipLine(tooltip, "Mode", operatingMode(row));
-    appendTooltipLine(tooltip, "Price [€/MWh]", formatTooltipNumber(row.price));
-    appendTooltipLine(tooltip, "Inflow [MW hydraulic]", formatTooltipNumber(row.naturalInflow));
-    appendTooltipLine(tooltip, "Turbine withdrawal [MW hydraulic]", formatTooltipNumber(row.turbineFlow));
-    appendTooltipLine(tooltip, "Pump addition [MW hydraulic]", formatTooltipNumber(row.pumpFlow));
-    appendTooltipLine(tooltip, "Spill [MW hydraulic]", formatTooltipNumber(row.spillFlow));
-    appendTooltipLine(tooltip, "Storage content [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
-    appendTooltipLine(tooltip, "Next storage content [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
-    appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
-    appendTooltipLine(tooltip, "Market settlement [€]", formatTooltipNumber(row.marketCashflow));
-    appendTooltipLine(tooltip, "Operating cost [€]", formatTooltipNumber(row.operatingCost));
-    appendTooltipLine(tooltip, "Net operating cashflow [€]", formatTooltipNumber(row.netOperatingCashflow));
+    if (selection.kind === "terminal") {
+      appendTooltipLine(tooltip, "State", "Terminal boundary");
+      appendTooltipLine(
+        tooltip,
+        "Storage content [MWh hydraulic]",
+        formatTooltipNumber(selection.storageContent),
+      );
+    } else {
+      const row = selection.row;
+      appendTooltipLine(tooltip, "Mode", operatingMode(row));
+      appendTooltipLine(tooltip, "Price [€/MWh]", formatTooltipNumber(row.price));
+      appendTooltipLine(tooltip, "Inflow [MW hydraulic]", formatTooltipNumber(row.naturalInflow));
+      appendTooltipLine(tooltip, "Turbine withdrawal [MW hydraulic]", formatTooltipNumber(row.turbineFlow));
+      appendTooltipLine(tooltip, "Pump addition [MW hydraulic]", formatTooltipNumber(row.pumpFlow));
+      appendTooltipLine(tooltip, "Spill [MW hydraulic]", formatTooltipNumber(row.spillFlow));
+      appendTooltipLine(tooltip, "Storage content [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
+      appendTooltipLine(tooltip, "Next storage content [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
+      appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
+      appendTooltipLine(tooltip, "Market settlement [€]", formatTooltipNumber(row.marketCashflow));
+      appendTooltipLine(tooltip, "Operating cost [€]", formatTooltipNumber(row.operatingCost));
+      appendTooltipLine(tooltip, "Net operating cashflow [€]", formatTooltipNumber(row.netOperatingCashflow));
+    }
     tooltip.hidden = false;
     const renderedWidth = svg.getBoundingClientRect().width;
-    const tooltipX = (rowX / viewWidth) * renderedWidth;
+    const tooltipX = (selectionX / viewWidth) * renderedWidth;
     tooltip.style.left = `${Math.min(renderedWidth - 110, Math.max(110, tooltipX))}px`;
   }
 

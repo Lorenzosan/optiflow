@@ -7,6 +7,7 @@ import {
   clampTimeDomain,
   extentForPanel,
   panTimeDomain,
+  tooltipSelectionAtTimestamp,
   zoomTimeDomain,
 } from "./dispatch_charts.mjs";
 
@@ -68,6 +69,26 @@ test("zero operating cost does not hide interval cashflow", () => {
   assert.deepEqual(cashflow.series[0].points.map((point) => point.value), [0, 14.4, 14.4]);
   assert.deepEqual(operatingCost.series[0].points.map((point) => point.value), [0, 0, 0]);
   assert.notEqual(cashflow, operatingCost);
+});
+
+
+
+test("tooltip selection exposes the terminal storage boundary", () => {
+  const model = buildDispatchChartModel(dispatchCsv([
+    "0,2027-01-04T00:00:00Z,0,0,16,0,0,0,16,0,0,0",
+    "1,2027-01-04T01:00:00Z,1,0,16,16,0,0,0,14.4,14.4,14.4",
+  ]), 1);
+
+  const interval = tooltipSelectionAtTimestamp(model, Date.parse("2027-01-04T01:30:00Z"));
+  assert.equal(interval.kind, "interval");
+  assert.equal(interval.row.timeIndex, 1);
+
+  const terminal = tooltipSelectionAtTimestamp(model, model.endMilliseconds);
+  assert.deepEqual(terminal, {
+    kind: "terminal",
+    timestampMilliseconds: Date.parse("2027-01-04T02:00:00Z"),
+    storageContent: 0,
+  });
 });
 
 test("buildDispatchChartModel rejects timestamp spacing inconsistent with the scenario", () => {
