@@ -172,6 +172,30 @@ def test_create_scenario_validates_stores_and_persists_uploads(
         assert "scenario_name,custom_case\n" in (root / persisted.scenario_path).read_text()
 
 
+@pytest.mark.parametrize("form_data", [{"description": "   "}, {}])
+def test_create_scenario_allows_empty_description(
+    api: ApiFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    form_data: dict[str, str],
+) -> None:
+    client, testing_session, _, _, _ = api
+    monkeypatch.setattr("backend.app.scenario_uploads.validate_scenario_inputs", lambda *_: None)
+
+    response = client.post(
+        "/scenarios",
+        data=form_data,
+        files=scenario_upload_files(name="empty_description"),
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["description"] == ""
+    with testing_session() as db:
+        persisted = db.get(Scenario, payload["id"])
+        assert persisted is not None
+        assert persisted.description == ""
+
+
 def test_create_scenario_rejects_duplicate_name_without_overwrite(
     api: ApiFixture,
     monkeypatch: pytest.MonkeyPatch,
@@ -224,13 +248,13 @@ def test_create_scenario_overwrites_custom_inputs_and_deletes_prior_runs(
 
     replaced = client.post(
         "/scenarios",
-        data={"description": "Second", "overwrite": "true"},
+        data={"description": "   ", "overwrite": "true"},
         files=scenario_upload_files(),
     )
     assert replaced.status_code == 201
     payload = replaced.json()
     assert payload["id"] == scenario_id
-    assert payload["description"] == "Second"
+    assert payload["description"] == ""
 
     with testing_session() as db:
         persisted = db.get(Scenario, scenario_id)

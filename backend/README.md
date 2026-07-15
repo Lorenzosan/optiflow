@@ -29,7 +29,7 @@ The stack starts PostgreSQL, applies Alembic migrations, seeds the yearly hydro 
 
 * `GET /health`
 * `GET /scenarios`
-* `POST /scenarios` with multipart `description`, `scenario`, `prices`, `inflows`, and optional `overwrite`
+* `POST /scenarios` with multipart `scenario`, `prices`, `inflows`, optional `description`, and optional `overwrite`
 * `POST /runs`
 * `GET /runs` with bounded pagination and optional scenario/status filters
 * `GET /runs/{run_id}`

@@ -30,3 +30,9 @@ test("scenario overwrite uses confirmation without a checkbox", () => {
   assert.match(appSource, /window\.confirm\(/);
   assert.match(appSource, /payload\.append\("overwrite", String\(replacing\)\)/);
 });
+
+
+test("scenario description is optional", () => {
+  assert.match(indexHtml, /<label for="scenario-description-input">Description \(optional\)<\/label>/);
+  assert.match(indexHtml, /<textarea id="scenario-description-input" name="description" maxlength="2000"><\/textarea>/);
+});

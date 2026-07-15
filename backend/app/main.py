@@ -166,16 +166,14 @@ def list_scenarios(db: Session = Depends(get_db)) -> list[ScenarioResponse]:
     status_code=status.HTTP_201_CREATED,
 )
 async def create_scenario(
-    description: Annotated[str, Form(max_length=2000)],
     scenario_file: Annotated[UploadFile, File(alias="scenario")],
     prices_file: Annotated[UploadFile, File(alias="prices")],
     inflows_file: Annotated[UploadFile, File(alias="inflows")],
+    description: Annotated[str, Form(max_length=2000)] = "",
     overwrite: Annotated[bool, Form()] = False,
     db: Session = Depends(get_db),
 ) -> ScenarioResponse:
     normalized_description = description.strip()
-    if not normalized_description:
-        raise HTTPException(status_code=422, detail="Description must not be empty")
 
     root = repository_root()
     try:
