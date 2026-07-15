@@ -80,6 +80,9 @@ void test_mutual_exclusion_and_bounds() {
     const core::Outcome simultaneous = pumped_storage.apply(
         core::State(50.0), core::Action(10.0, 0.0, 5.0), core::Exogenous(0.0, 0.0));
     require(!simultaneous.feasible, "simultaneous turbine and pump rejected");
+    const core::Outcome pump_and_spill = pumped_storage.apply(
+        core::State(50.0), core::Action(0.0, 5.0, 5.0), core::Exogenous(0.0, 0.0));
+    require(!pump_and_spill.feasible, "simultaneous spill and pump rejected");
     const core::Outcome outside = pumped_storage.apply(
         core::State(5.0), core::Action(20.0, 0.0, 0.0), core::Exogenous(0.0, 0.0));
     require(!outside.feasible, "outside state rejected");
@@ -87,11 +90,13 @@ void test_mutual_exclusion_and_bounds() {
 
 void test_action_grid_contains_only_unique_feasible_controls() {
     const numerics::ActionGrid grid = numerics::ActionGrid::from_parameters(
-        model_parameters(), core::SolverParameters(11, 3, 1, 2, 1.0));
-    require(grid.size() == 4, "mutually exclusive controls are filtered");
+        model_parameters(), core::SolverParameters(11, 3, 2, 2, 1.0));
+    require(grid.size() == 7, "mutually exclusive controls are filtered");
     for (const core::Action& action : grid.actions()) {
         require(!(action.turbine_flow > 0.0 && action.pump_flow > 0.0),
                 "action grid contains simultaneous turbine and pump flow");
+        require(!(action.spill_flow > 0.0 && action.pump_flow > 0.0),
+                "action grid contains simultaneous spill and pump flow");
     }
 
     const core::ModelParameters no_pumping(

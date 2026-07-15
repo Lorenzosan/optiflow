@@ -283,9 +283,12 @@ def validate(args: argparse.Namespace) -> None:
     action_count = sum(
         1
         for turbine_flow in axes["turbine_flow"]
-        for _ in axes["spill_flow"]
+        for spill_flow in axes["spill_flow"]
         for pump_flow in axes["pump_flow"]
-        if not (turbine_flow > 0.0 and pump_flow > 0.0)
+        if not (
+            (turbine_flow > 0.0 and pump_flow > 0.0)
+            or (spill_flow > 0.0 and pump_flow > 0.0)
+        )
     )
 
     cumulative_profit = 0.0
@@ -310,6 +313,8 @@ def validate(args: argparse.Namespace) -> None:
 
         if row["turbine_flow"] > args.state_tolerance and row["pump_flow"] > args.state_tolerance:
             fail(f"simultaneous turbine and pump at index {index}")
+        if row["spill_flow"] > args.state_tolerance and row["pump_flow"] > args.state_tolerance:
+            fail(f"simultaneous spill and pump at index {index}")
 
         expected_next = (
             row["reservoir_volume"]

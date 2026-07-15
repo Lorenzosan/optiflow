@@ -200,7 +200,7 @@ def count_actions(params: dict[str, str], resolution: Resolution) -> int:
     pump = effective_axis_size(
         scenario_float(params, "pump_max_flow"), resolution.pump_steps
     )
-    return spill * (turbine + pump - 1)
+    return turbine * spill + pump - 1
 
 
 def read_summary(path: Path) -> dict[str, float | int]:

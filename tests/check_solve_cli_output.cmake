@@ -32,7 +32,7 @@ set(required_output_patterns
     "Scenario: sample_day"
     "Time steps: 12"
     "Reservoir grid points: 21"
-    "Action count: 12"
+    "Action count: 10"
     "Solve seconds: [0-9]"
     "Simulation seconds: [0-9]"
     "Export energy .MWh.: [0-9]"

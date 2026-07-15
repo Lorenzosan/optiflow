@@ -30,7 +30,8 @@ ActionGrid ActionGrid::from_parameters(const core::ModelParameters& model_parame
     for (double turbine_flow : turbine_axis) {
         for (double spill_flow : spill_axis) {
             for (double pump_flow : pump_axis) {
-                if (turbine_flow > 0.0 && pump_flow > 0.0) {
+                if ((turbine_flow > 0.0 && pump_flow > 0.0) ||
+                    (spill_flow > 0.0 && pump_flow > 0.0)) {
                     continue;
                 }
                 actions.emplace_back(turbine_flow, spill_flow, pump_flow);

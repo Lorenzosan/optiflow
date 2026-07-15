@@ -34,6 +34,9 @@ core::Outcome PumpedStorageModel::apply(core::State state,
     if (action.turbine_flow > tolerance && action.pump_flow > tolerance) {
         return infeasible(state, "cannot turbine and pump at the same time");
     }
+    if (action.spill_flow > tolerance && action.pump_flow > tolerance) {
+        return infeasible(state, "cannot spill and pump at the same time");
+    }
 
     const double dt = parameters_.time_step_hours;
     const double turbine_power = action.turbine_flow * parameters_.turbine_efficiency;

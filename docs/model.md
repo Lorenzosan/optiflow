@@ -26,6 +26,8 @@ The historical field name `reservoir_volume` is retained in the CSV/API for comp
 * `spill_flow`: hydraulic power discarded, in MW.
 * `natural_inflow`: exogenous hydraulic power entering storage, in MW.
 
+Turbine withdrawal and spill may occur together, for example when inflow exceeds turbine capacity. Pumping is mutually exclusive with both turbine withdrawal and spill; the model never pumps water into the upper reservoir while releasing it.
+
 ## Reservoir transition
 
 ```text

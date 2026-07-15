@@ -15,9 +15,9 @@ execute_process(
         --inflows "${OPTIFLOW_SOURCE_DIR}/examples/inflows.csv"
         --output-dir "${OPTIFLOW_TEST_OUTPUT_DIR}"
         --summary-output "${summary_csv}"
-        --resolution 5,2,1,2
-        --resolution 9,3,1,3
-        --resolution 17,5,1,5
+        --resolution 5,2,2,2
+        --resolution 9,3,3,3
+        --resolution 17,5,5,5
     RESULT_VARIABLE analysis_result
     OUTPUT_VARIABLE analysis_stdout
     ERROR_VARIABLE analysis_stderr)
@@ -36,14 +36,14 @@ if(NOT summary_text MATCHES "case,reservoir_grid_points,turbine_flow_steps")
     message(FATAL_ERROR "resolution analysis output is missing the expected CSV header")
 endif()
 foreach(expected_case IN ITEMS
-        "r5_t2_s1_p2,5,2,1,2,3"
-        "r9_t3_s1_p3,9,3,1,3,5"
-        "r17_t5_s1_p5,17,5,1,5,9")
+        "r5_t2_s2_p2,5,2,2,2,5"
+        "r9_t3_s3_p3,9,3,3,3,11"
+        "r17_t5_s5_p5,17,5,5,5,29")
     if(NOT summary_text MATCHES "${expected_case}")
         message(FATAL_ERROR "resolution analysis output is missing ${expected_case}")
     endif()
 endforeach()
-if(NOT summary_text MATCHES "r17_t5_s1_p5,17,5,1,5,[0-9]+,[^,]+,0[.]0")
+if(NOT summary_text MATCHES "r17_t5_s5_p5,17,5,5,5,[0-9]+,[^,]+,0[.]0")
     message(FATAL_ERROR "finest resolution does not have zero profit delta")
 endif()
 
