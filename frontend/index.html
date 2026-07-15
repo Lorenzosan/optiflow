@@ -66,7 +66,7 @@
               <div class="form-field">
                 <label for="scenario-name">Scenario name</label>
                 <input id="scenario-name" name="scenario_name" type="text" maxlength="128" required>
-                <small>Commas and line breaks are not supported. Existing custom names can be replaced below.</small>
+                <small>Commas and line breaks are not supported. Existing custom names can be replaced after confirmation.</small>
               </div>
               <div class="form-field form-field-wide">
                 <label for="scenario-description-input">Description</label>
@@ -75,14 +75,6 @@
             </div>
 
             <div id="scenario-fields" class="parameter-groups"></div>
-
-            <div class="overwrite-field">
-              <label for="overwrite-scenario">
-                <input id="overwrite-scenario" name="overwrite" type="checkbox">
-                Replace an existing custom scenario with the same name
-              </label>
-              <small>This deletes that scenario's prior runs and dispatch artifacts. Bundled scenarios are read-only.</small>
-            </div>
 
             <fieldset class="parameter-group series-group">
               <legend>Time series</legend>
@@ -105,7 +97,7 @@
 
             <div class="form-actions">
               <button id="reset-scenario-button" class="secondary-button" type="reset">Reset template</button>
-              <button id="save-scenario-button" type="submit">Validate and save or replace scenario</button>
+              <button id="save-scenario-button" type="submit">Save scenario</button>
             </div>
             <p id="scenario-save-message" class="message" role="status" aria-live="polite"></p>
           </form>

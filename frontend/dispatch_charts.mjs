@@ -1,3 +1,5 @@
+import { formatNumber } from "./number_format.mjs";
+
 const HOUR_MILLISECONDS = 3_600_000;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
@@ -471,11 +473,11 @@ function svgText(text, attributes = {}) {
 function formatAxisNumber(value) {
   const absolute = Math.abs(value);
   const maximumFractionDigits = absolute >= 100 ? 0 : absolute >= 10 ? 1 : 2;
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(value);
+  return formatNumber(value, maximumFractionDigits);
 }
 
 function formatTooltipNumber(value, maximumFractionDigits = 2) {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(value);
+  return formatNumber(value, maximumFractionDigits);
 }
 
 function timeFormatter(startMilliseconds, endMilliseconds) {

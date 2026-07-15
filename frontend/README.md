@@ -11,9 +11,10 @@ Run frontend checks from the repository root:
 ```bash
 node --check frontend/app.js
 node --check frontend/scenario.mjs
+node --check frontend/number_format.mjs
 node --check frontend/trader.mjs
 node --check frontend/dispatch_charts.mjs
-node --test frontend/scenario.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs frontend/container_assets.test.mjs
+node --test frontend/scenario.test.mjs frontend/number_format.test.mjs frontend/trader.test.mjs frontend/dispatch_charts.test.mjs frontend/container_assets.test.mjs
 ```
 
 Run the stack with:

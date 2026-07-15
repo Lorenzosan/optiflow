@@ -5,6 +5,7 @@ import {
   buildScenarioCsv,
   validateSeriesPair,
 } from "./scenario.mjs";
+import { formatNumber } from "./number_format.mjs";
 import {
   DISPATCH_CHART_TIME_ZONE,
   buildDispatchChartModel,
@@ -43,7 +44,6 @@ const elements = {
   scenarioFields: document.querySelector("#scenario-fields"),
   pricesFile: document.querySelector("#prices-file"),
   inflowsFile: document.querySelector("#inflows-file"),
-  overwriteScenario: document.querySelector("#overwrite-scenario"),
   seriesPreview: document.querySelector("#series-preview"),
   saveScenarioButton: document.querySelector("#save-scenario-button"),
   scenarioSaveMessage: document.querySelector("#scenario-save-message"),
@@ -145,15 +145,6 @@ function formatDate(value) {
         dateStyle: "medium",
         timeStyle: "short",
       }).format(date);
-}
-
-function formatNumber(value, maximumFractionDigits = 2) {
-  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
-    return "—";
-  }
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits,
-  }).format(Number(value));
 }
 
 function formatRuntime(summary) {
@@ -337,14 +328,28 @@ async function createScenario(event) {
       throw new Error("Generated scenario CSV exceeds the 256 KiB upload limit.");
     }
 
-    const replacing = elements.overwriteScenario.checked
-      && state.scenarios.some((scenario) => scenario.name === scenarioName);
+    const existingScenario = state.scenarios.find((scenario) => scenario.name === scenarioName);
+    let replacing = false;
+    if (existingScenario) {
+      const isCustomScenario = existingScenario.files.scenario.startsWith("data/scenarios/");
+      if (!isCustomScenario) {
+        throw new Error(`Bundled scenario ${scenarioName} is read-only. Choose another name.`);
+      }
+      replacing = window.confirm(
+        `Replace ${scenarioName}? This deletes its previous runs and dispatch artifacts.`,
+      );
+      if (!replacing) {
+        setScenarioMessage("Scenario replacement cancelled.");
+        return;
+      }
+    }
+
     const payload = new FormData();
     payload.append("description", elements.scenarioDescriptionInput.value.trim());
     payload.append("scenario", scenarioFile);
     payload.append("prices", pricesFile, pricesFile.name);
     payload.append("inflows", inflowsFile, inflowsFile.name);
-    payload.append("overwrite", String(elements.overwriteScenario.checked));
+    payload.append("overwrite", String(replacing));
 
     const scenario = await apiRequest("/scenarios", {
       method: "POST",
