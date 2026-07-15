@@ -96,11 +96,18 @@ function parseDispatchRows(text, timeStepHours) {
         `Dispatch timestamp spacing at row ${rowNumber} does not match time_step_hours.`,
       );
     }
+    const price = parseFinite(columns[positions.price], "price", rowNumber);
+    const netPower = parseFinite(columns[positions.net_power], "net_power", rowNumber);
+    const netOperatingCashflow = parseFinite(columns[positions.reward], "reward", rowNumber);
+    const intervalHours = stepMilliseconds / HOUR_MILLISECONDS;
+    const marketCashflow = price * netPower * intervalHours;
+    const rawOperatingCost = marketCashflow - netOperatingCashflow;
+    const operatingCost = Math.abs(rawOperatingCost) <= 1e-9 ? 0 : rawOperatingCost;
     rows.push(Object.freeze({
       timeIndex,
       timestampUtc: columns[positions.timestamp_utc],
       timestampMilliseconds,
-      price: parseFinite(columns[positions.price], "price", rowNumber),
+      price,
       naturalInflow: parseFinite(
         columns[positions.natural_inflow],
         "natural_inflow",
@@ -119,13 +126,10 @@ function parseDispatchRows(text, timeStepHours) {
         "next_reservoir_volume",
         rowNumber,
       ),
-      netPower: parseFinite(columns[positions.net_power], "net_power", rowNumber),
-      reward: parseFinite(columns[positions.reward], "reward", rowNumber),
-      cumulativeProfit: parseFinite(
-        columns[positions.cumulative_profit],
-        "cumulative_profit",
-        rowNumber,
-      ),
+      netPower,
+      marketCashflow,
+      operatingCost,
+      netOperatingCashflow,
     }));
     expectedIndex += 1;
   }
@@ -187,13 +191,6 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
       timestampMilliseconds: endMilliseconds,
       value: rows.at(-1).nextReservoirVolume,
     }),
-  ]);
-  const profitPoints = Object.freeze([
-    Object.freeze({ timestampMilliseconds: startMilliseconds, value: 0 }),
-    ...rows.map((row) => Object.freeze({
-      timestampMilliseconds: row.timestampMilliseconds + stepMilliseconds,
-      value: row.cumulativeProfit,
-    })),
   ]);
   return Object.freeze({
     rows,
@@ -295,17 +292,30 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
         ]),
       }),
       Object.freeze({
-        key: "profit",
-        title: "Cumulative profit",
-        unit: "€",
-        interpolation: "line",
+        key: "economics",
+        title: "Interval economics",
+        unit: "€ / interval",
+        height: 96,
+        interpolation: "step",
         includeZero: true,
         series: Object.freeze([
           series(
-            "profit",
-            "Cumulative profit",
-            profitPoints,
-            "dispatch-series-profit",
+            "market-cashflow",
+            "Market cashflow",
+            stepPoints(rows, (row) => row.marketCashflow, stepMilliseconds),
+            "dispatch-series-market-cashflow",
+          ),
+          series(
+            "operating-cost",
+            "Operating cost",
+            stepPoints(rows, (row) => row.operatingCost, stepMilliseconds),
+            "dispatch-series-operating-cost",
+          ),
+          series(
+            "net-cashflow",
+            "Net operating cashflow",
+            stepPoints(rows, (row) => row.netOperatingCashflow, stepMilliseconds),
+            "dispatch-series-net-cashflow",
           ),
         ]),
       }),
@@ -852,8 +862,9 @@ export function renderDispatchCharts(container, model) {
     appendTooltipLine(tooltip, "Storage content [MWh hydraulic]", formatTooltipNumber(row.reservoirVolume));
     appendTooltipLine(tooltip, "Next storage content [MWh hydraulic]", formatTooltipNumber(row.nextReservoirVolume));
     appendTooltipLine(tooltip, "Net power [MW]", formatTooltipNumber(row.netPower));
-    appendTooltipLine(tooltip, "Reward [€]", formatTooltipNumber(row.reward));
-    appendTooltipLine(tooltip, "Cumulative profit [€]", formatTooltipNumber(row.cumulativeProfit));
+    appendTooltipLine(tooltip, "Market cashflow [€]", formatTooltipNumber(row.marketCashflow));
+    appendTooltipLine(tooltip, "Operating cost [€]", formatTooltipNumber(row.operatingCost));
+    appendTooltipLine(tooltip, "Net operating cashflow [€]", formatTooltipNumber(row.netOperatingCashflow));
     tooltip.hidden = false;
     const renderedWidth = svg.getBoundingClientRect().width;
     const tooltipX = (rowX / viewWidth) * renderedWidth;

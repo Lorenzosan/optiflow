@@ -56,9 +56,14 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   }),
   Object.freeze({
     title: "Solver resolution",
-    note: "More points and steps refine the discrete approximation but increase runtime and memory. Compare genuinely nested resolutions before treating a result as numerically stable.",
+    note: "More intervals and action steps refine the discrete approximation but increase runtime and memory. Compare genuinely nested resolutions before treating a result as numerically stable.",
     fields: Object.freeze([
-      field("reservoir_volume_grid_points", "Storage grid points [count]", 9, { integer: true, min: 1 }),
+      field("reservoir_volume_grid_points", "Storage grid intervals [count]", 8, {
+        integer: true,
+        min: 0,
+        scenarioOffset: 1,
+        help: "The optimizer uses intervals + 1 grid points. Spacing equals storage range divided by intervals.",
+      }),
       field("turbine_flow_steps", "Turbine withdrawal steps [count]", 3, { integer: true, min: 1 }),
       field("spill_flow_steps", "Spill steps [count]", 2, { integer: true, min: 1 }),
       field("pump_flow_steps", "Pump addition steps [count]", 3, { integer: true, min: 1 }),
@@ -102,9 +107,10 @@ function parseFieldValue(definition, rawValue) {
   if (definition.max !== undefined) {
     requireCondition(value <= definition.max, `${definition.label} exceeds its allowed maximum.`);
   }
+  const offsetValue = value + (definition.scenarioOffset ?? 0);
   const scenarioValue = definition.scenarioScale === undefined
-    ? value
-    : value * definition.scenarioScale;
+    ? offsetValue
+    : offsetValue * definition.scenarioScale;
   return { value, scenarioText: numberText(scenarioValue) };
 }
 
@@ -131,8 +137,8 @@ function validateBounds(values) {
   );
   if (values.reservoir_min_volume < values.reservoir_max_volume) {
     requireCondition(
-      values.reservoir_volume_grid_points >= 2,
-      "Storage grid points must be at least two for a nonzero storage range.",
+      values.reservoir_volume_grid_points >= 1,
+      "Storage grid intervals must be at least one for a nonzero storage range.",
     );
   }
 }
@@ -207,9 +213,10 @@ export function parseScenarioCsv(text) {
       Number.isFinite(scenarioValue),
       `${definition.label} must be a finite number in the scenario CSV.`,
     );
-    const editorValue = definition.scenarioScale === undefined
+    const scaledEditorValue = definition.scenarioScale === undefined
       ? scenarioValue
       : scenarioValue / definition.scenarioScale;
+    const editorValue = scaledEditorValue - (definition.scenarioOffset ?? 0);
     const parsed = parseFieldValue(definition, editorValue);
     values[definition.key] = parsed.value;
     validationValues[definition.key] = parsed.value;
@@ -234,6 +241,133 @@ export function suggestScenarioCopyName(name, existingNames) {
     }
   }
   throw new Error("Could not create a unique scenario copy name.");
+}
+
+
+function fieldDefinition(key) {
+  return ALL_FIELDS.find((definition) => definition.key === key);
+}
+
+function parsedEditorValue(values, key) {
+  const definition = fieldDefinition(key);
+  requireCondition(definition, `Unknown scenario field ${key}.`);
+  return parseFieldValue(definition, values[key]).value;
+}
+
+function alignmentScore(spacing, increments) {
+  if (!(spacing > 0) || increments.length === 0) {
+    return 0;
+  }
+  return Math.max(...increments.map((increment) => {
+    const ratio = increment / spacing;
+    return Math.abs(ratio - Math.round(ratio));
+  }));
+}
+
+export function storageGridDiagnostics(
+  values,
+  timeStepHours = null,
+  minimumPrice = null,
+  maximumPrice = null,
+  minimumAbsolutePrice = null,
+) {
+  const minimum = parsedEditorValue(values, "reservoir_min_volume");
+  const maximum = parsedEditorValue(values, "reservoir_max_volume");
+  const intervals = parsedEditorValue(values, "reservoir_volume_grid_points");
+  const penalty = parsedEditorValue(values, "terminal_reservoir_target_penalty");
+  const turbineMaximum = parsedEditorValue(values, "turbine_max_flow");
+  const turbineSteps = parsedEditorValue(values, "turbine_flow_steps");
+  const spillMaximum = parsedEditorValue(values, "spill_max_flow");
+  const spillSteps = parsedEditorValue(values, "spill_flow_steps");
+  const pumpMaximum = parsedEditorValue(values, "pump_max_flow");
+  const pumpSteps = parsedEditorValue(values, "pump_flow_steps");
+  const turbineEfficiencyPercent = parsedEditorValue(values, "turbine_efficiency");
+  const pumpEfficiencyPercent = parsedEditorValue(values, "pump_efficiency");
+  const operatingCost = parsedEditorValue(values, "operating_cost_per_mwh");
+
+  requireCondition(maximum >= minimum, "Storage grid bounds are invalid.");
+  const range = maximum - minimum;
+  const spacing = range === 0 ? 0 : range / intervals;
+  const parsedTimeStep = timeStepHours === null ? null : validateTimeStepHours(timeStepHours);
+  const increments = [];
+  if (parsedTimeStep !== null) {
+    for (const [limit, steps] of [
+      [turbineMaximum, turbineSteps],
+      [spillMaximum, spillSteps],
+      [pumpMaximum, pumpSteps],
+    ]) {
+      if (limit > 0 && steps > 1) {
+        increments.push((limit / (steps - 1)) * parsedTimeStep);
+      }
+    }
+  }
+
+  const score = alignmentScore(spacing, increments);
+  const aligned = score <= 1e-9;
+  let suggestedIntervals = null;
+  if (!aligned && spacing > 0 && increments.length > 0) {
+    const radius = Math.min(250, Math.max(10, Math.ceil(intervals * 0.05)));
+    const lower = Math.max(1, intervals - radius);
+    const upper = intervals + radius;
+    let best = { intervals, score };
+    for (let candidate = lower; candidate <= upper; candidate += 1) {
+      const candidateSpacing = range / candidate;
+      const candidateScore = alignmentScore(candidateSpacing, increments);
+      if (candidateScore < best.score - 1e-12
+          || (Math.abs(candidateScore - best.score) <= 1e-12
+              && Math.abs(candidate - intervals) < Math.abs(best.intervals - intervals))) {
+        best = { intervals: candidate, score: candidateScore };
+      }
+    }
+    if (best.intervals !== intervals && best.score <= 1e-9) {
+      suggestedIntervals = best.intervals;
+    }
+  }
+
+  const terminalInterpolationScaleEuro = spacing > 0
+    ? penalty * spacing * spacing / 4
+    : 0;
+  const numericMinimumPrice = minimumPrice === null || minimumPrice === undefined
+    ? null
+    : Number(minimumPrice);
+  const numericMaximumPrice = maximumPrice === null || maximumPrice === undefined
+    ? null
+    : Number(maximumPrice);
+  const numericMinimumAbsolutePrice = minimumAbsolutePrice === null
+      || minimumAbsolutePrice === undefined
+    ? null
+    : Number(minimumAbsolutePrice);
+  const maximumTurbineCashflowEuro = parsedTimeStep !== null
+      && Number.isFinite(numericMaximumPrice)
+    ? Math.max(0, numericMaximumPrice)
+      * turbineMaximum
+      * (turbineEfficiencyPercent / 100)
+      * parsedTimeStep
+    : null;
+  const freeCyclingRisk = parsedTimeStep !== null
+    && Number.isFinite(numericMinimumPrice)
+    && Number.isFinite(numericMaximumPrice)
+    && Number.isFinite(numericMinimumAbsolutePrice)
+    && numericMinimumPrice <= 0
+    && numericMaximumPrice >= 0
+    && numericMinimumAbsolutePrice <= 1e-12
+    && operatingCost === 0
+    && turbineMaximum > 0
+    && pumpMaximum > 0
+    && turbineEfficiencyPercent * pumpEfficiencyPercent < 10_000
+    && penalty > 0;
+
+  return Object.freeze({
+    intervals,
+    points: intervals + 1,
+    spacing,
+    actionIncrements: Object.freeze(increments),
+    aligned,
+    suggestedIntervals,
+    terminalInterpolationScaleEuro,
+    maximumTurbineCashflowEuro,
+    freeCyclingRisk,
+  });
 }
 
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
@@ -265,6 +399,9 @@ export function validateSeriesCsv(text, valueColumn) {
   );
 
   const timestamps = [];
+  let minimumValue = Number.POSITIVE_INFINITY;
+  let maximumValue = Number.NEGATIVE_INFINITY;
+  let minimumAbsoluteValue = Number.POSITIVE_INFINITY;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const line = lines[lineIndex].trim();
     if (!line) continue;
@@ -284,9 +421,18 @@ export function validateSeriesCsv(text, valueColumn) {
       requireCondition(value >= 0, `Row ${rowNumber} has a negative natural_inflow.`);
     }
     timestamps.push(timestamp);
+    minimumValue = Math.min(minimumValue, value);
+    maximumValue = Math.max(maximumValue, value);
+    minimumAbsoluteValue = Math.min(minimumAbsoluteValue, Math.abs(value));
   }
   requireCondition(timestamps.length > 0, `${valueColumn} CSV must contain at least one data row.`);
-  return Object.freeze({ rowCount: timestamps.length, timestamps: Object.freeze(timestamps) });
+  return Object.freeze({
+    rowCount: timestamps.length,
+    timestamps: Object.freeze(timestamps),
+    minimumValue,
+    maximumValue,
+    minimumAbsoluteValue,
+  });
 }
 
 export function validateSeriesPair(pricesText, inflowsText) {
@@ -326,5 +472,8 @@ export function validateSeriesPair(pricesText, inflowsText) {
     startTimestampUtc: prices.timestamps[0].text,
     endTimestampUtc: prices.timestamps.at(-1).text,
     timeStepHours,
+    minimumPrice: prices.minimumValue,
+    maximumPrice: prices.maximumValue,
+    minimumAbsolutePrice: prices.minimumAbsoluteValue,
   });
 }

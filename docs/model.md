@@ -73,6 +73,10 @@ terminal_penalty = terminal_reservoir_target_penalty
 
 The Bellman solver evaluates a discrete hydraulic-action grid at every reservoir-grid state. Linear interpolation supplies continuation values for next states between reservoir grid points. Numerical results should therefore be checked across nested state and action resolutions rather than treated as independent of discretization.
 
+For a storage range of width `W` and `N` grid points, spacing is `W / (N - 1)`. The browser editor therefore asks for interval count and writes `intervals + 1` points into the optimizer schema. This avoids the common off-by-one case where entering `100` points over a `0–200` MWh range creates `2.0202` MWh spacing instead of the intended `2` MWh spacing.
+
+A quadratic terminal target can magnify interpolation error. For penalty coefficient `p` and grid spacing `h`, the largest gap between the quadratic terminal value and its linear interpolation within one cell is `p h² / 4`. If that amount is comparable to or larger than interval cashflows, dispatch timing can be dominated by grid alignment. The editor reports this scale and suggests a nearby action-aligned interval count when available.
+
 `tools/analyze_resolution.py` creates scenario variants with nested solver grids and reports each result relative to the finest listed case. The comparison is a sensitivity diagnostic. It does not assume that profit increases monotonically, because changing the reservoir grid also changes interpolation error.
 
 A strictly larger Bellman value always replaces the current action. Exactly equal values use an explicit deterministic tie-break: less spill, then less total controlled hydraulic throughput, then less pumping, then less turbine withdrawal. The same rule is used in backward induction and value-function forward simulation, so equal-value dispatch does not depend on action enumeration order.

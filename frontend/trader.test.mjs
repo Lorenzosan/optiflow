@@ -25,9 +25,9 @@ test("buildTraderRows returns one period row with fixed Zurich products", () => 
 
   assert.equal(rows.length, 1);
   assert.equal(rows[0].period, "January 2027");
-  assert.deepEqual(rows[0].baseload, { averageMw: 1, energyMwh: 24, pnl: 48 });
-  assert.deepEqual(rows[0].peak, { averageMw: 1, energyMwh: 11, pnl: 22 });
-  assert.deepEqual(rows[0].offPeak, { averageMw: 1, energyMwh: 13, pnl: 26 });
+  assert.deepEqual(rows[0].baseload, { averageMw: 1, energyMwh: 24, cashflow: 48 });
+  assert.deepEqual(rows[0].peak, { averageMw: 1, energyMwh: 11, cashflow: 22 });
+  assert.deepEqual(rows[0].offPeak, { averageMw: 1, energyMwh: 13, cashflow: 26 });
   assert.equal("hours" in rows[0].baseload, false);
 });
 
@@ -44,9 +44,9 @@ test("buildTraderRows splits optimization intervals at peak boundaries", () => {
     2,
   );
 
-  assert.deepEqual(rows[0].baseload, { averageMw: 2, energyMwh: 4, pnl: 20 });
-  assert.deepEqual(rows[0].peak, { averageMw: 2, energyMwh: 2, pnl: 10 });
-  assert.deepEqual(rows[0].offPeak, { averageMw: 2, energyMwh: 2, pnl: 10 });
+  assert.deepEqual(rows[0].baseload, { averageMw: 2, energyMwh: 4, cashflow: 20 });
+  assert.deepEqual(rows[0].peak, { averageMw: 2, energyMwh: 2, cashflow: 10 });
+  assert.deepEqual(rows[0].offPeak, { averageMw: 2, energyMwh: 2, cashflow: 10 });
 });
 
 test("buildTraderRows reports an unavailable average for an empty product", () => {
@@ -57,8 +57,8 @@ test("buildTraderRows reports an unavailable average for an empty product", () =
 
   assert.equal(rows[0].peak.averageMw, null);
   assert.equal(rows[0].peak.energyMwh, 0);
-  assert.equal(rows[0].peak.pnl, 0);
-  assert.deepEqual(rows[0].offPeak, { averageMw: -3, energyMwh: -6, pnl: -8 });
+  assert.equal(rows[0].peak.cashflow, 0);
+  assert.deepEqual(rows[0].offPeak, { averageMw: -3, energyMwh: -6, cashflow: -8 });
 });
 
 test("buildTraderRows uses monthly periods first and calendar quarters later", () => {

@@ -126,7 +126,16 @@
   stroke: var(--accent);
 }
 
-.dispatch-series-profit {
+.dispatch-series-market-cashflow {
+  stroke: #2f72a4;
+}
+
+.dispatch-series-operating-cost {
+  stroke: #b13a3a;
+  stroke-dasharray: 5 4;
+}
+
+.dispatch-series-net-cashflow {
   stroke: #6c4aa1;
 }
 

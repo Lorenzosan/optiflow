@@ -136,14 +136,14 @@ function intervalMilliseconds(timeStepHours) {
 }
 
 function emptyProductAggregate() {
-  return { hours: 0, energyMwh: 0, pnl: 0 };
+  return { hours: 0, energyMwh: 0, cashflow: 0 };
 }
 
 function finalizedProduct(aggregate) {
   return Object.freeze({
     averageMw: aggregate.hours > 0 ? aggregate.energyMwh / aggregate.hours : null,
     energyMwh: aggregate.energyMwh,
-    pnl: aggregate.pnl,
+    cashflow: aggregate.cashflow,
   });
 }
 
@@ -176,11 +176,11 @@ export function buildTraderRows(dispatchText, timeStepHours) {
     return periods.get(period.key);
   }
 
-  function add(periodAggregate, productKey, row, durationHours, pnl) {
+  function add(periodAggregate, productKey, row, durationHours, cashflow) {
     const product = periodAggregate.products[productKey];
     product.hours += durationHours;
     product.energyMwh += row.netPowerMw * durationHours;
-    product.pnl += pnl;
+    product.cashflow += cashflow;
   }
 
   for (const row of dispatch) {
@@ -193,14 +193,14 @@ export function buildTraderRows(dispatchText, timeStepHours) {
         * HOUR_MILLISECONDS;
       const segmentEnd = Math.min(intervalEnd, nextHourBoundary);
       const durationHours = (segmentEnd - segmentStart) / HOUR_MILLISECONDS;
-      const pnl = row.reward * (durationHours / timeStep);
+      const cashflow = row.reward * (durationHours / timeStep);
       const parts = localParts(formatter, new Date(segmentStart));
       const periodAggregate = ensurePeriod(periodFor(parts, startParts));
       const isPeak = WEEKDAYS.has(parts.weekday)
         && parts.hour >= PEAK_START_HOUR
         && parts.hour < PEAK_END_HOUR;
-      add(periodAggregate, "baseload", row, durationHours, pnl);
-      add(periodAggregate, isPeak ? "peak" : "offPeak", row, durationHours, pnl);
+      add(periodAggregate, "baseload", row, durationHours, cashflow);
+      add(periodAggregate, isPeak ? "peak" : "offPeak", row, durationHours, cashflow);
       segmentStart = segmentEnd;
     }
   }

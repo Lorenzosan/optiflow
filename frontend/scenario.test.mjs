@@ -5,6 +5,7 @@ import {
   SCENARIO_PARAMETER_GROUPS,
   buildScenarioCsv,
   parseScenarioCsv,
+  storageGridDiagnostics,
   suggestScenarioCopyName,
   validateSeriesCsv,
   validateSeriesPair,
@@ -45,6 +46,7 @@ test("scenario editor exposes explicit hydro and euro units without a time-step 
   assert.equal(fields.pump_efficiency, "Pump efficiency [%]");
   assert.equal(fields.water_to_power_factor, undefined);
   assert.equal(fields.operating_cost_per_mwh, "Operating cost [€/MWh]");
+  assert.equal(fields.reservoir_volume_grid_points, "Storage grid intervals [count]");
   assert.equal(fields.terminal_reservoir_target_penalty, "Storage target penalty [€/MWh²]");
 });
 
@@ -62,6 +64,7 @@ test("buildScenarioCsv emits the derived time step and optimizer scalar schema",
   assert.match(csv, /turbine_efficiency,0\.9/);
   assert.match(csv, /pump_efficiency,0\.85/);
   assert.match(csv, /discount_factor,1/);
+  assert.match(csv, /reservoir_volume_grid_points,9/);
   assert.doesNotMatch(csv, /market_|peak_|series_start|water_to_power_factor/);
   assert.deepEqual(
     lines.slice(3).map((line) => line.split(",", 1)[0]),
@@ -78,6 +81,7 @@ test("parseScenarioCsv hydrates editor values and restores efficiency percentage
   assert.equal(parsed.values.turbine_efficiency, 90);
   assert.equal(parsed.values.pump_efficiency, 85);
   assert.equal(parsed.values.reservoir_max_volume, 200);
+  assert.equal(parsed.values.reservoir_volume_grid_points, 8);
 });
 
 test("parseScenarioCsv rejects incomplete or unsupported stored inputs", () => {
@@ -158,10 +162,50 @@ test("buildScenarioCsv requires integer solver counts", () => {
   );
 });
 
+
+
+test("storage-grid diagnostics expose the point conversion and nearby aligned grid", () => {
+  const values = defaultValues();
+  values.reservoir_min_volume = "0";
+  values.reservoir_max_volume = "200";
+  values.initial_reservoir_volume = "200";
+  values.terminal_reservoir_min_volume = "0";
+  values.terminal_reservoir_max_volume = "5";
+  values.terminal_target_reservoir_volume = "0";
+  values.terminal_reservoir_target_penalty = "125";
+  values.operating_cost_per_mwh = "0";
+  values.turbine_max_flow = "16";
+  values.pump_max_flow = "12";
+  values.spill_max_flow = "20";
+  values.turbine_flow_steps = "2";
+  values.pump_flow_steps = "2";
+  values.spill_flow_steps = "2";
+  values.reservoir_volume_grid_points = "99";
+
+  const unstable = storageGridDiagnostics(values, 1, 0, 1, 0);
+  assert.equal(unstable.points, 100);
+  assert.ok(Math.abs(unstable.spacing - (200 / 99)) < 1e-12);
+  assert.equal(unstable.aligned, false);
+  assert.equal(unstable.suggestedIntervals, 100);
+  assert.ok(Math.abs(unstable.terminalInterpolationScaleEuro - 127.53800632588511) < 1e-9);
+  assert.equal(unstable.maximumTurbineCashflowEuro, 14.4);
+  assert.equal(unstable.freeCyclingRisk, true);
+
+  values.reservoir_volume_grid_points = "100";
+  const aligned = storageGridDiagnostics(values, 1, 0, 1, 0);
+  assert.equal(aligned.points, 101);
+  assert.equal(aligned.spacing, 2);
+  assert.equal(aligned.aligned, true);
+  assert.equal(aligned.suggestedIntervals, null);
+});
+
 test("validateSeriesCsv accepts canonical UTC timestamps and negative prices", () => {
   const result = validateSeriesCsv(PRICE_CSV, "price");
   assert.equal(result.rowCount, 2);
   assert.equal(result.timestamps[0].text, "2027-01-01T00:00:00Z");
+  assert.equal(result.minimumValue, -10);
+  assert.equal(result.maximumValue, 42.5);
+  assert.equal(result.minimumAbsoluteValue, 10);
 });
 
 test("validateSeriesCsv rejects malformed or invalid timestamps", () => {
@@ -215,6 +259,9 @@ test("validateSeriesPair derives a constant time step from timestamps", () => {
   const oneHour = validateSeriesPair(PRICE_CSV, INFLOW_CSV);
   assert.equal(oneHour.rowCount, 2);
   assert.equal(oneHour.timeStepHours, 1);
+  assert.equal(oneHour.minimumPrice, -10);
+  assert.equal(oneHour.maximumPrice, 42.5);
+  assert.equal(oneHour.minimumAbsolutePrice, 10);
 
   const twoHourPrices = PRICE_CSV.replace("T01:00:00Z", "T02:00:00Z");
   const twoHourInflows = INFLOW_CSV.replace("T01:00:00Z", "T02:00:00Z");

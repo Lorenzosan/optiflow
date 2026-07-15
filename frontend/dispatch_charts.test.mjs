@@ -32,7 +32,7 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
 
   assert.deepEqual(
     model.panels.map((panel) => panel.key),
-    ["price", "inflow", "turbine", "pump", "spill", "reservoir", "profit"],
+    ["price", "inflow", "turbine", "pump", "spill", "reservoir", "economics"],
   );
   const pump = model.panels.find((panel) => panel.key === "pump");
   assert.equal(pump.unit, "MW hydraulic");
@@ -44,9 +44,19 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
   assert.equal(reservoir.series[0].label, "Storage content");
   assert.deepEqual(reservoir.series[0].points.map((point) => point.value), [0, 10, 0]);
 
-  const profit = model.panels.find((panel) => panel.key === "profit");
-  assert.equal(profit.unit, "€");
-  assert.deepEqual(profit.series[0].points.map((point) => point.value), [0, -400, 64]);
+  const economics = model.panels.find((panel) => panel.key === "economics");
+  assert.equal(economics.unit, "€ / interval");
+  assert.deepEqual(economics.series.map((item) => item.label), [
+    "Market cashflow",
+    "Operating cost",
+    "Net operating cashflow",
+  ]);
+  assert.deepEqual(
+    economics.series[0].points.map((point) => point.value),
+    [-375, 480, 480],
+  );
+  assert.deepEqual(economics.series[1].points.map((point) => point.value), [25, 16, 16]);
+  assert.deepEqual(economics.series[2].points.map((point) => point.value), [-400, 464, 464]);
 });
 
 test("buildDispatchChartModel rejects timestamp spacing inconsistent with the scenario", () => {

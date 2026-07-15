@@ -356,6 +356,24 @@ details[open] .summary-action::after {
   margin: 0 0 0.8rem;
 }
 
+
+.grid-diagnostics {
+  margin: 0.85rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f7f9fa;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.grid-diagnostics.warning {
+  border-color: #c98a2e;
+  background: #fff8eb;
+  color: #6f4a12;
+}
+
 .series-group {
   margin-top: 1rem;
 }

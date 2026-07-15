@@ -46,3 +46,11 @@ test("selected scenarios can be opened with retained CSV inputs", () => {
   assert.match(appSource, /state\.editorSource/);
   assert.match(appSource, /suggestScenarioCopyName/);
 });
+
+
+test("dispatch economics use cashflow terminology rather than P&L or MTM", () => {
+  assert.doesNotMatch(indexHtml, /P&amp;L|Profit \[€\]/);
+  assert.match(indexHtml, /Cashflow \[€\]/);
+  assert.match(appSource, /not mark-to-market/);
+  assert.match(appSource, /Net operating cashflow \[€\]/);
+});
