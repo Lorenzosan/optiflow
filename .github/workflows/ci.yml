@@ -50,6 +50,12 @@ jobs:
 
           git diff --check "$base" "$GITHUB_SHA"
 
+      - name: Check Docker startup assets
+        run: |
+          sh -n run-docker.sh
+          grep -Fq "docker compose up --build" run-docker.cmd
+          docker compose config --quiet
+
   cpp:
     name: C++ build and tests
     runs-on: ubuntu-24.04

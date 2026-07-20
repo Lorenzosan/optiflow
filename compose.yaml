@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     ports:
-      - "8080:80"
+      - "${OPTIFLOW_WEB_PORT:-8080}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -19,7 +19,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "8000:8000"
+      - "${OPTIFLOW_API_PORT:-8000}:8000"
     environment:
       OPTIFLOW_REPO_ROOT: /app
       OPTIFLOW_DATABASE_URL: postgresql+psycopg://optiflow:optiflow@postgres:5432/optiflow
@@ -44,8 +44,6 @@ services:
       POSTGRES_DB: optiflow
       POSTGRES_USER: optiflow
       POSTGRES_PASSWORD: optiflow
-    ports:
-      - "5432:5432"
     volumes:
       - optiflow-postgres-data:/var/lib/postgresql/data
     healthcheck:

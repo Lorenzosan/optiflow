@@ -19,6 +19,64 @@ The upper reservoir is the storage inventory. Electricity is consumed to pump wa
 * FastAPI orchestration, SQLAlchemy persistence, Alembic migrations, PostgreSQL Docker deployment, and guarded artifact downloads.
 * Dependency-free NGINX frontend with custom-scenario upload and selected-run trader aggregation.
 
+## Run the complete application
+
+Docker is the only host dependency for the complete web application. Docker builds the C++ solver and Python backend inside the API image, serves the frontend through NGINX, and runs PostgreSQL in a separate container. No host installation of CMake, a C++ compiler, Python, Node.js, NGINX, or PostgreSQL is required.
+
+Install Docker Desktop on macOS or Windows. Docker Desktop for Windows must be using Linux containers. On Linux, install Docker Engine and the Docker Compose plugin. Then run from the repository root.
+
+macOS or Linux:
+
+```bash
+./run-docker.sh
+```
+
+Windows Command Prompt or PowerShell:
+
+```text
+.\run-docker.cmd
+```
+
+The scripts verify that Docker and Docker Compose are available, then run `docker compose up --build`. Open `http://localhost:8080`; the API is also exposed at `http://localhost:8000`. Press Ctrl+C to stop the stack.
+
+The same startup command can be run directly on every platform:
+
+```bash
+docker compose up --build
+```
+
+If either default host port is already occupied, choose another before starting.
+
+macOS or Linux:
+
+```bash
+OPTIFLOW_WEB_PORT=8081 OPTIFLOW_API_PORT=8001 ./run-docker.sh
+```
+
+Windows Command Prompt:
+
+```bat
+set OPTIFLOW_WEB_PORT=8081
+set OPTIFLOW_API_PORT=8001
+.\run-docker.cmd
+```
+
+Windows PowerShell:
+
+```powershell
+$env:OPTIFLOW_WEB_PORT = "8081"
+$env:OPTIFLOW_API_PORT = "8001"
+.\run-docker.cmd
+```
+
+Stop and remove the containers without deleting persisted database or scenario data:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down --volumes` only when intentionally resetting the PostgreSQL database, custom scenario inputs, and run artifacts. The launcher scripts do not attempt to install Docker because that requires operating-system installation privileges.
+
 ## Build and test
 
 ```bash
@@ -104,13 +162,21 @@ The default resolutions are `9,3,3,3`, `17,5,5,5`, and `33,9,9,9`, where each tu
 
 This is a discretization sensitivity diagnostic, not a proof of convergence. Profit need not improve monotonically because changes to the state grid also change continuation-value interpolation.
 
-## Web demo
+## Web architecture
 
-```bash
-docker compose up --build
+The local Compose stack keeps the deployment roles separate even though all containers run on one machine:
+
+```text
+Browser
+  -> NGINX web container
+       -> static HTML, CSS, and JavaScript
+       -> /api reverse proxy
+            -> FastAPI API container
+                 -> compiled C++ solver process
+                 -> PostgreSQL container
 ```
 
-Open `http://localhost:8080`. The API remains available on `http://localhost:8000`.
+NGINX is a static-file server and reverse proxy in this deployment; it is not currently balancing multiple API instances. The browser communicates only with NGINX. FastAPI validates and persists requests, launches the solver executable inside the API container, and stores run metadata in PostgreSQL. The containers communicate over the private Compose network.
 
 Endpoints:
 
