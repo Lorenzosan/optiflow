@@ -37,7 +37,7 @@ Windows Command Prompt or PowerShell:
 .\run-docker.cmd
 ```
 
-The scripts verify that Docker and Docker Compose are available, then run `docker compose up --build`. Open `http://localhost:8080`; the API is also exposed at `http://localhost:8000`. Press Ctrl+C to stop the stack.
+The scripts verify that Docker and Docker Compose are available, then run `docker compose up --build`. Open `http://localhost:8080`. The browser frontend communicates with FastAPI only through the NGINX `/api/` proxy; port `8000` is also exposed for direct API inspection during development. Press Ctrl+C to stop the stack.
 
 The same startup command can be run directly on every platform:
 
@@ -77,6 +77,15 @@ docker compose down
 
 Use `docker compose down --volumes` only when intentionally resetting the PostgreSQL database, custom scenario inputs, and run artifacts. The launcher scripts do not attempt to install Docker because that requires operating-system installation privileges.
 
+## Contributor requirements
+
+The Docker quick start above does not require host development tools. Native builds and repository tests use:
+
+* CMake 3.20 or newer.
+* A C++20-capable compiler.
+* Python 3.12 for backend tests and repository tools.
+* Node.js 22 for dependency-free frontend syntax and test checks.
+
 ## Build and test
 
 ```bash
@@ -85,7 +94,7 @@ cmake --build build -j
 ctest --test-dir build --output-on-failure
 ```
 
-The test gate includes core transition/grid/interpolation tests, hand-checkable dispatch behavior, economic oracle cases, CLI validation, the yearly synthetic scenario, dispatch validation, scenario comparison, and resolution analysis.
+The test gate includes core transition/grid/interpolation tests, hand-checkable dispatch behavior, economic oracle cases, CLI validation, the short multistep example, the yearly synthetic scenario, dispatch validation, scenario comparison, and resolution analysis.
 
 GitHub Actions runs the C++ test gate, backend and frontend tests, changed-line whitespace checks, and builds both Docker images for pushes to `main` and pull requests.
 
@@ -143,6 +152,32 @@ python3 tools/compare_scenarios.py \
 ```
 
 The synthetic inputs are intended for smoke tests and interview discussion, not calibrated trading conclusions.
+
+## Multistep inflow-pulse example
+
+`examples/multistep/` is a short, hand-inspectable 12-hour case with three price levels and a three-hour `50 MW hydraulic` natural-inflow pulse. Pumping is disabled so the result isolates storage, turbine, and inflow timing rather than zero-price pumping arbitrage.
+
+The scalar assumptions are deliberately simple:
+
+* Storage range: `0–100 MWh hydraulic`, initially empty.
+* Turbine limit: `25 MW hydraulic`, with `90%` efficiency.
+* Spill limit: `50 MW hydraulic`.
+* Terminal storage: exactly `0 MWh hydraulic`.
+* State spacing and action increments: `25 MWh` and `25 MW hydraulic`, respectively.
+* Modeled operating cost: `0 €/MWh`, so the example isolates market-settlement timing.
+
+Run it directly:
+
+```bash
+./build/apps/solve_cli/optiflow_solve \
+  --scenario examples/multistep/scenario.csv \
+  --prices examples/multistep/prices.csv \
+  --inflows examples/multistep/inflows.csv \
+  --output build/multistep-dispatch.csv \
+  --summary-output build/multistep-summary.json
+```
+
+At the committed resolution, the deterministic result exports `135 MWh electric`, finishes at `0 MWh hydraulic`, and reports `€202.50` cumulative model reward. The solver generates during two inflow intervals to preserve enough storage capacity for the pulse, then prioritizes the later `€2/MWh` block. This is a numerical example, not a calibrated plant or market case.
 
 ## Resolution sensitivity
 

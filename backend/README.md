@@ -6,16 +6,38 @@ The optimizer remains transport-independent under `libs/optimization`; the CLI i
 
 ## Local run
 
+Local backend development requires CMake 3.20 or newer, a C++20 compiler, and Python 3.12. PostgreSQL is optional for this path because the default database URL uses SQLite.
+
+Build the solver, create a virtual environment, and install the bounded dependencies from `backend/requirements-dev.txt`:
+
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 python3 -m venv .venv
+```
+
+Activate the environment on macOS or Linux:
+
+```bash
 . .venv/bin/activate
+```
+
+Or in Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Then run:
+
+```bash
 python -m pip install -r backend/requirements-dev.txt
 python -m alembic upgrade head
 python -m pytest -q backend/tests
-uvicorn backend.app.main:app --reload
+python -m uvicorn backend.app.main:app --reload
 ```
+
+The Docker workflow remains the canonical complete-application deployment because it also provides NGINX and PostgreSQL.
 
 ## Docker
 
@@ -23,7 +45,7 @@ uvicorn backend.app.main:app --reload
 docker compose up --build
 ```
 
-The stack starts PostgreSQL, applies Alembic migrations, seeds the yearly hydro scenarios, starts the API, and serves the frontend through NGINX.
+The stack starts PostgreSQL, applies Alembic migrations, seeds the bundled multistep and yearly scenarios, starts the API, and serves the frontend through NGINX.
 
 ## API
 

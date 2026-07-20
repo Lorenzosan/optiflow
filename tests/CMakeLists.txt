@@ -66,6 +66,14 @@ add_test(NAME optiflow_solve_cli_yearly_example
         -P ${CMAKE_CURRENT_SOURCE_DIR}/check_yearly_example.cmake)
 
 
+add_test(NAME optiflow_solve_cli_multistep_example
+    COMMAND ${CMAKE_COMMAND}
+        -DOPTIFLOW_SOLVE=$<TARGET_FILE:optiflow_solve>
+        -DOPTIFLOW_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -DOPTIFLOW_TEST_OUTPUT_DIR=${PROJECT_BINARY_DIR}/test-output/solve-cli-multistep
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_multistep_example.cmake)
+
+
 if(Python3_Interpreter_FOUND)
     add_test(NAME optiflow_yearly_dispatch_summary
         COMMAND ${CMAKE_COMMAND}

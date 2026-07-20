@@ -5,6 +5,13 @@ from backend.app.models import Scenario
 
 SEEDED_SCENARIOS: tuple[dict[str, str], ...] = (
     {
+        "name": "multistep_inflow_pulse",
+        "description": "Short hourly case with stepped prices and a three-hour 50 MW hydraulic inflow pulse.",
+        "scenario_path": "examples/multistep/scenario.csv",
+        "prices_path": "examples/multistep/prices.csv",
+        "inflows_path": "examples/multistep/inflows.csv",
+    },
+    {
         "name": "synthetic_year",
         "description": "Yearly pumped-storage case with pumping, generation, spill, and terminal inventory requirements.",
         "scenario_path": "examples/yearly/scenario.csv",

@@ -8,7 +8,7 @@ OptiFlow uses a constant-head hydraulic-energy representation. Physical water vo
 * Natural inflow, turbine withdrawal, pump addition, and spill: `MW hydraulic`.
 * Generated, consumed, and net electrical power: `MW electric`.
 * Electricity price and operating cost: `€/MWh`.
-* Reward and cumulative profit: `€`.
+* Market settlement, operating cost, interval reward, and cumulative model reward: `€`.
 * Terminal target penalty: `€/MWh²`.
 
 ## State and controls
@@ -53,12 +53,14 @@ Efficiencies are dimensionless fractions in `(0, 1]`. Hydraulic head is assumed 
 ## Economics
 
 ```text
-revenue = electricity_price * net_power * time_step_hours
+market_settlement = electricity_price * net_power * time_step_hours
 operating_cost = operating_cost_per_mwh
   * (turbine_power + pump_power)
   * time_step_hours
-reward = revenue - operating_cost
+interval_reward = market_settlement - operating_cost
 ```
+
+The reporting layer presents market settlement, modeled operating cost, and net operating cashflow per interval. The persisted `cumulative_profit` field is the cumulative model reward retained for schema compatibility; it is not mark-to-market or accounting P&L. The terminal target penalty affects the Bellman objective but is not included in reported net operating cashflow.
 
 ## Terminal conditions
 
@@ -75,7 +77,7 @@ The Bellman solver evaluates a discrete hydraulic-action grid at every reservoir
 
 For a storage range of width `W` and `N` grid points, spacing is `W / (N - 1)`. The browser editor therefore asks for interval count and writes `intervals + 1` points into the optimizer schema. This avoids the common off-by-one case where entering `100` points over a `0–200` MWh range creates `2.0202` MWh spacing instead of the intended `2` MWh spacing.
 
-A quadratic terminal target can magnify interpolation error. For penalty coefficient `p` and grid spacing `h`, the largest gap between the quadratic terminal value and its linear interpolation within one cell is `p h² / 4`. If that amount is comparable to or larger than interval cashflows, dispatch timing can be dominated by grid alignment. The editor reports this scale and suggests a nearby action-aligned interval count when available.
+A quadratic terminal target can magnify interpolation error. For penalty coefficient `p` and grid spacing `h`, the largest gap between the quadratic terminal value and its linear interpolation within one cell is `p h² / 4`. If that amount is comparable to or larger than interval cashflows, dispatch timing can be dominated by grid alignment. Use nested resolution studies and action-aligned grids to assess this effect; the browser editor intentionally does not present a dynamic resolution diagnostic.
 
 `tools/analyze_resolution.py` creates scenario variants with nested solver grids and reports each result relative to the finest listed case. The comparison is a sensitivity diagnostic. It does not assume that profit increases monotonically, because changing the reservoir grid also changes interpolation error.
 
