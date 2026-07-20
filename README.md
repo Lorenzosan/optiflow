@@ -224,7 +224,20 @@ Endpoints:
 * `GET /runs/{run_id}`
 * `GET /runs/{run_id}/dispatch.csv`
 
-The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run and aggregates its timestamped dispatch into Baseload, Peak, and Off-peak columns. The table reports net operating cashflow—market settlement minus modeled operating cost—not mark-to-market or accounting P&L, and it excludes terminal target penalties. Peak is fixed to Monday–Friday 09:00–20:00 in Europe/Zurich. Dispatch charts show net operating cashflow and operating cost in separate interval panels instead of a cumulative-profit curve; market settlement remains available in the interval tooltip.
+The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run, synchronized dispatch charts, and a trader aggregation table. Dispatch charts show net operating cashflow and operating cost in separate interval panels instead of a cumulative-profit curve; market settlement remains available in the interval tooltip.
+
+### Trader aggregation definitions
+
+The trader table classifies dispatch in `Europe/Zurich` and splits multi-hour optimizer intervals at hourly boundaries before aggregation:
+
+* **Baseload** contains every interval segment in the reporting period.
+* **Peak** contains Monday–Friday segments whose local hour is at least `09:00` and earlier than `20:00`; `20:00` is excluded.
+* **Off-peak** contains every segment that is not Peak.
+* **Average power** is signed net electrical energy divided by the included hours. Generation is positive and pumping consumption is negative.
+* **Energy** is the signed sum of `net_power × segment duration`.
+* **Cashflow** is the sum of interval model reward, prorated when an optimizer interval is split. Model reward is market settlement minus modeled operating cost; it is not mark-to-market or accounting P&L, and it excludes terminal target penalties.
+
+The month containing the first dispatch timestamp and the next eleven calendar months are reported individually. Later dispatch is grouped into calendar quarters.
 
 The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. It derives `time_step_hours` from constant timestamp spacing rather than asking for it separately. Storage-grid resolution is entered as intervals; the generated optimizer CSV stores one more grid point than the displayed interval count. The selected scenario can be opened in the editor. Custom scenarios retain their name and can be replaced after confirmation; bundled examples open under a unique copy name because they remain read-only. Loaded price and inflow series are reused unless replacement files are selected. Replacement deletes that custom scenario's prior runs and dispatch artifacts. Physical water volumes still require plant-specific conversion before optimization.
 

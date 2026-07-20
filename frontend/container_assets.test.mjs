@@ -54,3 +54,10 @@ test("dispatch economics use cashflow terminology rather than P&L or MTM", () =>
   assert.match(appSource, /not mark-to-market/);
   assert.match(appSource, /Net operating cashflow \[€\]/);
 });
+
+
+test("trader caption keeps only the run and cashflow definition", () => {
+  assert.match(appSource, /Run #\$\{run\.id\}\. Cashflow is market settlement minus modeled operating cost/);
+  assert.doesNotMatch(appSource, /Baseload contains all intervals/);
+  assert.doesNotMatch(appSource, /The first 12 calendar months are monthly/);
+});

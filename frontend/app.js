@@ -13,12 +13,7 @@ import {
   buildDispatchChartModel,
   renderDispatchCharts,
 } from "./dispatch_charts.mjs";
-import {
-  PEAK_END_HOUR,
-  PEAK_START_HOUR,
-  TRADER_TIME_ZONE,
-  buildTraderRows,
-} from "./trader.mjs";
+import { buildTraderRows } from "./trader.mjs";
 
 const API_BASE = "/api";
 const PAGE_SIZE = 10;
@@ -723,11 +718,8 @@ async function renderRunDetails(run) {
     renderTraderTable(rows);
     elements.traderMessage.textContent = "";
     elements.traderCaption.textContent =
-      `Run #${run.id}. Baseload contains all intervals. Peak is Monday–Friday `
-      + `${String(PEAK_START_HOUR).padStart(2, "0")}:00–`
-      + `${String(PEAK_END_HOUR).padStart(2, "0")}:00 `
-      + `in ${TRADER_TIME_ZONE}; the end hour is exclusive. `
-      + "Cashflow is market settlement minus modeled operating cost; it is not mark-to-market and excludes terminal target penalties. The first 12 calendar months are monthly, then results are quarterly.";
+      `Run #${run.id}. Cashflow is market settlement minus modeled operating cost; `
+      + "it is not mark-to-market and excludes terminal target penalties.";
   } catch (error) {
     if (requestId !== state.traderRequestId) {
       return;
