@@ -1,3 +1,12 @@
+/**
+ * @file
+ * @brief Browser orchestration for scenarios, optimization runs, and persisted results.
+ *
+ * This module owns the page-level state, communicates with the same-origin FastAPI
+ * service through `/api`, and delegates numerical parsing and chart aggregation to
+ * the smaller frontend modules.
+ */
+
 import {
   SCENARIO_FILE_LIMIT_BYTES,
   SCENARIO_PARAMETER_GROUPS,
@@ -14,10 +23,22 @@ import {
 } from "./dispatch_charts.mjs";
 import { buildTraderRows } from "./trader.mjs";
 
+/**
+ * @brief Same-origin prefix used for every backend request.
+ */
 const API_BASE = "/api";
+/**
+ * @brief Number of optimization runs requested per history page.
+ */
 const PAGE_SIZE = 10;
+/**
+ * @brief Run statuses that receive dedicated status-chip styling.
+ */
 const ALLOWED_STATUSES = new Set(["pending", "running", "succeeded", "failed"]);
 
+/**
+ * @brief Mutable browser state shared by event handlers and render functions.
+ */
 const state = {
   scenarios: [],
   runs: [],
@@ -28,6 +49,9 @@ const state = {
   editorSource: null,
 };
 
+/**
+ * @brief Cached DOM elements used by the page controller.
+ */
 const elements = {
   runForm: document.querySelector("#run-form"),
   scenarioSelect: document.querySelector("#scenario-select"),
@@ -68,7 +92,15 @@ const elements = {
   downloadLink: document.querySelector("#download-link"),
 };
 
+/**
+ * @brief HTTP error carrying the response status returned by FastAPI.
+ */
 class ApiError extends Error {
+  /**
+   * @brief Constructs an API error.
+   * @param message Human-readable response error.
+   * @param status HTTP status code.
+   */
   constructor(message, status) {
     super(message);
     this.name = "ApiError";
@@ -76,6 +108,13 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * @brief Sends a request to the OptiFlow API and parses its response.
+ * @param path Path relative to the `/api` prefix.
+ * @param options Optional Fetch API request options.
+ * @return A promise resolving to the decoded JSON value or response text.
+ * @throws ApiError when the response status is not successful.
+ */
 async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -97,6 +136,11 @@ async function apiRequest(path, options = {}) {
   return payload;
 }
 
+/**
+ * @brief Normalizes text and FastAPI error payloads into one display message.
+ * @param payload Decoded response body.
+ * @return A user-facing error string.
+ */
 function extractErrorMessage(payload) {
   if (typeof payload === "string" && payload.trim()) {
     return payload.trim();
@@ -120,17 +164,32 @@ function extractErrorMessage(payload) {
   return "The API request failed.";
 }
 
+/**
+ * @brief Updates the page-level operation status message.
+ * @param message Message to display.
+ * @param isError Whether to apply error styling.
+ */
 function setOperationMessage(message, isError = false) {
   elements.operationMessage.textContent = message;
   elements.operationMessage.classList.toggle("error", isError);
 }
 
+/**
+ * @brief Updates the custom-scenario editor status message.
+ * @param message Message to display.
+ * @param isError Whether to apply error styling.
+ */
 function setScenarioMessage(message, isError = false) {
   elements.scenarioSaveMessage.textContent = message;
   elements.scenarioSaveMessage.classList.toggle("error", isError);
   elements.scenarioSaveMessage.classList.toggle("success", Boolean(message) && !isError);
 }
 
+/**
+ * @brief Formats an API timestamp for the browser locale.
+ * @param value ISO timestamp, with naive values interpreted as UTC.
+ * @return A localized date-time string or an em dash when absent.
+ */
 function formatDate(value) {
   if (!value) {
     return "—";
@@ -145,6 +204,11 @@ function formatDate(value) {
       }).format(date);
 }
 
+/**
+ * @brief Formats the combined solve and simulation duration.
+ * @param summary Persisted run summary or null.
+ * @return A duration in seconds or an em dash.
+ */
 function formatRuntime(summary) {
   if (!summary) {
     return "—";
@@ -152,6 +216,13 @@ function formatRuntime(summary) {
   return `${formatNumber(summary.solve_seconds + summary.simulation_seconds, 3)} s`;
 }
 
+/**
+ * @brief Creates one option for a scenario or filter selector.
+ * @param value Option value.
+ * @param label Visible option label.
+ * @param disabled Whether the option is unavailable.
+ * @return The configured option element.
+ */
 function createOption(value, label, disabled = false) {
   const option = document.createElement("option");
   option.value = String(value);
@@ -160,6 +231,10 @@ function createOption(value, label, disabled = false) {
   return option;
 }
 
+/**
+ * @brief Rebuilds scenario selectors while preserving valid selections.
+ * @param preferredScenarioId Scenario to select after a refresh, when supplied.
+ */
 function renderScenarioControls(preferredScenarioId = null) {
   const selectedScenarioId = preferredScenarioId ?? (Number(elements.scenarioSelect.value) || null);
   const filteredScenarioId = Number(elements.filterScenario.value) || null;
@@ -187,6 +262,9 @@ function renderScenarioControls(preferredScenarioId = null) {
   updateScenarioDescription();
 }
 
+/**
+ * @brief Synchronizes scenario description and action-button availability.
+ */
 function updateScenarioDescription() {
   const selectedId = Number(elements.scenarioSelect.value);
   const scenario = state.scenarios.find((item) => item.id === selectedId);
@@ -197,6 +275,11 @@ function updateScenarioDescription() {
   elements.editScenarioButton.disabled = !scenario || !scenario.available;
 }
 
+/**
+ * @brief Loads scenario metadata and refreshes scenario controls.
+ * @param selectedScenarioId Scenario to select after loading.
+ * @return A promise that settles after the controls are updated.
+ */
 async function loadScenarios({ selectedScenarioId = null } = {}) {
   try {
     state.scenarios = await apiRequest("/scenarios");
@@ -209,6 +292,11 @@ async function loadScenarios({ selectedScenarioId = null } = {}) {
   }
 }
 
+/**
+ * @brief Builds one numeric editor control from a scenario field definition.
+ * @param field Field metadata exported by `scenario.mjs`.
+ * @return A wrapper containing the label, input, and optional help text.
+ */
 function createParameterInput(field) {
   const wrapper = document.createElement("div");
   wrapper.className = "form-field parameter-field";
@@ -242,6 +330,9 @@ function createParameterInput(field) {
   return wrapper;
 }
 
+/**
+ * @brief Builds all grouped scalar scenario controls.
+ */
 function renderScenarioFields() {
   const groups = SCENARIO_PARAMETER_GROUPS.map((group) => {
     const fieldset = document.createElement("fieldset");
@@ -268,6 +359,12 @@ function renderScenarioFields() {
   elements.scenarioFields.replaceChildren(...groups);
 }
 
+/**
+ * @brief Checks a selected series file before reading its contents.
+ * @param file Browser File object.
+ * @param label Human-readable series name.
+ * @throws Error when the extension or size is invalid.
+ */
 function validateSeriesFile(file, label) {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     throw new Error(`${label} must be a .csv file.`);
@@ -277,6 +374,15 @@ function validateSeriesFile(file, label) {
   }
 }
 
+/**
+ * @brief Reads a newly selected series or reuses the editor-loaded text.
+ * @param input File input element.
+ * @param label Human-readable series name.
+ * @param sourceKey Key in the retained editor source.
+ * @param filename Synthetic filename used when reusing retained text.
+ * @return A promise resolving to the File, text, and retained-source flag.
+ * @throws Error when neither source is available.
+ */
 async function readSeriesInput(input, label, sourceKey, filename) {
   const selected = input.files?.[0];
   if (selected) {
@@ -293,6 +399,10 @@ async function readSeriesInput(input, label, sourceKey, filename) {
   throw new Error(`${label} CSV is required.`);
 }
 
+/**
+ * @brief Reads and jointly validates the selected price and inflow series.
+ * @return A promise resolving to both files, their text, source flags, and validation summary.
+ */
 async function validateSelectedSeries() {
   const [prices, inflows] = await Promise.all([
     readSeriesInput(elements.pricesFile, "Prices", "pricesText", "prices.csv"),
@@ -310,10 +420,19 @@ async function validateSelectedSeries() {
   };
 }
 
+/**
+ * @brief Checks whether a series is available from a file input or retained source.
+ * @param input File input element.
+ * @param sourceKey Key in the retained editor source.
+ * @return True when a series source is available.
+ */
 function hasSeriesInput(input, sourceKey) {
   return Boolean(input.files?.[0]) || state.editorSource?.[sourceKey] !== undefined;
 }
 
+/**
+ * @brief Validates available series and renders their horizon summary.
+ */
 async function updateSeriesPreview() {
   if (!hasSeriesInput(elements.pricesFile, "pricesText")
       || !hasSeriesInput(elements.inflowsFile, "inflowsText")) {
@@ -337,6 +456,10 @@ async function updateSeriesPreview() {
   }
 }
 
+/**
+ * @brief Writes parsed scalar scenario values into the editor inputs.
+ * @param values Map of editor field keys to values.
+ */
 function setScenarioFieldValues(values) {
   for (const group of SCENARIO_PARAMETER_GROUPS) {
     for (const field of group.fields) {
@@ -348,6 +471,10 @@ function setScenarioFieldValues(values) {
   }
 }
 
+/**
+ * @brief Loads the selected scenario inputs and hydrates the custom editor.
+ * @return A promise that settles after editor hydration or error display.
+ */
 async function openSelectedScenarioInEditor() {
   const scenarioId = Number(elements.scenarioSelect.value);
   const selectedScenario = state.scenarios.find((scenario) => scenario.id === scenarioId);
@@ -369,6 +496,7 @@ async function openSelectedScenarioInEditor() {
     }
 
     elements.scenarioForm.reset();
+    // Retain uploaded text so subsequent edits do not require reselecting files.
     state.editorSource = {
       scenarioId: inputs.id,
       sourceName: inputs.name,
@@ -402,6 +530,11 @@ async function openSelectedScenarioInEditor() {
   }
 }
 
+/**
+ * @brief Validates and uploads a new or replacement custom scenario.
+ * @param event Scenario form submission event.
+ * @return A promise that settles after upload and UI refresh.
+ */
 async function createScenario(event) {
   event.preventDefault();
   setScenarioMessage("");
@@ -473,6 +606,10 @@ async function createScenario(event) {
   }
 }
 
+/**
+ * @brief Builds the bounded run-history query from pagination and filters.
+ * @return A URL-encoded query string.
+ */
 function buildRunQuery() {
   const params = new URLSearchParams({
     limit: String(PAGE_SIZE),
@@ -487,6 +624,11 @@ function buildRunQuery() {
   return params.toString();
 }
 
+/**
+ * @brief Loads one page of run history and refreshes the selected result.
+ * @param selectFirst Whether to select the newest successful run when possible.
+ * @return A promise that settles after rendering.
+ */
 async function loadRuns({ selectFirst = false } = {}) {
   elements.refreshButton.disabled = true;
   try {
@@ -514,6 +656,10 @@ async function loadRuns({ selectFirst = false } = {}) {
   }
 }
 
+/**
+ * @brief Replaces the run-history body with a single status row.
+ * @param message Message shown across all table columns.
+ */
 function renderTableMessage(message) {
   const row = document.createElement("tr");
   const cell = document.createElement("td");
@@ -524,6 +670,9 @@ function renderTableMessage(message) {
   elements.runsBody.replaceChildren(row);
 }
 
+/**
+ * @brief Renders the current run-history page.
+ */
 function renderRunTable() {
   if (state.runs.length === 0) {
     renderTableMessage("No runs match the current filters.");
@@ -589,6 +738,11 @@ function renderRunTable() {
   elements.runsBody.replaceChildren(...rows);
 }
 
+/**
+ * @brief Creates a styled run-status element.
+ * @param status Backend run status.
+ * @return The configured status element.
+ */
 function createStatusChip(status) {
   const chip = document.createElement("span");
   chip.className = "status-chip";
@@ -599,6 +753,11 @@ function createStatusChip(status) {
   return chip;
 }
 
+/**
+ * @brief Updates an existing run-status element.
+ * @param chip Status element to update.
+ * @param status Backend run status.
+ */
 function updateStatusChip(chip, status) {
   chip.className = "status-chip";
   if (ALLOWED_STATUSES.has(status)) {
@@ -607,6 +766,10 @@ function updateStatusChip(chip, status) {
   chip.textContent = status;
 }
 
+/**
+ * @brief Updates run-history range text and pagination controls.
+ * @param page Paginated API response.
+ */
 function renderPagination(page) {
   const first = page.total === 0 ? 0 : page.offset + 1;
   const last = Math.min(page.offset + page.items.length, page.total);
@@ -615,6 +778,10 @@ function renderPagination(page) {
   elements.nextButton.disabled = page.offset + page.limit >= page.total;
 }
 
+/**
+ * @brief Clears chart content and optionally shows a status message.
+ * @param message Loading, unavailable, or error message.
+ */
 function clearDispatchCharts(message = "") {
   elements.dispatchCharts.replaceChildren();
   elements.dispatchCharts.hidden = true;
@@ -622,12 +789,19 @@ function clearDispatchCharts(message = "") {
   elements.dispatchChartsMessage.classList.remove("error");
 }
 
+/**
+ * @brief Clears trader aggregation rows and optionally shows a status message.
+ * @param message Loading, unavailable, or error message.
+ */
 function clearTraderView(message = "") {
   elements.traderBody.replaceChildren();
   elements.traderMessage.textContent = message;
   elements.traderMessage.classList.remove("error");
 }
 
+/**
+ * @brief Resets the selected-run panel and invalidates pending dispatch requests.
+ */
 function clearRunDetails() {
   state.selectedRunId = null;
   state.traderRequestId += 1;
@@ -637,6 +811,10 @@ function clearRunDetails() {
   clearTraderView();
 }
 
+/**
+ * @brief Renders period-level Baseload, Peak, and Off-peak aggregates.
+ * @param rows Trader rows produced by `buildTraderRows`.
+ */
 function renderTraderTable(rows) {
   const tableRows = rows.map((item) => {
     const row = document.createElement("tr");
@@ -665,6 +843,11 @@ function renderTraderTable(rows) {
   elements.traderBody.replaceChildren(...tableRows);
 }
 
+/**
+ * @brief Renders one run and loads its dispatch artifact when available.
+ * @param run Run detail returned by the backend.
+ * @return A promise that settles after charts and trader rows are rendered.
+ */
 async function renderRunDetails(run) {
   state.selectedRunId = run.id;
   elements.detailsEmpty.hidden = true;
@@ -685,6 +868,7 @@ async function renderRunDetails(run) {
     ? `${API_BASE}/runs/${run.id}/dispatch.csv`
     : "#";
 
+  // Ignore dispatch responses that arrive after the user selects another run.
   const requestId = ++state.traderRequestId;
   if (!canDownload) {
     clearDispatchCharts("Dispatch charts are available only for succeeded runs with a dispatch artifact.");
@@ -724,6 +908,10 @@ async function renderRunDetails(run) {
   }
 }
 
+/**
+ * @brief Renders persisted optimization summary metrics.
+ * @param summary Run summary or null.
+ */
 function renderSummary(summary) {
   if (!summary) {
     const card = createSummaryCard("Summary", "Not available");
@@ -749,6 +937,12 @@ function renderSummary(summary) {
   );
 }
 
+/**
+ * @brief Creates one metric card for the selected-run summary.
+ * @param label Metric label including units.
+ * @param value Formatted metric value.
+ * @return The configured summary-card element.
+ */
 function createSummaryCard(label, value) {
   const card = document.createElement("div");
   card.className = "summary-card";
@@ -762,6 +956,11 @@ function createSummaryCard(label, value) {
   return card;
 }
 
+/**
+ * @brief Submits an optimization run for the selected scenario.
+ * @param event Run form submission event.
+ * @return A promise that settles after the run and history views are refreshed.
+ */
 async function createRun(event) {
   event.preventDefault();
   const scenarioId = Number(elements.scenarioSelect.value);
@@ -790,6 +989,9 @@ async function createRun(event) {
   }
 }
 
+/**
+ * @brief Resets pagination and reloads the first run-history page.
+ */
 function resetAndLoadRuns() {
   state.offset = 0;
   clearRunDetails();

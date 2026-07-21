@@ -12,6 +12,18 @@ Dispatch is classified in `Europe/Zurich`. Multi-hour optimizer intervals are sp
 
 Cashflow is the sum of interval model reward, prorated when an optimizer interval is split. Model reward is market settlement minus modeled operating cost; it is not mark-to-market or accounting P&L, and it excludes terminal target penalties. The month containing the first dispatch timestamp and the next eleven calendar months are reported individually; later dispatch is grouped into calendar quarters.
 
+## Source documentation
+
+Production JavaScript modules use Doxygen-compatible Javadoc blocks. Public functions and nontrivial private helpers document their contracts; inline comments are reserved for state synchronization, unit conversion, time segmentation, and numerical edge cases rather than restating obvious statements. Test names serve as the documentation for test bodies.
+
+The root `Doxyfile` maps both `.js` and `.mjs` to Doxygen's JavaScript parser and includes the production frontend modules alongside the C++ public headers. Generate the combined documentation from the repository root:
+
+```bash
+doxygen Doxyfile
+```
+
+The generated HTML entry point is `docs/html/index.html`.
+
 Run frontend checks from the repository root:
 
 ```bash

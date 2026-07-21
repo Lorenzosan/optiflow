@@ -5,6 +5,14 @@ import test from "node:test";
 const appSource = readFileSync(new URL("./app.js", import.meta.url), "utf8");
 const dockerfile = readFileSync(new URL("./Dockerfile", import.meta.url), "utf8");
 const indexHtml = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+const doxyfile = readFileSync(new URL("../Doxyfile", import.meta.url), "utf8");
+const documentedFrontendModules = [
+  "app.js",
+  "scenario.mjs",
+  "number_format.mjs",
+  "trader.mjs",
+  "dispatch_charts.mjs",
+];
 
 function importedLocalModules(source) {
   return [...source.matchAll(/from\s+["']\.\/([^"']+)["']/g)].map((match) => match[1]);
@@ -60,4 +68,15 @@ test("successful result views omit explanatory captions", () => {
   assert.doesNotMatch(appSource, /Cashflow is market settlement minus modeled operating cost/);
   assert.doesNotMatch(appSource, /Times are shown in/);
   assert.doesNotMatch(appSource, /Hydraulic inflow and controls are positive/);
+});
+
+
+test("Doxygen indexes documented production frontend modules", () => {
+  assert.match(doxyfile, /mjs=JavaScript/);
+  for (const moduleName of documentedFrontendModules) {
+    assert.match(doxyfile, new RegExp(`frontend/${moduleName.replace(".", "\\.")}`));
+    const source = readFileSync(new URL(`./${moduleName}`, import.meta.url), "utf8");
+    assert.match(source, /@file/);
+    assert.match(source, /@brief/);
+  }
 });

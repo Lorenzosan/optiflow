@@ -1,12 +1,31 @@
+/**
+ * @file
+ * @brief Parsing, modeling, navigation, and SVG rendering for dispatch charts.
+ *
+ * The renderer is dependency-free. It maintains one synchronized time domain for
+ * all panels and keeps interval-valued series as steps while storage is drawn as a
+ * state trajectory including the terminal endpoint.
+ */
+
 import { formatNumber } from "./number_format.mjs";
 
+/** Milliseconds per hour used for interval and axis calculations. */
 const HOUR_MILLISECONDS = 3_600_000;
+/** Namespace URI required when creating SVG DOM elements. */
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+/** Canonical whole-second UTC timestamp accepted from dispatch artifacts. */
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+/** Sequence used to keep generated SVG clip-path identifiers unique. */
 let chartRenderSequence = 0;
 
+/**
+ * @brief Civil time zone used for chart axes, ranges, and tooltips.
+ */
 export const DISPATCH_CHART_TIME_ZONE = "Europe/Zurich";
 
+/**
+ * @brief Dispatch artifact columns required to construct every chart panel.
+ */
 const REQUIRED_COLUMNS = Object.freeze([
   "time_index",
   "timestamp_utc",
@@ -22,18 +41,39 @@ const REQUIRED_COLUMNS = Object.freeze([
   "cumulative_profit",
 ]);
 
+/**
+ * @brief Throws a chart-data error when a required condition is false.
+ * @param condition Condition to enforce.
+ * @param message Error message.
+ * @throws Error when the condition is false.
+ */
 function requireCondition(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
 }
 
+/**
+ * @brief Parses a finite numeric dispatch cell.
+ * @param value CSV cell text.
+ * @param label Column name used in errors.
+ * @param rowNumber One-based CSV row number.
+ * @return The parsed number.
+ * @throws Error when the value is not finite.
+ */
 function parseFinite(value, label, rowNumber) {
   const parsed = Number(value);
   requireCondition(Number.isFinite(parsed), `Dispatch row ${rowNumber} has an invalid ${label}.`);
   return parsed;
 }
 
+/**
+ * @brief Parses one canonical UTC dispatch timestamp.
+ * @param value Timestamp text.
+ * @param rowNumber One-based CSV row number.
+ * @return Epoch milliseconds.
+ * @throws Error when the timestamp is invalid.
+ */
 function parseTimestampUtc(value, rowNumber) {
   requireCondition(
     UTC_TIMESTAMP_PATTERN.test(value),
@@ -47,6 +87,12 @@ function parseTimestampUtc(value, rowNumber) {
   return milliseconds;
 }
 
+/**
+ * @brief Converts a positive whole-second time step from hours to milliseconds.
+ * @param timeStepHours Scenario interval duration in hours.
+ * @return Interval duration in milliseconds.
+ * @throws Error when the duration is invalid.
+ */
 function intervalMilliseconds(timeStepHours) {
   const parsed = Number(timeStepHours);
   requireCondition(Number.isFinite(parsed) && parsed > 0, "Scenario time step is invalid.");
@@ -59,6 +105,13 @@ function intervalMilliseconds(timeStepHours) {
   return roundedSeconds * 1000;
 }
 
+/**
+ * @brief Parses and validates the dispatch fields required by the chart model.
+ * @param text Dispatch CSV text.
+ * @param timeStepHours Scenario interval duration in hours.
+ * @return Immutable dispatch rows and interval duration.
+ * @throws Error when headers, rows, or spacing are invalid.
+ */
 function parseDispatchRows(text, timeStepHours) {
   const lines = String(text).split(/\r?\n/);
   const header = (lines.shift() ?? "").split(",").map((item) => item.trim());
@@ -101,6 +154,7 @@ function parseDispatchRows(text, timeStepHours) {
     const netOperatingCashflow = parseFinite(columns[positions.reward], "reward", rowNumber);
     const intervalHours = stepMilliseconds / HOUR_MILLISECONDS;
     const marketCashflow = price * netPower * intervalHours;
+    // The solver artifact stores net reward; recover modeled cost for its own panel.
     const rawOperatingCost = marketCashflow - netOperatingCashflow;
     const operatingCost = Math.abs(rawOperatingCost) <= 1e-9 ? 0 : rawOperatingCost;
     rows.push(Object.freeze({
@@ -137,6 +191,13 @@ function parseDispatchRows(text, timeStepHours) {
   return { rows: Object.freeze(rows), stepMilliseconds };
 }
 
+/**
+ * @brief Builds points for an interval-valued step series including its right endpoint.
+ * @param rows Parsed dispatch rows.
+ * @param valueForRow Selector returning the plotted value.
+ * @param stepMilliseconds Interval duration in milliseconds.
+ * @return An immutable point sequence.
+ */
 function stepPoints(rows, valueForRow, stepMilliseconds) {
   const points = rows.map((row) => Object.freeze({
     timestampMilliseconds: row.timestampMilliseconds,
@@ -149,6 +210,12 @@ function stepPoints(rows, valueForRow, stepMilliseconds) {
   return Object.freeze(points);
 }
 
+/**
+ * @brief Builds points for a state-valued line series.
+ * @param rows Parsed dispatch rows.
+ * @param valueForRow Selector returning the plotted value.
+ * @return An immutable point sequence.
+ */
 function linePoints(rows, valueForRow) {
   return Object.freeze(rows.map((row) => Object.freeze({
     timestampMilliseconds: row.timestampMilliseconds,
@@ -156,6 +223,11 @@ function linePoints(rows, valueForRow) {
   })));
 }
 
+/**
+ * @brief Derives a human-readable operating mode for the tooltip.
+ * @param row Parsed dispatch row.
+ * @return Idle or a combined generating, pumping, and spilling label.
+ */
 function operatingMode(row) {
   const modes = [];
   if (row.turbineFlow > 0) {
@@ -175,10 +247,25 @@ function operatingMode(row) {
     : mode).join(" + ");
 }
 
+/**
+ * @brief Creates an immutable chart-series descriptor.
+ * @param key Stable series identifier.
+ * @param label Legend and tooltip label.
+ * @param points Timestamped values.
+ * @param className CSS class controlling line appearance.
+ * @return A frozen series descriptor.
+ */
 function series(key, label, points, className) {
   return Object.freeze({ key, label, points, className });
 }
 
+/**
+ * @brief Builds the complete immutable multi-panel chart model.
+ * @param dispatchText Dispatch CSV text.
+ * @param timeStepHours Scenario interval duration in hours.
+ * @return Parsed rows, global time bounds, and panel descriptors.
+ * @throws Error when the artifact is invalid.
+ */
 export function buildDispatchChartModel(dispatchText, timeStepHours) {
   const { rows, stepMilliseconds } = parseDispatchRows(dispatchText, timeStepHours);
   const startMilliseconds = rows[0].timestampMilliseconds;
@@ -327,6 +414,11 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
   });
 }
 
+/**
+ * @brief Computes a padded y-axis extent while preserving meaningful signs.
+ * @param panel Panel descriptor with series and zero-inclusion policy.
+ * @return Minimum and maximum y-axis values.
+ */
 export function extentForPanel(panel) {
   const values = panel.series.flatMap((item) => item.points.map((point) => point.value));
   let minimum = Math.min(...values);
@@ -377,12 +469,30 @@ export function extentForPanel(panel) {
   return { minimum, maximum };
 }
 
+/**
+ * @brief Creates a linear numeric mapping between domain and range intervals.
+ * @param domainMinimum Lower input bound.
+ * @param domainMaximum Upper input bound.
+ * @param rangeMinimum Lower output bound.
+ * @param rangeMaximum Upper output bound.
+ * @return A function mapping domain values into the range.
+ */
 function linearScale(domainMinimum, domainMaximum, rangeMinimum, rangeMaximum) {
   const domainSpan = domainMaximum - domainMinimum;
   return (value) => rangeMinimum
     + ((value - domainMinimum) / domainSpan) * (rangeMaximum - rangeMinimum);
 }
 
+/**
+ * @brief Clamps a requested chart time window to full bounds and minimum span.
+ * @param startMilliseconds Requested start time.
+ * @param endMilliseconds Requested end time.
+ * @param fullStartMilliseconds Earliest available time.
+ * @param fullEndMilliseconds Latest available time.
+ * @param minimumSpanMilliseconds Smallest permitted visible duration.
+ * @return A frozen valid start and end window.
+ * @throws Error when bounds or spans are invalid.
+ */
 export function clampTimeDomain(
   startMilliseconds,
   endMilliseconds,
@@ -423,6 +533,17 @@ export function clampTimeDomain(
   return Object.freeze({ startMilliseconds: start, endMilliseconds: end });
 }
 
+/**
+ * @brief Zooms a time window around an anchor while respecting chart bounds.
+ * @param startMilliseconds Current visible start.
+ * @param endMilliseconds Current visible end.
+ * @param anchorMilliseconds Time that should remain under the pointer.
+ * @param factor Scale factor below one to zoom in and above one to zoom out.
+ * @param fullStartMilliseconds Earliest available time.
+ * @param fullEndMilliseconds Latest available time.
+ * @param minimumSpanMilliseconds Smallest permitted visible duration.
+ * @return The clamped zoomed time window.
+ */
 export function zoomTimeDomain(
   startMilliseconds,
   endMilliseconds,
@@ -449,6 +570,15 @@ export function zoomTimeDomain(
   );
 }
 
+/**
+ * @brief Translates a time window while preserving its duration.
+ * @param startMilliseconds Current visible start.
+ * @param endMilliseconds Current visible end.
+ * @param deltaMilliseconds Requested time translation.
+ * @param fullStartMilliseconds Earliest available time.
+ * @param fullEndMilliseconds Latest available time.
+ * @return The clamped translated time window.
+ */
 export function panTimeDomain(
   startMilliseconds,
   endMilliseconds,
@@ -466,6 +596,15 @@ export function panTimeDomain(
   );
 }
 
+/**
+ * @brief Builds an SVG path for line or step interpolation.
+ * @param points Timestamped numeric points.
+ * @param interpolation Either `line` or `step`.
+ * @param xScale Timestamp-to-x mapping.
+ * @param yScale Value-to-y mapping.
+ * @return SVG path data.
+ * @throws Error when the point sequence is empty.
+ */
 export function buildSeriesPath(points, interpolation, xScale, yScale) {
   requireCondition(points.length > 0, "A chart series must contain at least one point.");
   const first = points[0];
@@ -482,6 +621,12 @@ export function buildSeriesPath(points, interpolation, xScale, yScale) {
   return commands.join(" ");
 }
 
+/**
+ * @brief Creates an SVG element and assigns stringified attributes.
+ * @param name SVG element name.
+ * @param attributes Attribute map.
+ * @return The configured SVG element.
+ */
 function svgElement(name, attributes = {}) {
   const element = document.createElementNS(SVG_NAMESPACE, name);
   for (const [key, value] of Object.entries(attributes)) {
@@ -490,22 +635,45 @@ function svgElement(name, attributes = {}) {
   return element;
 }
 
+/**
+ * @brief Creates an SVG text element.
+ * @param text Visible text.
+ * @param attributes Attribute map.
+ * @return The configured SVG text element.
+ */
 function svgText(text, attributes = {}) {
   const element = svgElement("text", attributes);
   element.textContent = text;
   return element;
 }
 
+/**
+ * @brief Formats a y-axis value with magnitude-dependent precision.
+ * @param value Axis value.
+ * @return Localized tick text.
+ */
 function formatAxisNumber(value) {
   const absolute = Math.abs(value);
   const maximumFractionDigits = absolute >= 100 ? 0 : absolute >= 10 ? 1 : 2;
   return formatNumber(value, maximumFractionDigits);
 }
 
+/**
+ * @brief Formats a tooltip value with bounded precision.
+ * @param value Tooltip value.
+ * @param maximumFractionDigits Maximum decimal places.
+ * @return Localized numeric text.
+ */
 function formatTooltipNumber(value, maximumFractionDigits = 2) {
   return formatNumber(value, maximumFractionDigits);
 }
 
+/**
+ * @brief Chooses an axis date format appropriate to the visible duration.
+ * @param startMilliseconds Visible start time.
+ * @param endMilliseconds Visible end time.
+ * @return A Zurich-configured date-time formatter.
+ */
 function timeFormatter(startMilliseconds, endMilliseconds) {
   const durationDays = (endMilliseconds - startMilliseconds) / (24 * HOUR_MILLISECONDS);
   const options = durationDays > 370
@@ -523,6 +691,10 @@ function timeFormatter(startMilliseconds, endMilliseconds) {
   return new Intl.DateTimeFormat(undefined, options);
 }
 
+/**
+ * @brief Creates the detailed Zurich timestamp formatter used by tooltips.
+ * @return A date-time formatter.
+ */
 function tooltipTimeFormatter() {
   return new Intl.DateTimeFormat(undefined, {
     timeZone: DISPATCH_CHART_TIME_ZONE,
@@ -531,6 +703,12 @@ function tooltipTimeFormatter() {
   });
 }
 
+/**
+ * @brief Appends one label/value row to the chart tooltip.
+ * @param tooltip Tooltip container.
+ * @param label Metric label.
+ * @param value Formatted metric value.
+ */
 function appendTooltipLine(tooltip, label, value) {
   const line = document.createElement("div");
   const labelElement = document.createElement("span");
@@ -541,6 +719,13 @@ function appendTooltipLine(tooltip, label, value) {
   tooltip.append(line);
 }
 
+/**
+ * @brief Selects an interval or the terminal state for a hover timestamp.
+ * @param model Dispatch chart model.
+ * @param timestampMilliseconds Hovered time.
+ * @return An interval-row or terminal-state selection.
+ * @throws Error when the timestamp is not finite.
+ */
 export function tooltipSelectionAtTimestamp(model, timestampMilliseconds) {
   requireCondition(Number.isFinite(timestampMilliseconds), "Tooltip timestamp must be finite.");
   if (timestampMilliseconds >= model.endMilliseconds) {
@@ -557,6 +742,12 @@ export function tooltipSelectionAtTimestamp(model, timestampMilliseconds) {
   return Object.freeze({ kind: "interval", row: model.rows[rowIndex] });
 }
 
+/**
+ * @brief Renders synchronized SVG panels and interactive navigation controls.
+ * @param container DOM container that receives the toolbar, stage, and tooltip.
+ * @param model Chart model returned by `buildDispatchChartModel`.
+ * @throws Error when the container is absent.
+ */
 export function renderDispatchCharts(container, model) {
   requireCondition(container, "A chart container is required.");
   container.replaceChildren();
@@ -608,6 +799,12 @@ export function renderDispatchCharts(container, model) {
   rangeOutput.className = "dispatch-chart-range";
   rangeOutput.setAttribute("aria-live", "polite");
 
+/**
+ * @brief Creates one chart navigation button.
+ * @param label Visible button text.
+ * @param accessibleLabel Accessible label and tooltip.
+ * @return The configured button.
+ */
   function chartButton(label, accessibleLabel) {
     const button = document.createElement("button");
     button.type = "button";
@@ -696,6 +893,7 @@ export function renderDispatchCharts(container, model) {
       }));
     }
 
+    // Clip each transformed series so synchronized pan and zoom cannot leave its panel.
     const clipId = `dispatch-chart-clip-${renderId}-${layoutIndex}`;
     const clipPath = svgElement("clipPath", { id: clipId });
     clipPath.append(svgElement("rect", {
@@ -769,6 +967,10 @@ export function renderDispatchCharts(container, model) {
     timeStyle: "short",
   });
 
+/**
+ * @brief Creates the x scale for the current synchronized time domain.
+ * @return A timestamp-to-x mapping.
+ */
   function visibleXScale() {
     return linearScale(
       currentDomain.startMilliseconds,
@@ -778,16 +980,28 @@ export function renderDispatchCharts(container, model) {
     );
   }
 
+/**
+ * @brief Hides the hover line and tooltip.
+ */
   function hideTooltip() {
     hoverLine.setAttribute("visibility", "hidden");
     tooltip.hidden = true;
   }
 
+/**
+ * @brief Checks whether two time windows have identical bounds.
+ * @param first First domain.
+ * @param second Second domain.
+ * @return True when both bounds match.
+ */
   function domainsEqual(first, second) {
     return first.startMilliseconds === second.startMilliseconds
       && first.endMilliseconds === second.endMilliseconds;
   }
 
+/**
+ * @brief Rebuilds time-axis ticks for the current domain.
+ */
   function updateXAxis() {
     xAxisGroup.replaceChildren();
     const xFormatter = timeFormatter(
@@ -817,6 +1031,10 @@ export function renderDispatchCharts(container, model) {
     }
   }
 
+/**
+ * @brief Applies a synchronized domain to every panel and updates controls.
+ * @param nextDomain Clamped visible time window.
+ */
   function updateDomain(nextDomain) {
     currentDomain = nextDomain;
     const visibleSpan = currentDomain.endMilliseconds - currentDomain.startMilliseconds;
@@ -838,6 +1056,11 @@ export function renderDispatchCharts(container, model) {
     hideTooltip();
   }
 
+/**
+ * @brief Applies an anchored zoom operation.
+ * @param anchorMilliseconds Time to preserve under the pointer.
+ * @param factor Zoom scale factor.
+ */
   function zoomAround(anchorMilliseconds, factor) {
     updateDomain(zoomTimeDomain(
       currentDomain.startMilliseconds,
@@ -850,6 +1073,9 @@ export function renderDispatchCharts(container, model) {
     ));
   }
 
+/**
+ * @brief Restores the full dispatch horizon.
+ */
   function resetZoom() {
     updateDomain(Object.freeze({
       startMilliseconds: model.startMilliseconds,
@@ -857,6 +1083,11 @@ export function renderDispatchCharts(container, model) {
     }));
   }
 
+/**
+ * @brief Maps a pointer position to the current visible timestamp.
+ * @param event Pointer or wheel event.
+ * @return Hovered epoch milliseconds.
+ */
   function timestampAtPointer(event) {
     const bounds = svg.getBoundingClientRect();
     const viewX = ((event.clientX - bounds.left) / bounds.width) * viewWidth;
@@ -866,6 +1097,10 @@ export function renderDispatchCharts(container, model) {
       + fraction * (currentDomain.endMilliseconds - currentDomain.startMilliseconds);
   }
 
+/**
+ * @brief Updates the synchronized hover line and tooltip content.
+ * @param event Pointer event over the chart overlay.
+ */
   function showTooltip(event) {
     const selection = tooltipSelectionAtTimestamp(model, timestampAtPointer(event));
     const selectionTimestamp = selection.kind === "terminal"
@@ -914,6 +1149,7 @@ export function renderDispatchCharts(container, model) {
     tooltip.style.left = `${Math.min(renderedWidth - 110, Math.max(110, tooltipX))}px`;
   }
 
+  // Pointer movement is translated into a time-domain delta while dragging.
   let panState = null;
   overlay.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) {
@@ -948,6 +1184,10 @@ export function renderDispatchCharts(container, model) {
     showTooltip(event);
   });
 
+/**
+ * @brief Ends pointer capture and clears panning state.
+ * @param event Pointer event ending the drag.
+ */
   function finishPan(event) {
     if (!panState || panState.pointerId !== event.pointerId) {
       return;

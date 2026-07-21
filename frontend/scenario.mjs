@@ -1,10 +1,35 @@
+/**
+ * @file
+ * @brief Scalar scenario serialization and timestamped-series validation.
+ *
+ * The editor presents user-friendly units and interval counts while this module
+ * converts them to the exact CSV schema consumed by the C++ optimizer.
+ */
+
+/**
+ * @brief Maximum accepted scalar scenario file size in bytes.
+ */
 export const SCENARIO_FILE_LIMIT_BYTES = 256 * 1024;
+/**
+ * @brief Maximum accepted price or inflow series file size in bytes.
+ */
 export const SERIES_FILE_LIMIT_BYTES = 8 * 1024 * 1024;
 
+/**
+ * @brief Creates an immutable scenario editor field definition.
+ * @param key Optimizer CSV key.
+ * @param label Visible editor label.
+ * @param defaultValue Initial editor value.
+ * @param options Validation and conversion metadata.
+ * @return A frozen field definition.
+ */
 function field(key, label, defaultValue, options = {}) {
   return Object.freeze({ key, label, defaultValue, ...options });
 }
 
+/**
+ * @brief Immutable grouped field definitions used to build the scalar editor.
+ */
 export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   Object.freeze({
     title: "Hydraulic storage content",
@@ -72,14 +97,29 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   }),
 ]);
 
+/**
+ * @brief Flattened field definitions used for parsing and serialization.
+ */
 const ALL_FIELDS = SCENARIO_PARAMETER_GROUPS.flatMap((group) => group.fields);
 
+/**
+ * @brief Throws a validation error when a required condition is false.
+ * @param condition Condition to enforce.
+ * @param message Error message.
+ * @throws Error when the condition is false.
+ */
 function requireCondition(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
 }
 
+/**
+ * @brief Trims and validates a scenario name for the two-column CSV format.
+ * @param name Candidate scenario name.
+ * @return The normalized name.
+ * @throws Error when the name is empty, too long, or CSV-unsafe.
+ */
 function normalizeScenarioName(name) {
   const normalized = String(name ?? "").trim();
   requireCondition(normalized.length > 0, "Scenario name is required.");
@@ -88,10 +128,22 @@ function normalizeScenarioName(name) {
   return normalized;
 }
 
+/**
+ * @brief Serializes a finite number without unnecessary trailing precision.
+ * @param value Numeric value.
+ * @return Stable decimal text suitable for CSV output.
+ */
 function numberText(value) {
   return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(15)));
 }
 
+/**
+ * @brief Validates an editor value and converts it to optimizer units.
+ * @param definition Field conversion and validation metadata.
+ * @param rawValue Value supplied by the editor or parsed scenario.
+ * @return The editor value and serialized optimizer value.
+ * @throws Error when validation fails.
+ */
 function parseFieldValue(definition, rawValue) {
   const text = String(rawValue ?? "").trim();
   requireCondition(text.length > 0, `${definition.label} is required.`);
@@ -114,6 +166,11 @@ function parseFieldValue(definition, rawValue) {
   return { value, scenarioText: numberText(scenarioValue) };
 }
 
+/**
+ * @brief Validates storage, terminal, and grid relationships across fields.
+ * @param values Validated editor values keyed by scenario parameter.
+ * @throws Error when related bounds or resolutions are inconsistent.
+ */
 function validateBounds(values) {
   requireCondition(
     values.reservoir_min_volume <= values.reservoir_max_volume,
@@ -143,6 +200,12 @@ function validateBounds(values) {
   }
 }
 
+/**
+ * @brief Validates a positive time step representable as whole seconds.
+ * @param value Candidate duration in hours.
+ * @return The numeric duration in hours.
+ * @throws Error when the duration is invalid.
+ */
 function validateTimeStepHours(value) {
   const parsed = Number(value);
   requireCondition(Number.isFinite(parsed) && parsed > 0, "Derived time step must be finite and positive.");
@@ -154,6 +217,14 @@ function validateTimeStepHours(value) {
   return parsed;
 }
 
+/**
+ * @brief Builds a complete optimizer `key,value` scenario CSV.
+ * @param name Scenario name.
+ * @param values Editor values keyed by parameter name.
+ * @param timeStepHours Duration derived from series timestamps.
+ * @return UTF-8 CSV text ending with a newline.
+ * @throws Error when any scalar value is invalid.
+ */
 export function buildScenarioCsv(name, values, timeStepHours) {
   const normalizedName = normalizeScenarioName(name);
   const parsedTimeStepHours = validateTimeStepHours(timeStepHours);
@@ -172,6 +243,12 @@ export function buildScenarioCsv(name, values, timeStepHours) {
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * @brief Parses and validates an optimizer scenario CSV for editor hydration.
+ * @param text Scenario CSV text.
+ * @return Normalized scenario name, time step, and editor values.
+ * @throws Error when the schema, keys, or values are invalid.
+ */
 export function parseScenarioCsv(text) {
   requireCondition(!String(text).includes("\uFFFD"), "Scenario CSV is not valid UTF-8.");
   const lines = String(text).split(/\r?\n/);
@@ -230,6 +307,12 @@ export function parseScenarioCsv(text) {
   });
 }
 
+/**
+ * @brief Builds a unique copy name for a read-only bundled scenario.
+ * @param name Original scenario name.
+ * @param existingNames Names already present in the backend.
+ * @return A unique name with a copy suffix.
+ */
 export function suggestScenarioCopyName(name, existingNames) {
   const sourceName = normalizeScenarioName(name);
   const occupied = new Set([...existingNames].map((value) => String(value)));
@@ -246,6 +329,13 @@ export function suggestScenarioCopyName(name, existingNames) {
 
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 
+/**
+ * @brief Parses one canonical UTC timestamp from a series row.
+ * @param value Timestamp text.
+ * @param rowNumber One-based CSV row number used in errors.
+ * @return Epoch milliseconds.
+ * @throws Error when the timestamp is noncanonical or invalid.
+ */
 function parseTimestampUtc(value, rowNumber) {
   requireCondition(
     UTC_TIMESTAMP_PATTERN.test(value),
@@ -259,6 +349,13 @@ function parseTimestampUtc(value, rowNumber) {
   return Object.freeze({ text: value, milliseconds });
 }
 
+/**
+ * @brief Validates one timestamped numeric series CSV.
+ * @param text CSV text.
+ * @param valueColumn Required numeric column name.
+ * @return Canonical timestamps, numeric values, and spacing metadata.
+ * @throws Error when headers, rows, timestamps, values, or spacing are invalid.
+ */
 export function validateSeriesCsv(text, valueColumn) {
   requireCondition(
     valueColumn === "price" || valueColumn === "natural_inflow",
@@ -309,6 +406,13 @@ export function validateSeriesCsv(text, valueColumn) {
   });
 }
 
+/**
+ * @brief Validates matching price and inflow series and derives the time step.
+ * @param pricesText Price CSV text.
+ * @param inflowsText Natural inflow CSV text.
+ * @return Row count and time step in hours.
+ * @throws Error when horizons or timestamps differ.
+ */
 export function validateSeriesPair(pricesText, inflowsText) {
   const prices = validateSeriesCsv(pricesText, "price");
   const inflows = validateSeriesCsv(inflowsText, "natural_inflow");

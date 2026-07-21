@@ -1,8 +1,19 @@
 PROJECT_NAME           = "OptiFlow"
 PROJECT_BRIEF          = "Pumped-storage hydro dispatch optimization demo"
 OUTPUT_DIRECTORY       = docs
-INPUT                  = README.md docs/model.md libs/optimization/include
+INPUT                  = README.md \
+                         docs/model.md \
+                         libs/optimization/include \
+                         frontend/README.md \
+                         frontend/app.js \
+                         frontend/scenario.mjs \
+                         frontend/number_format.mjs \
+                         frontend/trader.mjs \
+                         frontend/dispatch_charts.mjs
 RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.hpp *.md *.js *.mjs
+EXTENSION_MAPPING      = js=JavaScript mjs=JavaScript
+EXCLUDE_PATTERNS       = */*.test.mjs
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = NO
 GENERATE_HTML          = YES
