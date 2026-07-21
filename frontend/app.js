@@ -9,7 +9,6 @@ import {
 } from "./scenario.mjs";
 import { formatNumber } from "./number_format.mjs";
 import {
-  DISPATCH_CHART_TIME_ZONE,
   buildDispatchChartModel,
   renderDispatchCharts,
 } from "./dispatch_charts.mjs";
@@ -64,7 +63,6 @@ const elements = {
   summaryGrid: document.querySelector("#summary-grid"),
   dispatchCharts: document.querySelector("#dispatch-charts"),
   dispatchChartsMessage: document.querySelector("#dispatch-charts-message"),
-  traderCaption: document.querySelector("#trader-caption"),
   traderMessage: document.querySelector("#trader-message"),
   traderBody: document.querySelector("#trader-body"),
   downloadLink: document.querySelector("#download-link"),
@@ -628,7 +626,6 @@ function clearTraderView(message = "") {
   elements.traderBody.replaceChildren();
   elements.traderMessage.textContent = message;
   elements.traderMessage.classList.remove("error");
-  elements.traderCaption.textContent = "";
 }
 
 function clearRunDetails() {
@@ -713,13 +710,9 @@ async function renderRunDetails(run) {
     }
     renderDispatchCharts(elements.dispatchCharts, chartModel);
     elements.dispatchCharts.hidden = false;
-    elements.dispatchChartsMessage.textContent =
-      `Times are shown in ${DISPATCH_CHART_TIME_ZONE}. Hydraulic inflow and controls are positive MW hydraulic magnitudes. Hover for interval values.`;
+    elements.dispatchChartsMessage.textContent = "";
     renderTraderTable(rows);
     elements.traderMessage.textContent = "";
-    elements.traderCaption.textContent =
-      `Run #${run.id}. Cashflow is market settlement minus modeled operating cost; `
-      + "it is not mark-to-market and excludes terminal target penalties.";
   } catch (error) {
     if (requestId !== state.traderRequestId) {
       return;

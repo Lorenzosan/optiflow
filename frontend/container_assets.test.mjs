@@ -48,16 +48,16 @@ test("selected scenarios can be opened with retained CSV inputs", () => {
 });
 
 
-test("dispatch economics use cashflow terminology rather than P&L or MTM", () => {
+test("dispatch results use cashflow terminology rather than P&L", () => {
   assert.doesNotMatch(indexHtml, /P&amp;L|Profit \[€\]/);
   assert.match(indexHtml, /Cashflow \[€\]/);
-  assert.match(appSource, /not mark-to-market/);
   assert.match(appSource, /Net operating cashflow \[€\]/);
 });
 
 
-test("trader caption keeps only the run and cashflow definition", () => {
-  assert.match(appSource, /Run #\$\{run\.id\}\. Cashflow is market settlement minus modeled operating cost/);
-  assert.doesNotMatch(appSource, /Baseload contains all intervals/);
-  assert.doesNotMatch(appSource, /The first 12 calendar months are monthly/);
+test("successful result views omit explanatory captions", () => {
+  assert.doesNotMatch(indexHtml, /id="trader-caption"/);
+  assert.doesNotMatch(appSource, /Cashflow is market settlement minus modeled operating cost/);
+  assert.doesNotMatch(appSource, /Times are shown in/);
+  assert.doesNotMatch(appSource, /Hydraulic inflow and controls are positive/);
 });
