@@ -203,7 +203,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
         title: "Electricity price",
         unit: "€/MWh",
         interpolation: "step",
-        includeZero: false,
+        includeZero: true,
         series: Object.freeze([
           series(
             "price",
@@ -281,7 +281,7 @@ export function buildDispatchChartModel(dispatchText, timeStepHours) {
         title: "Storage content",
         unit: "MWh hydraulic",
         interpolation: "line",
-        includeZero: false,
+        includeZero: true,
         series: Object.freeze([
           series(
             "reservoir",
@@ -331,6 +331,18 @@ export function extentForPanel(panel) {
   const values = panel.series.flatMap((item) => item.points.map((point) => point.value));
   let minimum = Math.min(...values);
   let maximum = Math.max(...values);
+
+  // Ignore floating-point noise around zero without hiding real negative values.
+  const magnitude = Math.max(Math.abs(minimum), Math.abs(maximum), 1);
+  const zeroTolerance = magnitude * 1e-12;
+
+  if (Math.abs(minimum) <= zeroTolerance) {
+    minimum = 0;
+  }
+  if (Math.abs(maximum) <= zeroTolerance) {
+    maximum = 0;
+  }
+
   const dataAreNonnegative = minimum >= 0;
   const dataAreNonpositive = maximum <= 0;
   if (panel.includeZero) {
@@ -549,9 +561,9 @@ export function renderDispatchCharts(container, model) {
   requireCondition(container, "A chart container is required.");
   container.replaceChildren();
 
-  const viewWidth = 1120;
-  const plotLeft = 132;
-  const plotRight = 1090;
+  const viewWidth = 1200;
+  const plotLeft = 200;
+  const plotRight = 1170;
   const top = 18;
   const defaultPanelHeight = 104;
   const panelGap = 22;

@@ -190,3 +190,18 @@ test("buildSeriesPath supports line and step interpolation", () => {
   assert.equal(buildSeriesPath(points, "line", xScale, yScale), "M 0 2 L 10 4");
   assert.equal(buildSeriesPath(points, "step", xScale, yScale), "M 0 2 H 10 V 4");
 });
+
+test("extentForPanel ignores negligible negative floating-point noise", () => {
+  const extent = extentForPanel({
+    includeZero: true,
+    series: [{
+      points: [
+        { value: -1e-12 },
+        { value: 194 },
+      ],
+    }],
+  });
+
+  assert.equal(extent.minimum, 0);
+  assert.ok(extent.maximum > 194);
+});
