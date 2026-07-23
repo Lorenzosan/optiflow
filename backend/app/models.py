@@ -1,3 +1,10 @@
+"""@file
+@brief Relational persistence models for scenarios, optimization runs, and summaries.
+
+Database timestamps are stored as naive UTC values and converted to aware UTC
+values only when API responses are serialized.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -9,10 +16,16 @@ from backend.app.timestamps import utc_now_naive
 
 
 class Base(DeclarativeBase):
+    """Declarative base for all OptiFlow SQLAlchemy models."""
     pass
 
 
 class Scenario(Base):
+    """Persist one bundled or uploaded optimizer scenario.
+
+    The three stored paths identify the scalar scenario CSV, price series, and
+    natural-inflow series. Deleting a scenario cascades to its optimization runs.
+    """
     __tablename__ = "scenarios"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -34,6 +47,12 @@ class Scenario(Base):
 
 
 class OptimizationRun(Base):
+    """Persist one execution of the C++ optimizer.
+
+    A run records lifecycle state, timestamps, an optional dispatch artifact path,
+    and an optional one-to-one summary. Dispatch trajectories remain CSV artifacts
+    rather than relational rows.
+    """
     __tablename__ = "optimization_runs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -72,6 +91,11 @@ class OptimizationRun(Base):
 
 
 class RunSummary(Base):
+    """Persist scalar output metrics for one successful optimization run.
+
+    The primary key is also a foreign key to `OptimizationRun`, enforcing at most
+    one summary per run.
+    """
     __tablename__ = "run_summaries"
 
     run_id: Mapped[int] = mapped_column(

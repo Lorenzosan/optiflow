@@ -9,17 +9,20 @@ INPUT                  = README.md \
                          frontend/scenario.mjs \
                          frontend/number_format.mjs \
                          frontend/trader.mjs \
-                         frontend/dispatch_charts.mjs
+                         frontend/dispatch_charts.mjs \
+                         backend/README.md \
+                         backend/app
 RECURSIVE              = YES
-FILE_PATTERNS          = *.h *.hpp *.md *.js *.mjs
+FILE_PATTERNS          = *.h *.hpp *.md *.js *.mjs *.py
 EXTENSION_MAPPING      = js=JavaScript mjs=JavaScript
-EXCLUDE_PATTERNS       = */*.test.mjs
+EXCLUDE_PATTERNS       = */*.test.mjs */tests/* */__pycache__/*
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = NO
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 QUIET                  = YES
 JAVADOC_AUTOBRIEF      = YES
+PYTHON_DOCSTRING       = NO
 WARN_IF_UNDOCUMENTED   = YES
 WARN_AS_ERROR          = NO
 HAVE_DOT               = NO

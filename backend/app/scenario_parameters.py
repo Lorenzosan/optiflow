@@ -1,3 +1,7 @@
+"""@file
+@brief Read API-relevant scalar parameters from optimizer scenario CSV files.
+"""
+
 from __future__ import annotations
 
 import csv
@@ -6,10 +10,19 @@ from pathlib import Path
 
 
 class ScenarioParameterError(ValueError):
-    """A required scenario parameter cannot be read safely."""
+    """Report malformed or missing required scenario parameters."""
 
 
 def load_time_step_hours(path: Path) -> float:
+    """Read and validate `time_step_hours` from a scenario CSV.
+
+    The parser requires the canonical `key,value` header, exactly two columns per
+    row, unique nonempty keys, and a finite positive time step.
+
+    @param path Scenario CSV path.
+    @return Time-step duration in hours.
+    @throws ScenarioParameterError When the file or parameter is invalid.
+    """
     try:
         with path.open(newline="", encoding="utf-8") as handle:
             reader = csv.reader(handle)

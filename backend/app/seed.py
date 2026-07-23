@@ -1,8 +1,13 @@
+"""@file
+@brief Seed and refresh the immutable bundled scenario catalogue.
+"""
+
 from sqlalchemy.orm import Session
 
 from backend.app.models import Scenario
 
 
+## @brief Source-controlled catalogue of immutable bundled scenarios.
 SEEDED_SCENARIOS: tuple[dict[str, str], ...] = (
     {
         "name": "multistep_inflow_pulse",
@@ -36,6 +41,14 @@ SEEDED_SCENARIOS: tuple[dict[str, str], ...] = (
 
 
 def seed_scenarios(db: Session) -> None:
+    """Create missing bundled scenarios and refresh their metadata idempotently.
+
+    Existing rows are updated in place so descriptions and repository paths follow
+    the current source tree without deleting associated run history.
+
+    @param db Active SQLAlchemy session.
+    @throws SQLAlchemyError When persistence fails.
+    """
     for scenario_data in SEEDED_SCENARIOS:
         scenario = db.query(Scenario).filter(Scenario.name == scenario_data["name"]).one_or_none()
         if scenario is None:

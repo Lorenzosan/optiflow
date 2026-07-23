@@ -64,11 +64,25 @@ Stored scenario inputs can be read through the guarded scenario-input endpoint f
 
 * `Scenario`: metadata and current managed input paths.
 * `OptimizationRun`: status, timestamps, artifact path, and errors.
-* `RunSummary`: profit, import/export energy, final reservoir inventory, timings, and hydraulic action counters.
+* `RunSummary`: net operating cashflow, import/export energy, final reservoir inventory, timings, and hydraulic action counters.
 
 Database timestamp columns store naive values with an explicit UTC contract for compatibility with the existing PostgreSQL schema. The API serializes run timestamps as timezone-aware UTC values ending in `Z`.
 
 Dispatch trajectories remain CSV artifacts rather than relational rows.
+
+## Source documentation
+
+Production Python modules use Doxygen-compatible module, class, and function docstrings. Contracts document parameters, return values, expected exceptions, persistence boundaries, managed-path guarantees, and the C++ subprocess interface. Inline comments are limited to security checks, transaction ordering, artifact lifecycle, and other behavior that is not evident from the statement itself. Test names document test bodies.
+
+The root `Doxyfile` includes `backend/app`, parses Python docstrings as Doxygen markup, and combines the backend reference with the C++ public headers and frontend modules. Generate the documentation from the repository root:
+
+```bash
+doxygen Doxyfile
+```
+
+The generated HTML entry point is `docs/html/index.html`. Doxygen is a documentation-build dependency only; it is not required to run the API.
+
+Backend documentation coverage is protected by `backend/tests/test_documentation.py`, which checks that every production module and top-level class or function has a docstring.
 
 ## Migration
 
