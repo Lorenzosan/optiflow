@@ -60,7 +60,7 @@ operating_cost = operating_cost_per_mwh
 interval_reward = market_settlement - operating_cost
 ```
 
-The reporting layer presents market settlement, modeled operating cost, and net operating cashflow per interval. The persisted `cumulative_profit` field is the cumulative model reward retained for schema compatibility; it is not mark-to-market or accounting P&L. The terminal target penalty affects the Bellman objective but is not included in reported net operating cashflow.
+The reporting layer presents market settlement, modeled operating cost, and net operating cashflow per interval. The persisted `cumulative_profit` field is the cumulative model reward retained for schema compatibility. The terminal target penalty affects the Bellman objective but is not included in reported net operating cashflow.
 
 ## Terminal conditions
 
