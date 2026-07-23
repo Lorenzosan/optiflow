@@ -537,6 +537,17 @@ tbody tr:hover {
   padding: 0.8rem;
 }
 
+.download-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.download-links .download-link {
+  margin-top: 0;
+}
+
 .download-link {
   display: inline-flex;
   align-items: center;

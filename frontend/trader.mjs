@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Dispatch aggregation into Baseload, Peak, and Off-peak reporting products.
+ * @brief Dispatch aggregation and CSV export for Baseload, Peak, and Off-peak products.
  *
  * Product classification uses Europe/Zurich civil time. Optimizer intervals are
  * split at hourly boundaries so Peak and Off-peak allocations remain correct for
@@ -29,6 +29,23 @@ const WEEKDAYS = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
 const HOUR_MILLISECONDS = 3_600_000;
 /** Canonical whole-second UTC timestamp accepted from dispatch artifacts. */
 const UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+/** Long-format CSV columns used by the product-summary export. */
+const TRADER_CSV_HEADER = Object.freeze([
+  "run_id",
+  "scenario_name",
+  "period",
+  "product",
+  "average_net_power_mw",
+  "energy_mwh",
+  "net_operating_cashflow_eur",
+]);
+/** Stable export order and public labels for trader products. */
+const TRADER_CSV_PRODUCTS = Object.freeze([
+  Object.freeze({ key: "baseload", label: "baseload" }),
+  Object.freeze({ key: "peak", label: "peak" }),
+  Object.freeze({ key: "offPeak", label: "off_peak" }),
+]);
 
 /**
  * @brief Throws a dispatch-validation error when a condition is false.
@@ -325,4 +342,57 @@ export function buildTraderRows(dispatchText, timeStepHours) {
         offPeak: finalizedProduct(aggregate.products.offPeak),
       })),
   );
+}
+
+/**
+ * @brief Escapes one text field for spreadsheet-compatible CSV output.
+ * @param value Field value.
+ * @return A quoted CSV cell when delimiters are present.
+ *
+ * Leading spreadsheet formula characters are prefixed with an apostrophe so a
+ * user-provided scenario name is displayed as text when opened in Excel or
+ * similar applications.
+ */
+function csvTextCell(value) {
+  let text = String(value ?? "");
+  if (/^[=+\-@]/.test(text)) {
+    text = `'${text}`;
+  }
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+/**
+ * @brief Formats an optional numeric value without applying display rounding.
+ * @param value Number or null for an unavailable product average.
+ * @return The JavaScript numeric representation, or an empty CSV cell.
+ */
+function csvNumberCell(value) {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+/**
+ * @brief Serializes trader rows as a long-format product-summary CSV.
+ * @param rows Trader rows produced by `buildTraderRows`.
+ * @param metadata Run metadata included on every exported row.
+ * @param metadata.runId Persisted optimization-run identifier.
+ * @param metadata.scenarioName Scenario display name.
+ * @return UTF-8 CSV text with CRLF line endings and full-precision numbers.
+ */
+export function buildTraderCsv(rows, { runId = "", scenarioName = "" } = {}) {
+  const lines = [TRADER_CSV_HEADER.join(",")];
+  for (const row of rows) {
+    for (const product of TRADER_CSV_PRODUCTS) {
+      const values = row[product.key];
+      lines.push([
+        csvNumberCell(runId),
+        csvTextCell(scenarioName),
+        csvTextCell(row.period),
+        product.label,
+        csvNumberCell(values.averageMw),
+        csvNumberCell(values.energyMwh),
+        csvNumberCell(values.cashflow),
+      ].join(","));
+    }
+  }
+  return `${lines.join("\r\n")}\r\n`;
 }

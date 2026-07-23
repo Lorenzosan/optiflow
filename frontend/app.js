@@ -21,7 +21,7 @@ import {
   buildDispatchChartModel,
   renderDispatchCharts,
 } from "./dispatch_charts.mjs";
-import { buildTraderRows } from "./trader.mjs";
+import { buildTraderCsv, buildTraderRows } from "./trader.mjs";
 
 /**
  * @brief Same-origin prefix used for every backend request.
@@ -46,6 +46,7 @@ const state = {
   offset: 0,
   selectedRunId: null,
   traderRequestId: 0,
+  traderCsvUrl: null,
   editorSource: null,
 };
 
@@ -90,6 +91,7 @@ const elements = {
   traderMessage: document.querySelector("#trader-message"),
   traderBody: document.querySelector("#trader-body"),
   downloadLink: document.querySelector("#download-link"),
+  traderDownloadLink: document.querySelector("#trader-download-link"),
 };
 
 /**
@@ -790,10 +792,24 @@ function clearDispatchCharts(message = "") {
 }
 
 /**
+ * @brief Revokes and hides the generated product-summary CSV download.
+ */
+function clearTraderCsvDownload() {
+  if (state.traderCsvUrl !== null) {
+    URL.revokeObjectURL(state.traderCsvUrl);
+    state.traderCsvUrl = null;
+  }
+  elements.traderDownloadLink.hidden = true;
+  elements.traderDownloadLink.href = "#";
+  elements.traderDownloadLink.removeAttribute("download");
+}
+
+/**
  * @brief Clears trader aggregation rows and optionally shows a status message.
  * @param message Loading, unavailable, or error message.
  */
 function clearTraderView(message = "") {
+  clearTraderCsvDownload();
   elements.traderBody.replaceChildren();
   elements.traderMessage.textContent = message;
   elements.traderMessage.classList.remove("error");
@@ -841,6 +857,25 @@ function renderTraderTable(rows) {
     return row;
   });
   elements.traderBody.replaceChildren(...tableRows);
+}
+
+/**
+ * @brief Creates the downloadable long-format product-summary CSV.
+ * @param rows Trader rows produced by `buildTraderRows`.
+ * @param run Selected persisted run.
+ */
+function renderTraderCsvDownload(rows, run) {
+  clearTraderCsvDownload();
+  const csv = buildTraderCsv(rows, {
+    runId: run.id,
+    scenarioName: run.scenario_name,
+  });
+  // A UTF-8 byte-order mark improves non-ASCII scenario names in spreadsheet software.
+  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+  state.traderCsvUrl = URL.createObjectURL(blob);
+  elements.traderDownloadLink.href = state.traderCsvUrl;
+  elements.traderDownloadLink.download = `optiflow-run-${run.id}-product-summary.csv`;
+  elements.traderDownloadLink.hidden = false;
 }
 
 /**
@@ -896,6 +931,7 @@ async function renderRunDetails(run) {
     elements.dispatchCharts.hidden = false;
     elements.dispatchChartsMessage.textContent = "";
     renderTraderTable(rows);
+    renderTraderCsvDownload(rows, run);
     elements.traderMessage.textContent = "";
   } catch (error) {
     if (requestId !== state.traderRequestId) {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildTraderRows, parseDispatchCsv } from "./trader.mjs";
+import { buildTraderCsv, buildTraderRows, parseDispatchCsv } from "./trader.mjs";
 
 function dispatchCsv(rowCount, {
   start = "2027-01-03T23:00:00Z",
@@ -93,4 +93,27 @@ test("buildTraderRows rejects dispatch spacing that differs from the optimizer s
     () => buildTraderRows(dispatchCsv(2, { timeStepHours: 2 }), 1),
     /does not match time_step_hours/,
   );
+});
+
+test("buildTraderCsv exports long-format products with run metadata", () => {
+  const rows = buildTraderRows(
+    dispatchCsv(2, { start: "2027-01-08T23:00:00Z", netPower: -3, reward: -4 }),
+    1,
+  );
+  const csv = buildTraderCsv(rows, { runId: 42, scenarioName: 'Demo, "A"' });
+
+  assert.equal(
+    csv,
+    "run_id,scenario_name,period,product,average_net_power_mw,energy_mwh,net_operating_cashflow_eur\r\n"
+    + '42,"Demo, ""A""",January 2027,baseload,-3,-6,-8\r\n'
+    + '42,"Demo, ""A""",January 2027,peak,,0,0\r\n'
+    + '42,"Demo, ""A""",January 2027,off_peak,-3,-6,-8\r\n',
+  );
+});
+
+test("buildTraderCsv neutralizes spreadsheet formulas in scenario names", () => {
+  const rows = buildTraderRows(dispatchCsv(1), 1);
+  const csv = buildTraderCsv(rows, { runId: 7, scenarioName: "=1+1" });
+
+  assert.match(csv, /7,'=1\+1,January 2027,baseload/);
 });

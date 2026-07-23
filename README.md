@@ -226,7 +226,7 @@ Endpoints:
 * `GET /runs/{run_id}`
 * `GET /runs/{run_id}/dispatch.csv`
 
-The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run, synchronized dispatch charts, and a trader aggregation table. Dispatch charts show net operating cashflow and operating cost in separate interval panels instead of a cumulative-profit curve; market settlement remains available in the interval tooltip.
+The frontend sends same-origin requests through the NGINX `/api/` proxy. It displays the newest or selected successful run, synchronized dispatch charts, and a trader aggregation table. Successful runs offer both the original interval dispatch CSV and a client-generated long-format product-summary CSV. Dispatch charts show net operating cashflow and operating cost in separate interval panels instead of a cumulative-profit curve; market settlement remains available in the interval tooltip.
 
 ### Persistence design
 
@@ -271,6 +271,19 @@ The trader table classifies dispatch in `Europe/Zurich` and splits multi-hour op
 * **Cashflow** is the sum of interval model reward, proportionally distributed when an optimizer interval is split. Model reward is market settlement minus modeled operating cost, and it excludes terminal target penalties.
 
 The month containing the first dispatch timestamp and the next eleven calendar months are reported individually. Later dispatch is grouped into calendar quarters.
+
+### Product-summary CSV export
+
+The selected-run view can download the trader aggregation as `optiflow-run-<run_id>-product-summary.csv`. The export is generated in the browser from the same unrounded values used to render the table, so it requires no additional backend endpoint and is not persisted in PostgreSQL. Its long format is convenient for Excel, Python, R, and comparisons across products:
+
+```csv
+run_id,scenario_name,period,product,average_net_power_mw,energy_mwh,net_operating_cashflow_eur
+42,multistep_inflow_pulse,January 2027,baseload,11.25,135,202.5
+42,multistep_inflow_pulse,January 2027,peak,11.25,45,67.5
+42,multistep_inflow_pulse,January 2027,off_peak,11.25,90,135
+```
+
+An empty `average_net_power_mw` cell means that the product contains no hours in that period. The detailed interval trajectory remains available separately through `GET /runs/{run_id}/dispatch.csv`.
 
 The custom editor presents storage content in `MWh hydraulic`, hydraulic inflow and controls in `MW hydraulic`, and efficiencies as percentages while preserving the fraction-based optimizer schema. It derives `time_step_hours` from constant timestamp spacing rather than asking for it separately. Storage-grid resolution is entered as intervals; the generated optimizer CSV stores one more grid point than the displayed interval count. The selected scenario can be opened in the editor. Custom scenarios retain their name and can be replaced after confirmation; bundled examples open under a unique copy name because they remain read-only. Loaded price and inflow series are reused unless replacement files are selected. Replacement deletes that custom scenario's prior runs and dispatch artifacts. Physical water volumes still require plant-specific conversion before optimization.
 

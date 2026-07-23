@@ -80,3 +80,12 @@ test("Doxygen indexes documented production frontend modules", () => {
     assert.match(source, /@brief/);
   }
 });
+
+test("selected runs expose interval and product-summary CSV downloads", () => {
+  assert.match(indexHtml, /id="download-link"[^>]*>Download interval dispatch CSV<\/a>/);
+  assert.match(indexHtml, /id="trader-download-link"[^>]*>Download product summary CSV<\/a>/);
+  assert.match(appSource, /buildTraderCsv/);
+  assert.match(appSource, /URL\.createObjectURL/);
+  assert.match(appSource, /URL\.revokeObjectURL/);
+  assert.match(appSource, /optiflow-run-\$\{run\.id\}-product-summary\.csv/);
+});
