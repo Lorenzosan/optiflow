@@ -38,7 +38,6 @@ const REQUIRED_COLUMNS = Object.freeze([
   "next_reservoir_volume",
   "net_power",
   "reward",
-  "cumulative_profit",
 ]);
 
 /**

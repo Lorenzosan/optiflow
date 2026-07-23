@@ -6,6 +6,7 @@
 #include "optiflow/solver/ForwardSimulator.h"
 
 #include <cmath>
+#include <numeric>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -31,6 +32,13 @@ std::vector<core::DispatchStep> solve(const core::Scenario& scenario) {
     return solver::ForwardSimulator(grid, actions, pumped_storage, sp)
         .simulate_from_value_function(scenario, result.value_function);
 }
+double total_reward(const std::vector<core::DispatchStep>& trajectory) {
+    return std::accumulate(
+        trajectory.begin(),
+        trajectory.end(),
+        0.0,
+        [](double total, const core::DispatchStep& step) { return total + step.reward; });
+}
 core::TerminalParameters open_terminal() { return core::TerminalParameters(0.0, 10.0, 0.0, 0.0); }
 
 void test_high_price_now_generates() {
@@ -39,7 +47,7 @@ void test_high_price_now_generates() {
         {core::Exogenous(100.0, 0.0), core::Exogenous(0.0, 0.0)},
         parameters(), open_terminal()));
     near(trajectory[0].action.turbine_flow, 10.0, "generate now");
-    near(trajectory.back().cumulative_profit, 1000.0, "profit");
+    near(total_reward(trajectory), 1000.0, "cashflow");
 }
 
 void test_low_price_now_preserves_water() {
@@ -58,7 +66,7 @@ void test_negative_price_pumps_for_later_generation() {
         parameters(), open_terminal()));
     near(trajectory[0].action.pump_flow, 10.0, "pump at negative price");
     near(trajectory[1].action.turbine_flow, 10.0, "generate later");
-    near(trajectory.back().cumulative_profit, 1100.0, "arbitrage profit");
+    near(total_reward(trajectory), 1100.0, "arbitrage cashflow");
 }
 
 void test_high_operating_cost_avoids_cycle() {
@@ -67,7 +75,7 @@ void test_high_operating_cost_avoids_cycle() {
         {core::Exogenous(0.0, 0.0), core::Exogenous(100.0, 0.0)},
         parameters(75.0), open_terminal()));
     near(trajectory[0].action.pump_flow, 0.0, "avoid expensive pumping");
-    near(trajectory.back().cumulative_profit, 0.0, "no-cycle profit");
+    near(total_reward(trajectory), 0.0, "no-cycle cashflow");
 }
 
 }  // namespace

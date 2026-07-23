@@ -56,8 +56,30 @@ def upgrade() -> None:
         unique=False,
     )
 
+    op.create_table(
+        "run_summaries",
+        sa.Column("run_id", sa.Integer(), nullable=False),
+        sa.Column("net_operating_cashflow", sa.Float(), nullable=False),
+        sa.Column("export_energy_mwh", sa.Float(), nullable=False),
+        sa.Column("import_energy_mwh", sa.Float(), nullable=False),
+        sa.Column("final_reservoir_volume", sa.Float(), nullable=False),
+        sa.Column("solve_seconds", sa.Float(), nullable=False),
+        sa.Column("simulation_seconds", sa.Float(), nullable=False),
+        sa.Column("turbine_steps", sa.Integer(), nullable=False),
+        sa.Column("pump_steps", sa.Integer(), nullable=False),
+        sa.Column("spill_steps", sa.Integer(), nullable=False),
+        sa.Column("wait_steps", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["run_id"],
+            ["optimization_runs.id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("run_id"),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("run_summaries")
     op.drop_index("ix_optimization_runs_status", table_name="optimization_runs")
     op.drop_index("ix_optimization_runs_scenario_id", table_name="optimization_runs")
     op.drop_table("optimization_runs")

@@ -11,7 +11,7 @@ import {
   zoomTimeDomain,
 } from "./dispatch_charts.mjs";
 
-const HEADER = "time_index,timestamp_utc,price,natural_inflow,reservoir_volume,turbine_flow,spill_flow,pump_flow,next_reservoir_volume,net_power,reward,cumulative_profit";
+const HEADER = "time_index,timestamp_utc,price,natural_inflow,reservoir_volume,turbine_flow,spill_flow,pump_flow,next_reservoir_volume,net_power,reward";
 
 function dispatchCsv(rows) {
   return `${[HEADER, ...rows].join("\n")}\n`;
@@ -19,8 +19,8 @@ function dispatchCsv(rows) {
 
 test("buildDispatchChartModel creates aligned interval and boundary series", () => {
   const model = buildDispatchChartModel(dispatchCsv([
-    "0,2027-01-04T00:00:00Z,30,0,0,0,0,10,10,-12.5,-400,-400",
-    "1,2027-01-04T01:00:00Z,60,0,10,10,0,0,0,8,464,64",
+    "0,2027-01-04T00:00:00Z,30,0,0,0,0,10,10,-12.5,-400",
+    "1,2027-01-04T01:00:00Z,60,0,10,10,0,0,0,8,464",
   ]), 1);
 
   assert.equal(model.rows.length, 2);
@@ -60,8 +60,8 @@ test("buildDispatchChartModel creates aligned interval and boundary series", () 
 
 test("zero operating cost does not hide interval cashflow", () => {
   const model = buildDispatchChartModel(dispatchCsv([
-    "0,2027-01-04T00:00:00Z,0,0,16,0,0,0,16,0,0,0",
-    "1,2027-01-04T01:00:00Z,1,0,16,16,0,0,0,14.4,14.4,14.4",
+    "0,2027-01-04T00:00:00Z,0,0,16,0,0,0,16,0,0",
+    "1,2027-01-04T01:00:00Z,1,0,16,16,0,0,0,14.4,14.4",
   ]), 1);
 
   const cashflow = model.panels.find((panel) => panel.key === "cashflow");
@@ -75,8 +75,8 @@ test("zero operating cost does not hide interval cashflow", () => {
 
 test("tooltip selection exposes the terminal storage boundary", () => {
   const model = buildDispatchChartModel(dispatchCsv([
-    "0,2027-01-04T00:00:00Z,0,0,16,0,0,0,16,0,0,0",
-    "1,2027-01-04T01:00:00Z,1,0,16,16,0,0,0,14.4,14.4,14.4",
+    "0,2027-01-04T00:00:00Z,0,0,16,0,0,0,16,0,0",
+    "1,2027-01-04T01:00:00Z,1,0,16,16,0,0,0,14.4,14.4",
   ]), 1);
 
   const interval = tooltipSelectionAtTimestamp(model, Date.parse("2027-01-04T01:30:00Z"));
@@ -94,8 +94,8 @@ test("tooltip selection exposes the terminal storage boundary", () => {
 test("buildDispatchChartModel rejects timestamp spacing inconsistent with the scenario", () => {
   assert.throws(
     () => buildDispatchChartModel(dispatchCsv([
-      "0,2027-01-04T00:00:00Z,30,0,0,0,0,0,0,0,0,0",
-      "1,2027-01-04T02:00:00Z,60,0,0,0,0,0,0,0,0,0",
+      "0,2027-01-04T00:00:00Z,30,0,0,0,0,0,0,0,0",
+      "1,2027-01-04T02:00:00Z,60,0,0,0,0,0,0,0,0",
     ]), 1),
     /does not match time_step_hours/,
   );
@@ -115,9 +115,9 @@ test("buildDispatchChartModel requires the current dispatch schema", () => {
 
 test("hydraulic flows use separate raw positive panels", () => {
   const model = buildDispatchChartModel(dispatchCsv([
-    "0,2027-01-04T00:00:00Z,30,4,300,12,0,0,292,10,100,100",
-    "1,2027-01-04T01:00:00Z,20,4,292,0,3,8,301,-8,-50,50",
-    "2,2027-01-04T02:00:00Z,40,4,301,0,0,0,305,0,0,50",
+    "0,2027-01-04T00:00:00Z,30,4,300,12,0,0,292,10,100",
+    "1,2027-01-04T01:00:00Z,20,4,292,0,3,8,301,-8,-50",
+    "2,2027-01-04T02:00:00Z,40,4,301,0,0,0,305,0,0",
   ]), 1);
 
   const turbine = model.panels.find((panel) => panel.key === "turbine");
@@ -137,8 +137,8 @@ test("hydraulic flows use separate raw positive panels", () => {
 
 test("nonnegative panels keep zero as the lower axis bound", () => {
   const model = buildDispatchChartModel(dispatchCsv([
-    "0,2027-01-04T00:00:00Z,30,4,0,0,0,0,4,0,0,0",
-    "1,2027-01-04T01:00:00Z,60,8,4,0,0,0,12,0,0,0",
+    "0,2027-01-04T00:00:00Z,30,4,0,0,0,0,4,0,0",
+    "1,2027-01-04T01:00:00Z,60,8,4,0,0,0,12,0,0",
   ]), 1);
   const inflow = model.panels.find((panel) => panel.key === "inflow");
 

@@ -28,7 +28,6 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_from_value_function(
     std::vector<core::DispatchStep> trajectory;
     trajectory.reserve(scenario.horizon_size());
     core::State state = scenario.initial_state();
-    double cumulative_profit = 0.0;
 
     for (std::size_t time_index = 0; time_index < scenario.horizon_size(); ++time_index) {
         const core::Exogenous& exogenous = scenario.exogenous_series().at(time_index);
@@ -59,15 +58,13 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_from_value_function(
             throw std::runtime_error("no feasible action found during forward simulation");
         }
 
-        cumulative_profit += best_outcome.reward;
         trajectory.emplace_back(time_index,
                                 state,
                                 *best_action,
                                 exogenous,
                                 best_outcome.next_state,
                                 best_outcome.net_power,
-                                best_outcome.reward,
-                                cumulative_profit);
+                                best_outcome.reward);
         state = best_outcome.next_state;
     }
     return trajectory;
@@ -79,7 +76,6 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_nearest_policy(
     std::vector<core::DispatchStep> trajectory;
     trajectory.reserve(scenario.horizon_size());
     core::State state = scenario.initial_state();
-    double cumulative_profit = 0.0;
 
     for (std::size_t time_index = 0; time_index < scenario.horizon_size(); ++time_index) {
         const core::Action& action = policy.get(time_index, state_grid_.nearest_index(state));
@@ -88,15 +84,13 @@ std::vector<core::DispatchStep> ForwardSimulator::simulate_nearest_policy(
         if (!outcome.feasible) {
             throw std::runtime_error("nearest-policy simulation selected an infeasible action");
         }
-        cumulative_profit += outcome.reward;
         trajectory.emplace_back(time_index,
                                 state,
                                 action,
                                 exogenous,
                                 outcome.next_state,
                                 outcome.net_power,
-                                outcome.reward,
-                                cumulative_profit);
+                                outcome.reward);
         state = outcome.next_state;
     }
     return trajectory;

@@ -70,7 +70,7 @@ RunStatus = Literal["pending", "running", "succeeded", "failed"]
 
 
 class RunSummaryResponse(BaseModel):
-    cumulative_profit: float
+    net_operating_cashflow: float
     export_energy_mwh: float
     import_energy_mwh: float
     final_reservoir_volume: float
@@ -319,7 +319,7 @@ def summary_response(summary: RunSummary | None) -> RunSummaryResponse | None:
     if summary is None:
         return None
     return RunSummaryResponse(
-        cumulative_profit=summary.cumulative_profit,
+        net_operating_cashflow=summary.net_operating_cashflow,
         export_energy_mwh=summary.export_energy_mwh,
         import_energy_mwh=summary.import_energy_mwh,
         final_reservoir_volume=summary.final_reservoir_volume,
@@ -334,7 +334,7 @@ def summary_response(summary: RunSummary | None) -> RunSummaryResponse | None:
 
 def attach_summary(run: OptimizationRun, summary: RunSummaryData) -> None:
     run.summary = RunSummary(
-        cumulative_profit=summary.cumulative_profit,
+        net_operating_cashflow=summary.net_operating_cashflow,
         export_energy_mwh=summary.export_energy_mwh,
         import_energy_mwh=summary.import_energy_mwh,
         final_reservoir_volume=summary.final_reservoir_volume,

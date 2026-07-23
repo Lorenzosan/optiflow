@@ -44,7 +44,7 @@ foreach(expected_case IN ITEMS
     endif()
 endforeach()
 if(NOT summary_text MATCHES "r17_t5_s5_p5,17,5,5,5,[0-9]+,[^,]+,0[.]0")
-    message(FATAL_ERROR "finest resolution does not have zero profit delta")
+    message(FATAL_ERROR "finest resolution does not have zero cashflow delta")
 endif()
 
 execute_process(

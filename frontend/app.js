@@ -702,10 +702,10 @@ function renderRunTable() {
     const statusCell = document.createElement("td");
     statusCell.append(createStatusChip(run.status));
 
-    const profitCell = document.createElement("td");
-    profitCell.className = "numeric";
-    profitCell.textContent = run.summary
-      ? formatNumber(run.summary.cumulative_profit)
+    const cashflowCell = document.createElement("td");
+    cashflowCell.className = "numeric";
+    cashflowCell.textContent = run.summary
+      ? formatNumber(run.summary.net_operating_cashflow)
       : "—";
 
     const runtimeCell = document.createElement("td");
@@ -728,7 +728,7 @@ function renderRunTable() {
       scenarioCell,
       startedCell,
       statusCell,
-      profitCell,
+      cashflowCell,
       runtimeCell,
       artifactCell,
     );
@@ -920,7 +920,7 @@ function renderSummary(summary) {
   }
 
   const metrics = [
-    ["Net operating cashflow [€]", formatNumber(summary.cumulative_profit)],
+    ["Net operating cashflow [€]", formatNumber(summary.net_operating_cashflow)],
     ["Export energy [MWh]", formatNumber(summary.export_energy_mwh)],
     ["Import energy [MWh]", formatNumber(summary.import_energy_mwh)],
     ["Final storage content [MWh hydraulic]", formatNumber(summary.final_reservoir_volume)],

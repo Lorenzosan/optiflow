@@ -14,7 +14,6 @@ from pathlib import Path
 
 DEFAULT_STATE_TOLERANCE = 1.0e-4
 DEFAULT_ECONOMIC_TOLERANCE = 1.0e-2
-DEFAULT_CUMULATIVE_RELATIVE_TOLERANCE = 2.0e-5
 
 
 class ValidationError(RuntimeError):
@@ -34,11 +33,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stdout", type=Path)
     parser.add_argument("--state-tolerance", type=float, default=DEFAULT_STATE_TOLERANCE)
     parser.add_argument("--economic-tolerance", type=float, default=DEFAULT_ECONOMIC_TOLERANCE)
-    parser.add_argument(
-        "--cumulative-relative-tolerance",
-        type=float,
-        default=DEFAULT_CUMULATIVE_RELATIVE_TOLERANCE,
-    )
     return parser.parse_args()
 
 
@@ -130,7 +124,6 @@ def read_dispatch(path: Path) -> list[dict[str, float | str | datetime]]:
         "next_reservoir_volume",
         "net_power",
         "reward",
-        "cumulative_profit",
     ]
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
@@ -291,7 +284,7 @@ def validate(args: argparse.Namespace) -> None:
         )
     )
 
-    cumulative_profit = 0.0
+    net_operating_cashflow = 0.0
     previous_next_reservoir = initial_reservoir
     for index, row in enumerate(rows):
         require_close("price", index, row["price"], prices[index], args.state_tolerance)
@@ -344,18 +337,9 @@ def validate(args: argparse.Namespace) -> None:
             row["price"] * expected_net_power * dt
             - operating_cost * (turbine_power + pump_power) * dt
         )
-        cumulative_profit += row["reward"]
+        net_operating_cashflow += row["reward"]
         require_close("net_power", index, row["net_power"], expected_net_power, args.state_tolerance)
         require_close("reward", index, row["reward"], expected_reward, args.economic_tolerance)
-        require_close(
-            "cumulative_profit",
-            index,
-            row["cumulative_profit"],
-            cumulative_profit,
-            args.economic_tolerance,
-            args.cumulative_relative_tolerance,
-        )
-        cumulative_profit = row["cumulative_profit"]
         previous_next_reservoir = row["next_reservoir_volume"]
 
     final_volume = rows[-1]["next_reservoir_volume"]
@@ -374,8 +358,8 @@ def validate(args: argparse.Namespace) -> None:
         )
 
     print(
-        f"Dispatch validation passed: {len(rows)} rows, final cumulative profit "
-        f"{rows[-1]['cumulative_profit']:.6g}"
+        f"Dispatch validation passed: {len(rows)} rows, final net operating cashflow "
+        f"{net_operating_cashflow:.6g}"
     )
 
 

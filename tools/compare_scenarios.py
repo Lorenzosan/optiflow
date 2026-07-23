@@ -52,7 +52,6 @@ def read_dispatch(path: Path) -> list[dict[str, float]]:
         "next_reservoir_volume",
         "net_power",
         "reward",
-        "cumulative_profit",
     ]
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
@@ -131,7 +130,7 @@ def run_scenario(args: argparse.Namespace, scenario_path: Path) -> dict[str, str
     result = {
         "scenario": name,
         "rows": str(len(rows)),
-        "cumulative_profit": number(rows[-1]["cumulative_profit"]),
+        "net_operating_cashflow": number(sum(row["reward"] for row in rows)),
         "export_mwh": number(export_mwh),
         "import_mwh": number(import_mwh),
         "net_export_mwh": number(export_mwh - import_mwh),
@@ -151,7 +150,7 @@ def run_scenario(args: argparse.Namespace, scenario_path: Path) -> dict[str, str
 FIELDNAMES = [
     "scenario",
     "rows",
-    "cumulative_profit",
+    "net_operating_cashflow",
     "export_mwh",
     "import_mwh",
     "net_export_mwh",
@@ -183,15 +182,15 @@ def write_results(rows: list[dict[str, str]], output: Path | None) -> None:
 
 
 def print_table(rows: list[dict[str, str]], output: Path | None) -> None:
-    base = float(rows[0]["cumulative_profit"])
-    headers = ["Scenario", "Profit", "Delta", "Export MWh", "Import MWh", "Final res.", "Actions", "Solve s"]
+    base = float(rows[0]["net_operating_cashflow"])
+    headers = ["Scenario", "Cashflow", "Delta", "Export MWh", "Import MWh", "Final res.", "Actions", "Solve s"]
     rendered = []
     for row in rows:
-        profit = float(row["cumulative_profit"])
+        cashflow = float(row["net_operating_cashflow"])
         rendered.append([
             row["scenario"],
-            f"{profit:.0f}",
-            f"{profit - base:.0f}",
+            f"{cashflow:.0f}",
+            f"{cashflow - base:.0f}",
             f"{float(row['export_mwh']):.1f}",
             f"{float(row['import_mwh']):.1f}",
             f"{float(row['final_reservoir']):.2f}",

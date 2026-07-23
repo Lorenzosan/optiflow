@@ -21,7 +21,7 @@ RESOLUTION_KEYS = (
     "pump_flow_steps",
 )
 SUMMARY_FIELDS = (
-    "cumulative_profit",
+    "net_operating_cashflow",
     "export_energy_mwh",
     "import_energy_mwh",
     "final_reservoir_volume",
@@ -284,7 +284,7 @@ def run_case(
 def add_finest_deltas(results: list[dict[str, object]]) -> None:
     finest = results[-1]
     comparisons = (
-        ("cumulative_profit", "profit_delta_vs_finest"),
+        ("net_operating_cashflow", "cashflow_delta_vs_finest"),
         ("export_energy_mwh", "export_delta_vs_finest"),
         ("import_energy_mwh", "import_delta_vs_finest"),
         ("final_reservoir_volume", "final_reservoir_delta_vs_finest"),
@@ -301,8 +301,8 @@ FIELDNAMES = (
     "spill_flow_steps",
     "pump_flow_steps",
     "action_count",
-    "cumulative_profit",
-    "profit_delta_vs_finest",
+    "net_operating_cashflow",
+    "cashflow_delta_vs_finest",
     "export_energy_mwh",
     "export_delta_vs_finest",
     "import_energy_mwh",
@@ -330,13 +330,13 @@ def write_csv(results: list[dict[str, object]], path: Path) -> None:
 
 
 def print_table(results: list[dict[str, object]], output_path: Path) -> None:
-    headers = ("Resolution", "Actions", "Profit", "Delta finest", "Final res.", "Solve s")
+    headers = ("Resolution", "Actions", "Cashflow", "Delta finest", "Final res.", "Solve s")
     table = [
         (
             str(row["case"]),
             str(row["action_count"]),
-            f"{float(row['cumulative_profit']):.6g}",
-            f"{float(row['profit_delta_vs_finest']):.6g}",
+            f"{float(row['net_operating_cashflow']):.6g}",
+            f"{float(row['cashflow_delta_vs_finest']):.6g}",
             f"{float(row['final_reservoir_volume']):.6g}",
             f"{float(row['solve_seconds']):.4f}",
         )
@@ -348,7 +348,7 @@ def print_table(results: list[dict[str, object]], output_path: Path) -> None:
     ]
     print("Resolution sensitivity")
     print("Deltas are measured against the finest listed resolution.")
-    print("Profit is not assumed to improve monotonically when interpolation changes.")
+    print("Cashflow is not assumed to improve monotonically when interpolation changes.")
     print()
     print("  ".join(value.ljust(widths[index]) for index, value in enumerate(headers)))
     print("  ".join("-" * width for width in widths))

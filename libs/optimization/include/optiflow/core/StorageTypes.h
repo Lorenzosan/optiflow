@@ -69,7 +69,6 @@ struct DispatchStep {
     State next_state;
     double net_power;
     double reward;
-    double cumulative_profit;
 
     DispatchStep(std::size_t time_index,
                  State state,
@@ -77,8 +76,7 @@ struct DispatchStep {
                  Exogenous exogenous,
                  State next_state,
                  double net_power,
-                 double reward,
-                 double cumulative_profit);
+                 double reward);
 };
 
 /**

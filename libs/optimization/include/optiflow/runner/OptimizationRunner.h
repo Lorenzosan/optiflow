@@ -25,7 +25,7 @@ struct OptimizationDiagnostics {
 
 struct OptimizationResult {
     std::vector<core::DispatchStep> dispatch;
-    double cumulative_profit;
+    double net_operating_cashflow;
     OptimizationDiagnostics diagnostics;
 };
 

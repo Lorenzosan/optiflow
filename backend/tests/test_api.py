@@ -21,7 +21,7 @@ ApiFixture = tuple[TestClient, TestSessionFactory, Scenario, Path, Path]
 
 def sample_summary() -> RunSummaryData:
     return RunSummaryData(
-        cumulative_profit=1234.5,
+        net_operating_cashflow=1234.5,
         export_energy_mwh=456.0,
         import_energy_mwh=78.0,
         final_reservoir_volume=52.5,
@@ -444,7 +444,7 @@ def test_create_run_persists_success(
     assert payload["started_at"].endswith("Z")
     assert payload["completed_at"].endswith("Z")
     assert payload["summary"] == {
-        "cumulative_profit": 1234.5,
+        "net_operating_cashflow": 1234.5,
         "export_energy_mwh": 456.0,
         "import_energy_mwh": 78.0,
         "final_reservoir_volume": 52.5,

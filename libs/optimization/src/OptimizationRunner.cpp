@@ -7,6 +7,7 @@
 #include "optiflow/solver/ForwardSimulator.h"
 
 #include <chrono>
+#include <numeric>
 #include <utility>
 #include <vector>
 
@@ -65,7 +66,11 @@ OptimizationResult OptimizationRunner::run(const core::ScenarioBundle& bundle) c
         simulator.simulate_from_value_function(scenario, solution.value_function);
     const Clock::time_point simulation_end = Clock::now();
 
-    const double cumulative_profit = dispatch.empty() ? 0.0 : dispatch.back().cumulative_profit;
+    const double net_operating_cashflow = std::accumulate(
+        dispatch.begin(),
+        dispatch.end(),
+        0.0,
+        [](double total, const core::DispatchStep& step) { return total + step.reward; });
     OptimizationDiagnostics diagnostics = dispatch_diagnostics(
         dispatch, model_parameters.time_step_hours, scenario.initial_state());
     diagnostics.horizon_steps = scenario.horizon_size();
@@ -75,7 +80,7 @@ OptimizationResult OptimizationRunner::run(const core::ScenarioBundle& bundle) c
     diagnostics.simulation_seconds =
         std::chrono::duration<double>(simulation_end - simulation_start).count();
 
-    return OptimizationResult{std::move(dispatch), cumulative_profit, diagnostics};
+    return OptimizationResult{std::move(dispatch), net_operating_cashflow, diagnostics};
 }
 
 }  // namespace optiflow::runner

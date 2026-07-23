@@ -7,7 +7,7 @@ from backend.app.runner import run_solver
 
 
 SUMMARY_JSON = """{
-  "cumulative_profit": 123.5,
+  "net_operating_cashflow": 123.5,
   "export_energy_mwh": 44.0,
   "import_energy_mwh": 12.0,
   "final_reservoir_volume": 51.0,
@@ -69,7 +69,7 @@ def test_run_solver_reads_machine_summary(
     assert result.output_dispatch_path == "artifacts/run_000007_dispatch.csv"
     assert result.error_message is None
     assert result.summary is not None
-    assert result.summary.cumulative_profit == 123.5
+    assert result.summary.net_operating_cashflow == 123.5
     assert result.summary.export_energy_mwh == 44.0
     assert result.summary.final_reservoir_volume == 51.0
     assert result.summary.wait_steps == 3
@@ -83,7 +83,7 @@ def test_run_solver_rejects_incomplete_summary(
     output_dir = configure_fake_solver(
         tmp_path,
         monkeypatch,
-        '{"cumulative_profit": 123.5}\n',
+        '{"net_operating_cashflow": 123.5}\n',
     )
     result = run_solver(tmp_path, make_scenario(), 8)
 

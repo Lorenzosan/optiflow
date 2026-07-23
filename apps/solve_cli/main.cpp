@@ -89,7 +89,7 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
 
     output << "time_index,timestamp_utc,price,natural_inflow,reservoir_volume,"
            << "turbine_flow,spill_flow,pump_flow,next_reservoir_volume,"
-           << "net_power,reward,cumulative_profit\n";
+           << "net_power,reward\n";
     for (const optiflow::core::DispatchStep& step : trajectory) {
         output << step.time_index << ','
                << step.exogenous.timestamp_utc << ','
@@ -101,8 +101,7 @@ void write_dispatch_csv(const std::filesystem::path& output_path,
                << step.action.pump_flow << ','
                << step.next_state.reservoir_volume << ','
                << step.net_power << ','
-               << step.reward << ','
-               << step.cumulative_profit << '\n';
+               << step.reward << '\n';
     }
 }
 
@@ -115,7 +114,7 @@ void write_summary_json(const std::filesystem::path& output_path,
     const optiflow::runner::OptimizationDiagnostics& diagnostics = result.diagnostics;
     output << std::setprecision(17)
            << "{\n"
-           << "  \"cumulative_profit\": " << result.cumulative_profit << ",\n"
+           << "  \"net_operating_cashflow\": " << result.net_operating_cashflow << ",\n"
            << "  \"export_energy_mwh\": " << diagnostics.export_energy_mwh << ",\n"
            << "  \"import_energy_mwh\": " << diagnostics.import_energy_mwh << ",\n"
            << "  \"final_reservoir_volume\": " << diagnostics.final_reservoir_volume << ",\n"
@@ -146,7 +145,7 @@ void print_summary(std::ostream& output,
     output << "Pump steps: " << diagnostics.pump_steps << '\n';
     output << "Spill steps: " << diagnostics.spill_steps << '\n';
     output << "Wait steps: " << diagnostics.wait_steps << '\n';
-    output << "Cumulative profit [€]: " << result.cumulative_profit << '\n';
+    output << "Net operating cashflow [€]: " << result.net_operating_cashflow << '\n';
     output << "Dispatch written to: " << dispatch_path << '\n';
 }
 

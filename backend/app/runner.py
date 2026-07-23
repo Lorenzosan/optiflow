@@ -23,7 +23,7 @@ MAX_ERROR_LENGTH = 4000
 class RunSummaryData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    cumulative_profit: float
+    net_operating_cashflow: float
     export_energy_mwh: float
     import_energy_mwh: float
     final_reservoir_volume: float

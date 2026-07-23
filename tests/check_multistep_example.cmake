@@ -61,7 +61,7 @@ set(required_output_patterns
     "Pump steps: 0"
     "Spill steps: 0"
     "Wait steps: 6"
-    "Cumulative profit .€.: 202.5")
+    "Net operating cashflow .€.: 202.5")
 foreach(pattern IN LISTS required_output_patterns)
     string(REGEX MATCH "${pattern}" match_result "${command_output}")
     if(match_result STREQUAL "")
@@ -80,7 +80,7 @@ endif()
 
 file(READ "${summary_json}" summary_contents)
 set(required_summary_patterns
-    "\"cumulative_profit\": 202.5"
+    "\"net_operating_cashflow\": 202.5"
     "\"export_energy_mwh\": 135"
     "\"import_energy_mwh\": 0"
     "\"final_reservoir_volume\": 0"

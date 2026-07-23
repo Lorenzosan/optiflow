@@ -74,16 +74,14 @@ DispatchStep::DispatchStep(std::size_t time_index_value,
                            Exogenous exogenous_value,
                            State next_state_value,
                            double net_power_value,
-                           double reward_value,
-                           double cumulative_profit_value)
+                           double reward_value)
     : time_index(time_index_value),
       state(state_value),
       action(action_value),
       exogenous(exogenous_value),
       next_state(next_state_value),
       net_power(net_power_value),
-      reward(reward_value),
-      cumulative_profit(cumulative_profit_value) {}
+      reward(reward_value) {}
 
 ModelParameters::ModelParameters(double time_step_hours_value,
                                  double reservoir_min_volume_value,

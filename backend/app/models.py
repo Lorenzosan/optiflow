@@ -78,7 +78,7 @@ class RunSummary(Base):
         ForeignKey("optimization_runs.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    cumulative_profit: Mapped[float] = mapped_column(Float, nullable=False)
+    net_operating_cashflow: Mapped[float] = mapped_column(Float, nullable=False)
     export_energy_mwh: Mapped[float] = mapped_column(Float, nullable=False)
     import_energy_mwh: Mapped[float] = mapped_column(Float, nullable=False)
     final_reservoir_volume: Mapped[float] = mapped_column(Float, nullable=False)

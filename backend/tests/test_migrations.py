@@ -5,8 +5,6 @@ import sys
 
 from sqlalchemy import create_engine, inspect, text
 
-from backend.app.models import Base
-
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,7 +39,7 @@ def test_migrations_upgrade_and_downgrade_sqlite(tmp_path: Path) -> None:
     }
     assert {column["name"] for column in inspector.get_columns("run_summaries")} == {
         "run_id",
-        "cumulative_profit",
+        "net_operating_cashflow",
         "export_energy_mwh",
         "import_energy_mwh",
         "final_reservoir_volume",
@@ -52,6 +50,9 @@ def test_migrations_upgrade_and_downgrade_sqlite(tmp_path: Path) -> None:
         "spill_steps",
         "wait_steps",
     }
+    with engine.connect() as connection:
+        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+    assert revision == "20260710_0001"
     engine.dispose()
 
     run_alembic(database_url, "downgrade", "base")
@@ -59,24 +60,3 @@ def test_migrations_upgrade_and_downgrade_sqlite(tmp_path: Path) -> None:
     assert inspect(engine).get_table_names() == ["alembic_version"]
     engine.dispose()
 
-
-def test_pre_alembic_schema_can_be_adopted_and_upgraded(tmp_path: Path) -> None:
-    database_path = tmp_path / "existing-schema.db"
-    database_url = f"sqlite:///{database_path}"
-
-    engine = create_engine(database_url)
-    Base.metadata.tables["scenarios"].create(engine)
-    Base.metadata.tables["optimization_runs"].create(engine)
-    engine.dispose()
-
-    run_alembic(database_url, "stamp", "20260710_0001")
-    run_alembic(database_url, "upgrade", "head")
-    run_alembic(database_url, "check")
-
-    engine = create_engine(database_url)
-    inspector = inspect(engine)
-    assert "run_summaries" in inspector.get_table_names()
-    with engine.connect() as connection:
-        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert revision == "20260710_0002"
-    engine.dispose()

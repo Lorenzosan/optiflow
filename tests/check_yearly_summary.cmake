@@ -35,7 +35,7 @@ set(required_output_patterns
     "Net market cashflow:"
     "Operating cost:"
     "Recomputed reward:"
-    "Reported cumulative profit:"
+    "Net operating cashflow:"
     "Export energy:"
     "Import energy:"
     "Average export price:"

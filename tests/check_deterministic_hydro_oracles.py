@@ -26,7 +26,6 @@ DISPATCH_HEADER = [
     "next_reservoir_volume",
     "net_power",
     "reward",
-    "cumulative_profit",
 ]
 
 
@@ -53,7 +52,6 @@ CASES = (
                 "next_reservoir_volume": 4,
                 "net_power": -5.0,
                 "reward": 90.0,
-                "cumulative_profit": 90.0,
             },
             {
                 "time_index": 1,
@@ -67,11 +65,10 @@ CASES = (
                 "next_reservoir_volume": 0,
                 "net_power": 3.2,
                 "reward": 313.6,
-                "cumulative_profit": 403.6,
             },
         ),
         expected_summary={
-            "cumulative_profit": 403.6,
+            "net_operating_cashflow": 403.6,
             "export_energy_mwh": 3.2,
             "import_energy_mwh": 5.0,
             "final_reservoir_volume": 0,
@@ -96,7 +93,6 @@ CASES = (
                 "next_reservoir_volume": 0,
                 "net_power": 0.0,
                 "reward": 0.0,
-                "cumulative_profit": 0.0,
             },
             {
                 "time_index": 1,
@@ -110,11 +106,10 @@ CASES = (
                 "next_reservoir_volume": 0,
                 "net_power": 0.0,
                 "reward": 0.0,
-                "cumulative_profit": 0.0,
             },
         ),
         expected_summary={
-            "cumulative_profit": 0.0,
+            "net_operating_cashflow": 0.0,
             "export_energy_mwh": 0.0,
             "import_energy_mwh": 0.0,
             "final_reservoir_volume": 0,
@@ -139,7 +134,6 @@ CASES = (
                 "next_reservoir_volume": 4,
                 "net_power": -5.0,
                 "reward": -160.0,
-                "cumulative_profit": -160.0,
             },
             {
                 "time_index": 1,
@@ -153,11 +147,10 @@ CASES = (
                 "next_reservoir_volume": 0,
                 "net_power": 3.2,
                 "reward": 185.6,
-                "cumulative_profit": 25.6,
             },
         ),
         expected_summary={
-            "cumulative_profit": 25.6,
+            "net_operating_cashflow": 25.6,
             "export_energy_mwh": 3.2,
             "import_energy_mwh": 5.0,
             "final_reservoir_volume": 0,
@@ -182,11 +175,10 @@ CASES = (
                 "next_reservoir_volume": 4,
                 "net_power": 0.0,
                 "reward": 0.0,
-                "cumulative_profit": 0.0,
             },
         ),
         expected_summary={
-            "cumulative_profit": 0.0,
+            "net_operating_cashflow": 0.0,
             "export_energy_mwh": 0.0,
             "import_energy_mwh": 0.0,
             "final_reservoir_volume": 4,

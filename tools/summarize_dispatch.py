@@ -95,7 +95,6 @@ def read_dispatch(path: Path) -> list[dict[str, float | str]]:
         "next_reservoir_volume",
         "net_power",
         "reward",
-        "cumulative_profit",
     ]
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
@@ -210,7 +209,6 @@ def summarize(args: argparse.Namespace) -> None:
 
     net_market_cashflow = export_revenue - import_cost
     recomputed_reward = net_market_cashflow - operating_cost
-    reported_profit = rows[-1]["cumulative_profit"]
 
     print("OptiFlow dispatch summary")
     metric("Scenario", params.get("scenario_name", ""))
@@ -222,9 +220,8 @@ def summarize(args: argparse.Namespace) -> None:
     metric("Net market cashflow", net_market_cashflow, "€")
     metric("Operating cost", operating_cost, "€")
     metric("Recomputed reward", recomputed_reward, "€")
-    metric("Dispatch reward sum", reward_total, "€")
-    metric("Reported cumulative profit", reported_profit, "€")
-    metric("Reward difference", reported_profit - reward_total, "€")
+    metric("Net operating cashflow", reward_total, "€")
+    metric("Reward difference", recomputed_reward - reward_total, "€")
     print()
     metric("Export energy", export_mwh, "MWh")
     metric("Import energy", import_mwh, "MWh")
