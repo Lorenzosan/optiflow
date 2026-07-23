@@ -81,7 +81,7 @@ export const SCENARIO_PARAMETER_GROUPS = Object.freeze([
   }),
   Object.freeze({
     title: "Solver resolution",
-    note: "More intervals and action steps refine the discrete approximation but increase runtime and memory. Compare genuinely nested resolutions before treating a result as numerically stable.",
+    note: "Finer storage and flow grids can reduce discretization error, but they require more runtime and memory. Check numerical stability by comparing nested grids, where every point in a coarser grid also appears in the finer grid, and verify that key results change only slightly.",
     fields: Object.freeze([
       field("reservoir_volume_grid_points", "Storage grid intervals [count]", 8, {
         integer: true,

@@ -55,12 +55,10 @@
 
         <div class="scenario-editor-content">
           <p class="supporting-text editor-intro">
-            Start from the template, upload price and inflow CSV files, or open an existing scenario
-            from the selector above. The time step is derived from the timestamp spacing. Loaded
-            series are reused unless replacement files are selected. You can then create or replace
-            a custom scenario. Storage content is MWh hydraulic; natural inflow and
-            hydraulic controls are MW hydraulic. Convert physical water data with plant-specific
-            head calibration before upload. The C++ input reader performs the authoritative validation.
+            Start from the template, upload price and inflow CSV files, or open an existing scenario.
+            The time step is inferred from timestamp spacing, and loaded series are retained unless
+            replacement files are selected. Storage content is measured in MWh hydraulic; natural
+            inflow and hydraulic controls are measured in MW hydraulic.
           </p>
 
           <form id="scenario-form">
